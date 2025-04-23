@@ -201,4 +201,7 @@ public class TBMGame extends GameDescription implements GameObservable{
                Ti ricordi che non hai ancora utilizzato quel fantastico regalo di tua zia Lina.
                Sar\u00e0 il caso di cercarlo e di giocarci!""";
     }
+    
+    public void cleanup() {
+    }
 }
