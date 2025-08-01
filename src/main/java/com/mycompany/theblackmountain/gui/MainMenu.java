@@ -2,38 +2,32 @@ package com.mycompany.theblackmountain.gui;
 
 import com.mycompany.theblackmountain.thread.MusicManager;
 import com.mycompany.theblackmountain.save.SaveManager;
+import com.mycompany.theblackmountain.gui.utils.UIComponents;
+import com.mycompany.theblackmountain.gui.utils.UIImageManager;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
-import java.net.URL;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
 
 public class MainMenu extends JFrame {
 
-    private JPanel backgroundPanel;
+    private UIComponents.BackgroundPanel backgroundPanel;
     private JButton newGameButton;
     private JButton loadGameButton;
     private JButton soundToggleButton;
     private JButton exitButton;
+    private JButton creditsButton;
 
-    private ImageIcon background;
     private boolean soundEffectsEnabled = true;
 
     public MainMenu() {
-        URL bgURL = getClass().getResource("/images/background_menu.png");
-        if (bgURL != null) {
-            background = new ImageIcon(bgURL);
-        } else {
-            System.err.println("Background NON trovato!");
-        }
-
         setupUI();
-        
+
         // Avvia la musica usando il MusicManager
         MusicManager.getInstance().startMusic();
     }
@@ -45,151 +39,280 @@ public class MainMenu extends JFrame {
         setLocationRelativeTo(null);
         setResizable(false);
 
-        URL iconURL = getClass().getResource("/images/game_icon.png");
-        if (iconURL != null) {
-            Image icon = Toolkit.getDefaultToolkit().getImage(iconURL);
-            setIconImage(icon);
-        } else {
-            System.err.println("Icona finestra NON trovata!");
-        }
+        // Imposta icona della finestra se disponibile
+        setWindowIcon();
 
-        backgroundPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                if (background != null) {
-                    g.drawImage(background.getImage(), 0, 0, getWidth(), getHeight(), this);
-                }
-            }
-        };
-        backgroundPanel.setLayout(new BorderLayout());
+        // === PANNELLO PRINCIPALE CON SFONDO ===
+        backgroundPanel = UIComponents.createBackgroundPanel(
+                UIImageManager.BACKGROUNDS_PATH + "menu_background.png",
+                new BorderLayout()
+        );
+        add(backgroundPanel);
 
         // === TITOLO ===
         JPanel titlePanel = new JPanel();
         titlePanel.setOpaque(false);
-        titlePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 100));
-        
-        JLabel titleLabel = new JLabel("THE BLACK MOUNTAIN");
-        titleLabel.setFont(new Font("Serif", Font.BOLD, 48));
-        titleLabel.setForeground(Color.WHITE);
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
-        titlePanel.add(titleLabel);
+        titlePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 80));
 
+        JLabel titleLabel = new JLabel("THE BLACK MOUNTAIN");
+        titleLabel.setFont(createTitleFont());
+        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        // Aggiungi effetto ombra al titolo
+        titleLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createEmptyBorder(20, 0, 0, 0),
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(100, 50, 150), 2),
+                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                )
+        ));
+
+        titlePanel.add(titleLabel);
         backgroundPanel.add(titlePanel, BorderLayout.NORTH);
 
+        // === SOTTOTITOLO ===
+        JPanel subtitlePanel = new JPanel();
+        subtitlePanel.setOpaque(false);
+        subtitlePanel.setLayout(new FlowLayout(FlowLayout.CENTER));
+
+        JLabel subtitleLabel = new JLabel("Un'Avventura Testuale Epica");
+        subtitleLabel.setFont(new Font("Serif", Font.ITALIC, 18));
+        subtitleLabel.setForeground(new Color(200, 200, 200));
+        subtitlePanel.add(subtitleLabel);
+
         // === BOTTONI CENTRALI ===
-        newGameButton = createImageButton("NUOVA PARTITA",
-                "/images/settings/button_1.png",
-                "/images/settings/button_1_hover.png",
-                "/audio/button_click.wav");
+        JPanel mainButtonPanel = createMainButtonPanel();
 
-        loadGameButton = createImageButton("CARICA PARTITA",
-                "/images/settings/button_1.png",
-                "/images/settings/button_1_hover.png",
-                "/audio/button_click.wav");
+        // Contenitore per centrare i pulsanti
+        JPanel centerContainer = new JPanel(new BorderLayout());
+        centerContainer.setOpaque(false);
+        centerContainer.add(subtitlePanel, BorderLayout.NORTH);
+        centerContainer.add(mainButtonPanel, BorderLayout.CENTER);
 
-        exitButton = createImageButton("ESCI",
-                "/images/settings/button_1.png",
-                "/images/settings/button_1_hover.png",
-                "/audio/button_click.wav");
+        backgroundPanel.add(centerContainer, BorderLayout.CENTER);
 
+        // === PANNELLO INFERIORE ===
+        JPanel bottomPanel = createBottomPanel();
+        backgroundPanel.add(bottomPanel, BorderLayout.SOUTH);
+
+        setVisible(true);
+    }
+
+    private JPanel createMainButtonPanel() {
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(50, 450, 0, 450));
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(50, 0, 50, 0));
 
-        buttonPanel.add(newGameButton);
-        buttonPanel.add(Box.createVerticalStrut(20));
-        buttonPanel.add(loadGameButton);
-        buttonPanel.add(Box.createVerticalStrut(20));
-        buttonPanel.add(exitButton);
+        Dimension buttonSize = new Dimension(300, 60);
+        int spacing = 20;
 
-        backgroundPanel.add(buttonPanel, BorderLayout.CENTER);
+        // NUOVA PARTITA
+        newGameButton = createMenuButton("new_game", "NUOVA PARTITA",
+                "Inizia una nuova avventura", buttonSize, e -> startNewGame());
 
-        // pulsante volume
-        soundToggleButton = new JButton();
-        soundToggleButton.setContentAreaFilled(false);
-        soundToggleButton.setBorderPainted(false);
-        soundToggleButton.setFocusPainted(false);
-        soundToggleButton.setOpaque(false);
-        soundToggleButton.setPreferredSize(new Dimension(64, 64));
-        updateSoundButton();
+        loadGameButton = createMenuButton("load_game", "CARICA PARTITA",
+                "Continua un'avventura salvata", buttonSize, e -> loadGame());
 
-        soundToggleButton.addActionListener(e -> {
-            MusicManager musicManager = MusicManager.getInstance();
-            musicManager.setMusicEnabled(!musicManager.isMusicEnabled());
-            updateSoundButton();
-        });
+        creditsButton = createMenuButton("credits", "CREDITI",
+                "Informazioni sul gioco", buttonSize, e -> showCredits());
 
-        // Panel per posizionare il bottone in basso a destra
-        JPanel bottomRightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        bottomRightPanel.setOpaque(false);
-        bottomRightPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 20));
-        bottomRightPanel.add(soundToggleButton);
+        exitButton = createMenuButton("exit", "ESCI",
+                "Chiudi il gioco", buttonSize, e -> exitGame());
 
-        backgroundPanel.add(bottomRightPanel, BorderLayout.SOUTH);
+        // Aggiungi i pulsanti con spaziatura
+        buttonPanel.add(Box.createVerticalGlue());
+        buttonPanel.add(createCenteredButton(newGameButton));
+        buttonPanel.add(Box.createVerticalStrut(spacing));
+        buttonPanel.add(createCenteredButton(loadGameButton));
+        buttonPanel.add(Box.createVerticalStrut(spacing));
+        buttonPanel.add(createCenteredButton(creditsButton));
+        buttonPanel.add(Box.createVerticalStrut(spacing));
+        buttonPanel.add(createCenteredButton(exitButton));
+        buttonPanel.add(Box.createVerticalGlue());
 
-        add(backgroundPanel);
-
-        // Aggiungo ActionListener per i bottoni
-        newGameButton.addActionListener(e -> startNewGame());
-        loadGameButton.addActionListener(e -> loadGame());
-        exitButton.addActionListener(e -> exitGame());
+        return buttonPanel;
     }
 
-    private JButton createImageButton(String text, String iconPath, String hoverIconPath, String hoverSoundPath) {
-        URL iconURL = getClass().getResource(iconPath);
-        URL hoverIconURL = getClass().getResource(hoverIconPath);
+    private JPanel createBottomPanel() {
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.setOpaque(false);
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 20, 20));
 
-        ImageIcon defaultIcon = (iconURL != null) ? new ImageIcon(iconURL) : null;
-        ImageIcon hoverIcon = (hoverIconURL != null) ? new ImageIcon(hoverIconURL) : null;
+        // Informazioni versione (sinistra)
+        JLabel versionLabel = new JLabel("v1.0 - The Black Mountain Adventure");
+        versionLabel.setForeground(new Color(150, 150, 150));
+        versionLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        bottomPanel.add(versionLabel, BorderLayout.WEST);
 
-        JButton button = new JButton(text, defaultIcon);
-        button.setHorizontalTextPosition(SwingConstants.CENTER);
+        // Pulsante audio (destra)
+        soundToggleButton = createSoundButton();
+        JPanel soundPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        soundPanel.setOpaque(false);
+        soundPanel.add(soundToggleButton);
+        bottomPanel.add(soundPanel, BorderLayout.EAST);
+
+        return bottomPanel;
+    }
+
+    private JButton createMenuButton(String imageName, String text, String tooltip,
+            Dimension size, ActionListener action) {
+        JButton button = new JButton();
+
+        // Carica immagini se disponibili
+        UIImageManager imageManager = UIImageManager.getInstance();
+        ImageIcon[] buttonIcons = imageManager.loadButtonImages(imageName, 40, 40);
+
+        if (buttonIcons[0] != null) {
+            button.setIcon(buttonIcons[0]);
+
+            // Effetto hover
+            ImageIcon hoverIcon = buttonIcons[1];
+            button.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseEntered(java.awt.event.MouseEvent evt) {
+                    button.setIcon(hoverIcon);
+                    if (soundEffectsEnabled) {
+                        playHoverSound();
+                    }
+                }
+
+                @Override
+                public void mouseExited(java.awt.event.MouseEvent evt) {
+                    button.setIcon(buttonIcons[0]);
+                }
+            });
+        } else {
+            // Se non c'è immagine, usa solo testo
+            System.out.println("⚠️ Immagine pulsante non trovata: " + imageName);
+        }
+
+        // Configurazione del pulsante
+        button.setText(text);
+        button.setHorizontalTextPosition(SwingConstants.RIGHT);
         button.setVerticalTextPosition(SwingConstants.CENTER);
-        button.setFont(new Font("SansSerif", Font.BOLD, 18));
+        button.setFont(new Font("SansSerif", Font.BOLD, 16));
         button.setForeground(Color.WHITE);
-        button.setBorderPainted(false);
-        button.setFocusPainted(false);
-        button.setContentAreaFilled(false);
+        button.setToolTipText(tooltip);
+        button.setPreferredSize(size);
+        button.setMaximumSize(size);
+        button.setMinimumSize(size);
 
+        // Stile
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setOpaque(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Bordo personalizzato
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 50, 150), 2),
+                BorderFactory.createEmptyBorder(10, 20, 10, 20)
+        ));
+
+        // Effetto sfondo al hover
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                if (hoverIcon != null) {
-                    button.setIcon(hoverIcon);
-                }
-                // Suoni di hover 
-                if (soundEffectsEnabled && hoverSoundPath != null) {
-                    playSound(hoverSoundPath);
-                }
+                button.setOpaque(true);
+                button.setBackground(new Color(100, 50, 150, 100));
             }
 
             @Override
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                if (defaultIcon != null) {
-                    button.setIcon(defaultIcon);
-                }
+                button.setOpaque(false);
             }
+        });
+
+        if (action != null) {
+            button.addActionListener(action);
+        }
+
+        return button;
+    }
+
+    private JButton createSoundButton() {
+        JButton button = new JButton();
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setOpaque(false);
+        button.setPreferredSize(new Dimension(64, 64));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        updateSoundButtonIcon(button);
+
+        button.addActionListener(e -> {
+            MusicManager musicManager = MusicManager.getInstance();
+            musicManager.setMusicEnabled(!musicManager.isMusicEnabled());
+            updateSoundButtonIcon(button);
         });
 
         return button;
     }
 
-    private void playSound(String soundPath) {
+    private void updateSoundButtonIcon(JButton button) {
+        boolean musicEnabled = MusicManager.getInstance().isMusicEnabled();
+        UIImageManager imageManager = UIImageManager.getInstance();
+
+        String imageName = musicEnabled ? "volume_on" : "volume_off";
+        ImageIcon icon = imageManager.loadScaledImage(
+                UIImageManager.ICONS_PATH + imageName + ".png", 48, 48);
+
+        button.setIcon(icon);
+        button.setToolTipText(musicEnabled ? "Disattiva Audio" : "Attiva Audio");
+    }
+
+    private JPanel createCenteredButton(JButton button) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        panel.setOpaque(false);
+        panel.add(button);
+        return panel;
+    }
+
+    private Font createTitleFont() {
         try {
-            InputStream audioSrc = getClass().getResourceAsStream(soundPath);
-            if (audioSrc == null) {
-                System.err.println("File audio non trovato: " + soundPath);
-                return;
+            InputStream is = getClass().getResourceAsStream("/fonts/yoster.ttf");
+            if (is != null) {
+                Font baseFont = Font.createFont(Font.TRUETYPE_FONT, is);
+                return baseFont.deriveFont(Font.BOLD, 48f);
             }
-            InputStream bufferedIn = new BufferedInputStream(audioSrc);
-            AudioInputStream audioStream = AudioSystem.getAudioInputStream(bufferedIn);
-            Clip clip = AudioSystem.getClip();
-            clip.open(audioStream);
-            clip.start();
         } catch (Exception e) {
-            System.err.println("Errore nel suono: " + e.getMessage());
+            System.err.println("⚠️ Font personalizzato non trovato per il titolo");
+        }
+        return new Font("Serif", Font.BOLD, 48);
+    }
+
+    private void setWindowIcon() {
+        UIImageManager imageManager = UIImageManager.getInstance();
+        ImageIcon icon = imageManager.loadImage(UIImageManager.ICONS_PATH + "game_icon.png");
+
+        if (icon != null) {
+            setIconImage(icon.getImage());
+        } else {
+            System.err.println("⚠️ Icona finestra non trovata");
+        }
+    }
+
+    private void playHoverSound() {
+        try {
+            InputStream audioSrc = getClass().getResourceAsStream("/audio/button_hover.wav");
+            if (audioSrc == null) {
+                // Fallback sound
+                audioSrc = getClass().getResourceAsStream("/audio/button_click.wav");
+            }
+
+            if (audioSrc != null) {
+                InputStream bufferedIn = new BufferedInputStream(audioSrc);
+                AudioInputStream audioStream = AudioSystem.getAudioInputStream(bufferedIn);
+                Clip clip = AudioSystem.getClip();
+                clip.open(audioStream);
+                clip.start();
+            }
+        } catch (Exception e) {
+            // Suono non critico, ignora errori
         }
     }
 
@@ -200,8 +323,10 @@ public class MainMenu extends JFrame {
             gameGUI.setVisible(true);
             this.dispose();
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Errore nell'avvio del gioco: " + e.getMessage(),
+            JOptionPane.showMessageDialog(this,
+                    "Errore nell'avvio del gioco: " + e.getMessage(),
                     "Errore", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
     }
 
@@ -210,50 +335,60 @@ public class MainMenu extends JFrame {
         fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
                 "File di salvataggio TBM", "dat"));
 
+        // Personalizza il dialog
+        fileChooser.setDialogTitle("Carica Partita Salvata");
+        fileChooser.setApproveButtonText("Carica");
+
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             try {
                 String saveData = SaveManager.loadGame(fileChooser.getSelectedFile());
-                
+
                 // Non fermare la musica
                 GameGUI gameGUI = new GameGUI(saveData);
                 gameGUI.setVisible(true);
                 this.dispose();
-                
+
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Errore nel caricamento: " + ex.getMessage(),
+                JOptionPane.showMessageDialog(this,
+                        "Errore nel caricamento: " + ex.getMessage(),
                         "Errore", JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
             }
         }
+    }
+
+    private void showCredits() {
+        String creditsText = """
+                === THE BLACK MOUNTAIN ===
+                
+                Un'avventura testuale epica
+                
+                🎮 Sviluppato da: Il tuo team
+                🎵 Musica: Composizioni originali
+                🎨 Arte: Immagini e mappe personalizzate
+                ⚔️ Sistema di combattimento avanzato
+                💾 Sistema di salvataggio completo
+                
+                Grazie per aver giocato!
+                
+                Versione 1.0 - 2024
+                """;
+
+        JOptionPane.showMessageDialog(this, creditsText,
+                "Crediti", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void exitGame() {
         int choice = JOptionPane.showConfirmDialog(this,
                 "Sei sicuro di voler uscire dal gioco?",
                 "Conferma uscita",
-                JOptionPane.YES_NO_OPTION);
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
 
         if (choice == JOptionPane.YES_OPTION) {
             MusicManager.getInstance().stopMusic();
             System.exit(0);
-        }
-    }
-
-    private void updateSoundButton() {
-        URL iconURL;
-        if (MusicManager.getInstance().isMusicEnabled()) {
-            iconURL = getClass().getResource("/images/settings/volume_on1.png");
-        } else {
-            iconURL = getClass().getResource("/images/settings/volume_off1.png");
-        }
-
-        if (iconURL != null) {
-            ImageIcon icon = new ImageIcon(iconURL);
-            // Ridimensiona l'icona per renderla più piccola
-            Image img = icon.getImage().getScaledInstance(48, 48, Image.SCALE_SMOOTH);
-            soundToggleButton.setIcon(new ImageIcon(img));
-        } else {
-            System.err.println("Icona volume NON trovata!");
         }
     }
 }

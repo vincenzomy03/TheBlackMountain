@@ -1,0 +1,79 @@
+# =================================================
+# CONFIGURAZIONE PATH IMMAGINI - THE BLACK MOUNTAIN
+# =================================================
+# 
+# Questo file ti permette di cambiare facilmente i percorsi
+# delle immagini senza modificare il codice Java.
+#
+# Salva questo file in: src/main/resources/config/image_paths.properties
+
+# PATH BASE
+images.base=/images/
+
+# CARTELLE PRINCIPALI
+images.buttons=/images/buttons/
+images.maps=/images/maps/
+images.backgrounds=/images/backgrounds/
+images.icons=/images/icons/
+
+# =================================================
+# SFONDI SPECIFICI
+# =================================================
+menu.background=/images/backgrounds/menu_background.png
+game.background=/images/backgrounds/game_background.png
+
+# =================================================
+# PULSANTI MENU PRINCIPALE
+# =================================================
+button.new_game=/images/buttons/new_game.png
+button.new_game.hover=/images/buttons/new_game_hover.png
+button.load_game=/images/buttons/load_game.png
+button.load_game.hover=/images/buttons/load_game_hover.png
+button.credits=/images/buttons/credits.png
+button.credits.hover=/images/buttons/credits_hover.png
+button.exit=/images/buttons/exit.png
+button.exit.hover=/images/buttons/exit_hover.png
+
+# =================================================
+# PULSANTI AZIONI GIOCO
+# =================================================
+button.inventory=/images/buttons/inventory.png
+button.inventory.hover=/images/buttons/inventory_hover.png
+button.attack=/images/buttons/sword.png
+button.attack.hover=/images/buttons/sword_hover.png
+button.save=/images/buttons/save.png
+button.save.hover=/images/buttons/save_hover.png
+button.look=/images/buttons/magnifier.png
+button.look.hover=/images/buttons/magnifier_hover.png
+
+# =================================================
+# PULSANTI DIREZIONALI
+# =================================================
+button.arrow_up=/images/buttons/arrow_up.png
+button.arrow_up.hover=/images/buttons/arrow_up_hover.png
+button.arrow_down=/images/buttons/arrow_down.png
+button.arrow_down.hover=/images/buttons/arrow_down_hover.png
+button.arrow_left=/images/buttons/arrow_left.png
+button.arrow_left.hover=/images/buttons/arrow_left_hover.png
+button.arrow_right=/images/buttons/arrow_right.png
+button.arrow_right.hover=/images/buttons/arrow_right_hover.png
+
+# =================================================
+# ICONE SISTEMA
+# =================================================
+game.icon=/images/icons/game_icon.png
+volume.on=/images/icons/volume_on.png
+volume.off=/images/icons/volume_off.png
+
+# =================================================
+# MAPPE STANZE (Opzionale - se vuoi override specifici)
+# =================================================
+# Se non specifichi, usa il pattern automatico: /images/maps/{nome_stanza}.png
+map.ingresso_della_fortezza=/images/maps/ingresso_della_fortezza.png
+map.stanza_del_topo=/images/maps/stanza_del_topo.png
+map.mensa_abbandonata=/images/maps/mensa_abbandonata.png
+map.dormitorio_delle_guardie=/images/maps/dormitorio_delle_guardie.png
+map.sala_delle_guardie=/images/maps/sala_delle_guardie.png
+map.sala_degli_incantesimi=/images/maps/sala_degli_incantesimi.png
+map.stanza_delle_torture=/images/maps/stanza_delle_torture.png
+map.sala_del_signore_dei_goblin=/images/maps/sala_del_signore_dei_goblin.png
