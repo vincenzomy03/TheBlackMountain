@@ -19,6 +19,8 @@ replay_pid*
 # === Maven ===
 /target/
 
+# === Saves ===
+src/main/saves/
 # === NetBeans ===
 /nbproject/private/
 /build/

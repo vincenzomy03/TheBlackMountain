@@ -1,5 +1,5 @@
 /*
- * Engine principale aggiornato per utilizzare il nuovo MainMenu
+ * Engine principale aggiornato con il nuovo sistema di salvataggio e musica
  */
 package com.mycompany.theblackmountain;
 
@@ -9,9 +9,7 @@ import com.mycompany.theblackmountain.impl.TBMGame;
 import com.mycompany.theblackmountain.parser.Parser;
 import com.mycompany.theblackmountain.parser.ParserOutput;
 import com.mycompany.theblackmountain.type.CommandType;
-import com.mycompany.theblackmountain.save.GameSaveData;
-import com.mycompany.theblackmountain.save.GameSaveManager;
-import java.awt.Color;
+import com.mycompany.theblackmountain.thread.MusicManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,7 +17,6 @@ import java.util.Scanner;
 import java.util.Set;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
 
 /**
  * Engine principale del gioco The Black Mountain
@@ -88,9 +85,6 @@ public class TBM_engine {
      * @param args argomenti della riga di comando
      */
     public static void main(String[] args) {
-        // Configura il Look and Feel
-       // setupLookAndFeel();
-        
         // Verifica se l'utente vuole la modalità console
         if (args.length > 0 && args[0].equals("--console")) {
             // Modalità console per debug o preferenze utente
@@ -121,13 +115,15 @@ public class TBM_engine {
         }
     }
     
-    
     /**
      * Metodo di utilità per avviare direttamente il gioco (per testing)
      */
     public static void startDirectGame() {
         SwingUtilities.invokeLater(() -> {
             try {
+                // Avvia la musica
+                MusicManager.getInstance().startMusic();
+                
                 GameGUI gameGUI = new GameGUI();
                 gameGUI.setVisible(true);
             } catch (Exception e) {

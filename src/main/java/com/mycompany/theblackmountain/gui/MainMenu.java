@@ -1,9 +1,7 @@
 package com.mycompany.theblackmountain.gui;
 
-import com.mycompany.theblackmountain.GameDescription;
-import com.mycompany.theblackmountain.impl.TBMGame;
-import com.mycompany.theblackmountain.thread.Music;
-import com.mycompany.theblackmountain.save.GameSaveData;
+import com.mycompany.theblackmountain.thread.MusicManager;
+import com.mycompany.theblackmountain.save.SaveManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -23,15 +21,10 @@ public class MainMenu extends JFrame {
     private JButton soundToggleButton;
     private JButton exitButton;
 
-    private boolean soundEnabled = true;
-
-    private Thread musicThread;
-    private Music music;
-
     private ImageIcon background;
+    private boolean soundEffectsEnabled = true;
 
     public MainMenu() {
-
         URL bgURL = getClass().getResource("/images/background_menu.png");
         if (bgURL != null) {
             background = new ImageIcon(bgURL);
@@ -40,7 +33,9 @@ public class MainMenu extends JFrame {
         }
 
         setupUI();
-        startBackgroundMusic();
+        
+        // Avvia la musica usando il MusicManager
+        MusicManager.getInstance().startMusic();
     }
 
     private void setupUI() {
@@ -69,31 +64,10 @@ public class MainMenu extends JFrame {
         };
         backgroundPanel.setLayout(new BorderLayout());
 
-        
-        // da aggiustare
-        soundToggleButton = new JButton();
-        soundToggleButton.setContentAreaFilled(false);
-        soundToggleButton.setBorderPainted(false);
-        soundToggleButton.setFocusPainted(false);
-        soundToggleButton.setOpaque(false);
-        updateSoundButton(); // Imposta l'icona iniziale
-        
-        
-
-        soundToggleButton.addActionListener(e -> {
-            soundEnabled = !soundEnabled;
-            updateSoundButton();
-        });
-
-        JPanel topLeftPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        topLeftPanel.setOpaque(false);
-        topLeftPanel.add(soundToggleButton);
-        backgroundPanel.add(topLeftPanel, BorderLayout.WEST);
-        
+        // === TITOLO ===
         JPanel titlePanel = new JPanel();
         titlePanel.setOpaque(false);
         titlePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 100));
-        
         
         JLabel titleLabel = new JLabel("THE BLACK MOUNTAIN");
         titleLabel.setFont(new Font("Serif", Font.BOLD, 48));
@@ -101,10 +75,9 @@ public class MainMenu extends JFrame {
         titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
         titlePanel.add(titleLabel);
 
-        
-
         backgroundPanel.add(titlePanel, BorderLayout.NORTH);
 
+        // === BOTTONI CENTRALI ===
         newGameButton = createImageButton("NUOVA PARTITA",
                 "/images/settings/button_1.png",
                 "/images/settings/button_1_hover.png",
@@ -120,7 +93,6 @@ public class MainMenu extends JFrame {
                 "/images/settings/button_1_hover.png",
                 "/audio/button_click.wav");
 
-        // Aggiungo i bottoni al centro con un BoxLayout verticale
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
@@ -133,6 +105,29 @@ public class MainMenu extends JFrame {
         buttonPanel.add(exitButton);
 
         backgroundPanel.add(buttonPanel, BorderLayout.CENTER);
+
+        // pulsante volume
+        soundToggleButton = new JButton();
+        soundToggleButton.setContentAreaFilled(false);
+        soundToggleButton.setBorderPainted(false);
+        soundToggleButton.setFocusPainted(false);
+        soundToggleButton.setOpaque(false);
+        soundToggleButton.setPreferredSize(new Dimension(64, 64));
+        updateSoundButton();
+
+        soundToggleButton.addActionListener(e -> {
+            MusicManager musicManager = MusicManager.getInstance();
+            musicManager.setMusicEnabled(!musicManager.isMusicEnabled());
+            updateSoundButton();
+        });
+
+        // Panel per posizionare il bottone in basso a destra
+        JPanel bottomRightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        bottomRightPanel.setOpaque(false);
+        bottomRightPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 20));
+        bottomRightPanel.add(soundToggleButton);
+
+        backgroundPanel.add(bottomRightPanel, BorderLayout.SOUTH);
 
         add(backgroundPanel);
 
@@ -164,7 +159,8 @@ public class MainMenu extends JFrame {
                 if (hoverIcon != null) {
                     button.setIcon(hoverIcon);
                 }
-                if (soundEnabled && hoverSoundPath != null) {
+                // Suoni di hover 
+                if (soundEffectsEnabled && hoverSoundPath != null) {
                     playSound(hoverSoundPath);
                 }
             }
@@ -183,6 +179,10 @@ public class MainMenu extends JFrame {
     private void playSound(String soundPath) {
         try {
             InputStream audioSrc = getClass().getResourceAsStream(soundPath);
+            if (audioSrc == null) {
+                System.err.println("File audio non trovato: " + soundPath);
+                return;
+            }
             InputStream bufferedIn = new BufferedInputStream(audioSrc);
             AudioInputStream audioStream = AudioSystem.getAudioInputStream(bufferedIn);
             Clip clip = AudioSystem.getClip();
@@ -195,7 +195,7 @@ public class MainMenu extends JFrame {
 
     private void startNewGame() {
         try {
-            stopBackgroundMusic();
+            // Non fermare la musica - continua nel gioco
             GameGUI gameGUI = new GameGUI();
             gameGUI.setVisible(true);
             this.dispose();
@@ -206,26 +206,26 @@ public class MainMenu extends JFrame {
     }
 
     private void loadGame() {
-        JFileChooser fileChooser = new JFileChooser();
+        JFileChooser fileChooser = new JFileChooser(new File(SaveManager.SAVE_DIRECTORY));
         fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
-                "File di salvataggio", "dat"));
+                "File di salvataggio TBM", "dat"));
 
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
-            File saveFile = fileChooser.getSelectedFile();
             try {
-                GameSaveData saveData = loadGameData(saveFile);
-                stopBackgroundMusic();
+                String saveData = SaveManager.loadGame(fileChooser.getSelectedFile());
+                
+                // Non fermare la musica
                 GameGUI gameGUI = new GameGUI(saveData);
                 gameGUI.setVisible(true);
                 this.dispose();
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Errore nel caricamento: " + e.getMessage(),
+                
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Errore nel caricamento: " + ex.getMessage(),
                         "Errore", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
-
 
     private void exitGame() {
         int choice = JOptionPane.showConfirmDialog(this,
@@ -234,44 +234,26 @@ public class MainMenu extends JFrame {
                 JOptionPane.YES_NO_OPTION);
 
         if (choice == JOptionPane.YES_OPTION) {
-            stopBackgroundMusic();
+            MusicManager.getInstance().stopMusic();
             System.exit(0);
-        }
-    }
-
-    private void startBackgroundMusic() {
-        if (soundEnabled) {
-            music = new Music();
-            musicThread = new Thread(music);
-            musicThread.start();
-        }
-    }
-
-    private void stopBackgroundMusic() {
-        if (music != null) {
-            music.pausa();
-        }
-    }
-
-    private GameSaveData loadGameData(File saveFile) throws Exception {
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(saveFile))) {
-            return (GameSaveData) ois.readObject();
         }
     }
 
     private void updateSoundButton() {
         URL iconURL;
-        if (soundEnabled) {
+        if (MusicManager.getInstance().isMusicEnabled()) {
             iconURL = getClass().getResource("/images/settings/volume_on1.png");
         } else {
             iconURL = getClass().getResource("/images/settings/volume_off1.png");
         }
 
         if (iconURL != null) {
-            soundToggleButton.setIcon(new ImageIcon(iconURL));
+            ImageIcon icon = new ImageIcon(iconURL);
+            // Ridimensiona l'icona per renderla più piccola
+            Image img = icon.getImage().getScaledInstance(48, 48, Image.SCALE_SMOOTH);
+            soundToggleButton.setIcon(new ImageIcon(img));
         } else {
             System.err.println("Icona volume NON trovata!");
         }
     }
-
 }
