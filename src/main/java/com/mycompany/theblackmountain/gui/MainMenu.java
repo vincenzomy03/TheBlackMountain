@@ -105,20 +105,23 @@ public class MainMenu extends JFrame {
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(50, 0, 50, 0));
 
-        Dimension buttonSize = new Dimension(300, 60);
-        int spacing = 20;
+        Dimension buttonSize = new Dimension(300, 80); // Pulsanti più grandi per le immagini
+        int spacing = 25;
 
-        // NUOVA PARTITA
-        newGameButton = createMenuButton("new_game", "NUOVA PARTITA",
+        // NUOVA PARTITA - usando UIComponents per supportare immagini future
+        newGameButton = createImageMenuButton("new_game", "NUOVA PARTITA",
                 "Inizia una nuova avventura", buttonSize, e -> startNewGame());
 
-        loadGameButton = createMenuButton("load_game", "CARICA PARTITA",
+        // CARICA PARTITA
+        loadGameButton = createImageMenuButton("load_game", "CARICA PARTITA",
                 "Continua un'avventura salvata", buttonSize, e -> loadGame());
 
-        creditsButton = createMenuButton("credits", "CREDITI",
+        // CREDITI
+        creditsButton = createImageMenuButton("credits", "CREDITI",
                 "Informazioni sul gioco", buttonSize, e -> showCredits());
 
-        exitButton = createMenuButton("exit", "ESCI",
+        // ESCI
+        exitButton = createImageMenuButton("exit", "ESCI",
                 "Chiudi il gioco", buttonSize, e -> exitGame());
 
         // Aggiungi i pulsanti con spaziatura
@@ -133,6 +136,104 @@ public class MainMenu extends JFrame {
         buttonPanel.add(Box.createVerticalGlue());
 
         return buttonPanel;
+    }
+
+    /**
+     * Crea un pulsante del menu principale che supporta immagini personalizzate
+     * Questo metodo usa UIComponents per supportare le immagini che aggiungerai in futuro
+     */
+    private JButton createImageMenuButton(String imageName, String text, String tooltip,
+            Dimension size, ActionListener action) {
+
+        UIImageManager imageManager = UIImageManager.getInstance();
+
+        // Prova a caricare le immagini personalizzate
+        ImageIcon[] buttonIcons = imageManager.loadButtonImages(imageName, size.width - 20, size.height - 20);
+
+        JButton button = new JButton();
+        button.setText(text);
+        button.setToolTipText(tooltip);
+        button.setPreferredSize(size);
+        button.setMaximumSize(size);
+        button.setMinimumSize(size);
+
+        // Se esistono immagini personalizzate, usale
+        if (buttonIcons[0] != null && !isPlaceholderIcon(buttonIcons[0])) {
+            button.setIcon(buttonIcons[0]);
+            button.setHorizontalTextPosition(SwingConstants.CENTER);
+            button.setVerticalTextPosition(SwingConstants.BOTTOM);
+
+            // Effetto hover con immagine
+            button.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseEntered(java.awt.event.MouseEvent evt) {
+                    button.setIcon(buttonIcons[1]);
+                    if (soundEffectsEnabled) {
+                        playHoverSound();
+                    }
+                }
+
+                @Override
+                public void mouseExited(java.awt.event.MouseEvent evt) {
+                    button.setIcon(buttonIcons[0]);
+                }
+            });
+        } else {
+            // Stile testuale elegante se non ci sono immagini
+            setupTextualButton(button);
+        }
+
+        // Configurazione comune
+        button.setFont(new Font("SansSerif", Font.BOLD, 16));
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setOpaque(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        if (action != null) {
+            button.addActionListener(action);
+        }
+
+        return button;
+    }
+
+    /**
+     * Configura un pulsante con stile testuale quando non ci sono immagini
+     */
+    private void setupTextualButton(JButton button) {
+        // Bordo personalizzato
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 50, 150), 2),
+                BorderFactory.createEmptyBorder(10, 20, 10, 20)
+        ));
+
+        // Effetto sfondo al hover
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setOpaque(true);
+                button.setBackground(new Color(100, 50, 150, 100));
+                if (soundEffectsEnabled) {
+                    playHoverSound();
+                }
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setOpaque(false);
+            }
+        });
+    }
+
+    /**
+     * Verifica se un'icona è un placeholder (creato quando l'immagine non esiste)
+     */
+    private boolean isPlaceholderIcon(ImageIcon icon) {
+        // Un modo semplice per rilevare i placeholder: controllare se l'immagine è molto piccola
+        // o se ha caratteristiche tipiche dei placeholder
+        return icon.getIconWidth() <= 40 && icon.getIconHeight() <= 40;
     }
 
     private JPanel createBottomPanel() {
@@ -154,83 +255,6 @@ public class MainMenu extends JFrame {
         bottomPanel.add(soundPanel, BorderLayout.EAST);
 
         return bottomPanel;
-    }
-
-    private JButton createMenuButton(String imageName, String text, String tooltip,
-            Dimension size, ActionListener action) {
-        JButton button = new JButton();
-
-        // Carica immagini se disponibili
-        UIImageManager imageManager = UIImageManager.getInstance();
-        ImageIcon[] buttonIcons = imageManager.loadButtonImages(imageName, 40, 40);
-
-        if (buttonIcons[0] != null) {
-            button.setIcon(buttonIcons[0]);
-
-            // Effetto hover
-            ImageIcon hoverIcon = buttonIcons[1];
-            button.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseEntered(java.awt.event.MouseEvent evt) {
-                    button.setIcon(hoverIcon);
-                    if (soundEffectsEnabled) {
-                        playHoverSound();
-                    }
-                }
-
-                @Override
-                public void mouseExited(java.awt.event.MouseEvent evt) {
-                    button.setIcon(buttonIcons[0]);
-                }
-            });
-        } else {
-            // Se non c'è immagine, usa solo testo
-            System.out.println("⚠️ Immagine pulsante non trovata: " + imageName);
-        }
-
-        // Configurazione del pulsante
-        button.setText(text);
-        button.setHorizontalTextPosition(SwingConstants.RIGHT);
-        button.setVerticalTextPosition(SwingConstants.CENTER);
-        button.setFont(new Font("SansSerif", Font.BOLD, 16));
-        button.setForeground(Color.WHITE);
-        button.setToolTipText(tooltip);
-        button.setPreferredSize(size);
-        button.setMaximumSize(size);
-        button.setMinimumSize(size);
-
-        // Stile
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setContentAreaFilled(false);
-        button.setOpaque(false);
-        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        // Bordo personalizzato
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(100, 50, 150), 2),
-                BorderFactory.createEmptyBorder(10, 20, 10, 20)
-        ));
-
-        // Effetto sfondo al hover
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setOpaque(true);
-                button.setBackground(new Color(100, 50, 150, 100));
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setOpaque(false);
-            }
-        });
-
-        if (action != null) {
-            button.addActionListener(action);
-        }
-
-        return button;
     }
 
     private JButton createSoundButton() {

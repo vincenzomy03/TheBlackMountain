@@ -30,7 +30,8 @@ public class GameGUI extends JFrame {
     private JTextArea outputArea;
     private JTextField inputField;
     private JButton northButton, southButton, eastButton, westButton;
-    private JButton lookButton, inventoryButton, saveButton, attackButton, soundToggleButton;
+    private JButton lookButton, inventoryButton, saveButton, soundToggleButton;
+    private JButton useAttackButton, useSwordButton, useBowButton, usePotionButton;
     private UIComponents.MapPanel mapPanel;
     private UIComponents.BackgroundPanel backgroundPanel;
 
@@ -114,19 +115,12 @@ public class GameGUI extends JFrame {
 
         backgroundPanel.add(centerPanel, BorderLayout.CENTER);
 
-        // === SUD: Input + Azioni ===
+        // === SUD: Solo Input (senza pulsanti) ===
         JPanel bottomPanel = UIComponents.createThemedPanel(
                 new Color(40, 40, 50, 200), // Semi-trasparente
-                new BoxLayout(null, BoxLayout.Y_AXIS)
-        );
-        bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
-
-        // Pannello input
-        JPanel inputPanel = UIComponents.createThemedPanel(
-                new Color(60, 60, 70, 200),
                 new BorderLayout()
         );
-        inputPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         JLabel commandLabel = new JLabel(" Comando: ");
         commandLabel.setForeground(UIComponents.TEXT_COLOR);
@@ -134,90 +128,70 @@ public class GameGUI extends JFrame {
 
         inputField = UIComponents.createInputField(gameFont, this::processInput);
 
-        inputPanel.add(commandLabel, BorderLayout.WEST);
-        inputPanel.add(inputField, BorderLayout.CENTER);
-        bottomPanel.add(inputPanel);
-
-        // Pannello azioni
-        JPanel actionPanel = UIComponents.createThemedPanel(
-                new Color(30, 30, 40, 200),
-                new FlowLayout(FlowLayout.CENTER)
-        );
-
-        // Crea pulsanti di azione usando il nuovo sistema
-        inventoryButton = UIComponents.createActionButton(
-                UIComponents.ActionType.INVENTORY,
-                e -> performAction("inventario")
-        );
-
-        attackButton = UIComponents.createActionButton(
-                UIComponents.ActionType.ATTACK,
-                e -> performAction("attacca")
-        );
-
-        saveButton = UIComponents.createActionButton(
-                UIComponents.ActionType.SAVE,
-                e -> saveGame()
-        );
-
-        soundToggleButton = UIComponents.createActionButton(
-                UIComponents.ActionType.SOUND_ON,
-                e -> toggleSound()
-        );
-
-        actionPanel.add(inventoryButton);
-        actionPanel.add(attackButton);
-        actionPanel.add(lookButton);
-        actionPanel.add(saveButton);
-        actionPanel.add(soundToggleButton);
-        bottomPanel.add(actionPanel);
+        bottomPanel.add(commandLabel, BorderLayout.WEST);
+        bottomPanel.add(inputField, BorderLayout.CENTER);
 
         backgroundPanel.add(bottomPanel, BorderLayout.SOUTH);
 
-        // === OVEST: Area laterale sinistra con pulsanti azione verticali e frecce in basso ===
-// Pannello per i pulsanti di azione (verticale)
-        JPanel actionVerticalPanel = new JPanel();
-        actionVerticalPanel.setLayout(new BoxLayout(actionVerticalPanel, BoxLayout.Y_AXIS));
-        actionVerticalPanel.setOpaque(false);
+        // === OVEST: Pulsanti azione centrati + Frecce direzionali ===
+        JPanel westPanel = new JPanel();
+        westPanel.setLayout(new BoxLayout(westPanel, BoxLayout.Y_AXIS));
+        westPanel.setOpaque(false);
+        westPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-// Aggiungi pulsanti uno sotto l’altro con un po’ di margine
-        int actionButtonSpacing = 8;
+        // === Pulsanti azione centrati ===
+        JPanel actionButtonsPanel = new JPanel();
+        actionButtonsPanel.setLayout(new BoxLayout(actionButtonsPanel, BoxLayout.Y_AXIS));
+        actionButtonsPanel.setOpaque(false);
 
+        int actionButtonSpacing = 5;
+
+        // Crea pulsanti azione
         inventoryButton = UIComponents.createActionButton(
                 UIComponents.ActionType.INVENTORY, e -> performAction("inventario")
         );
-        actionVerticalPanel.add(inventoryButton);
-        actionVerticalPanel.add(Box.createVerticalStrut(actionButtonSpacing));
-
-        attackButton = UIComponents.createActionButton(
+        useAttackButton = UIComponents.createActionButton(
                 UIComponents.ActionType.ATTACK, e -> performAction("attacca")
         );
-        actionVerticalPanel.add(attackButton);
-        actionVerticalPanel.add(Box.createVerticalStrut(actionButtonSpacing));
-
+        useSwordButton = UIComponents.createActionButton(
+                UIComponents.ActionType.USE_SWORD, e -> performAction("usa spada")
+        );
+        useBowButton = UIComponents.createActionButton(
+                UIComponents.ActionType.USE_BOW, e -> performAction("usa arco")
+        );
+        usePotionButton = UIComponents.createActionButton(
+                UIComponents.ActionType.USE_POTION, e -> performAction("usa pozione di cura")
+        );
         lookButton = UIComponents.createActionButton(
                 UIComponents.ActionType.LOOK, e -> performAction("osserva")
         );
-        actionVerticalPanel.add(lookButton);
-        actionVerticalPanel.add(Box.createVerticalStrut(actionButtonSpacing));
-
         saveButton = UIComponents.createActionButton(
                 UIComponents.ActionType.SAVE, e -> saveGame()
         );
-        actionVerticalPanel.add(saveButton);
-        actionVerticalPanel.add(Box.createVerticalStrut(actionButtonSpacing));
-
         soundToggleButton = UIComponents.createActionButton(
                 UIComponents.ActionType.SOUND_ON, e -> toggleSound()
         );
-        actionVerticalPanel.add(soundToggleButton);
 
-// === Direzioni ===
+        // Aggiungi pulsanti centrati
+        actionButtonsPanel.add(createCenteredComponent(saveButton));
+        actionButtonsPanel.add(createCenteredComponent(soundToggleButton));
+        actionButtonsPanel.add(Box.createVerticalStrut(actionButtonSpacing));
+        actionButtonsPanel.add(createCenteredComponent(inventoryButton));
+        actionButtonsPanel.add(Box.createVerticalStrut(actionButtonSpacing));
+        actionButtonsPanel.add(createCenteredComponent(useAttackButton));
+        actionButtonsPanel.add(Box.createVerticalStrut(actionButtonSpacing));
+        actionButtonsPanel.add(createCenteredComponent(useSwordButton));
+        actionButtonsPanel.add(Box.createVerticalStrut(actionButtonSpacing));
+        actionButtonsPanel.add(createCenteredComponent(useBowButton));
+        actionButtonsPanel.add(Box.createVerticalStrut(actionButtonSpacing));
+        actionButtonsPanel.add(createCenteredComponent(usePotionButton));
+
+        // === Frecce direzionali ===
         JPanel directionPanel = new JPanel(new GridLayout(3, 3, 2, 2));
         directionPanel.setOpaque(false);
         directionPanel.setPreferredSize(new Dimension(150, 150));
 
-// Layout 3x3 per i pulsanti di direzione
+        // Layout 3x3 per i pulsanti di direzione
         directionPanel.add(new JLabel()); // vuoto
         northButton = UIComponents.createDirectionButton("nord", e -> moveDirection("nord"));
         directionPanel.add(northButton);
@@ -240,20 +214,15 @@ public class GameGUI extends JFrame {
         directionPanel.add(southButton);
         directionPanel.add(new JLabel()); // vuoto
 
-// Contenitore per direzioni centrato in basso
+        // Contenitore per direzioni centrato in basso
         JPanel directionWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         directionWrapper.setOpaque(false);
         directionWrapper.add(directionPanel);
 
-// === Contenitore principale laterale (WEST) ===
-        JPanel westPanel = new JPanel();
-        westPanel.setLayout(new BoxLayout(westPanel, BoxLayout.Y_AXIS));
-        westPanel.setOpaque(false);
-        westPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        westPanel.add(actionVerticalPanel);        // Pulsanti in alto
-        westPanel.add(Box.createVerticalGlue());   // Spinge le frecce verso il basso
-        westPanel.add(directionWrapper);           // Frecce in fondo
+        // === Assemblaggio pannello ovest ===
+        westPanel.add(actionButtonsPanel);        // Pulsanti azione in alto
+        westPanel.add(Box.createVerticalGlue());  // Spazio flessibile
+        westPanel.add(directionWrapper);          // Frecce in fondo
 
         backgroundPanel.add(westPanel, BorderLayout.WEST);
 
@@ -269,6 +238,16 @@ public class GameGUI extends JFrame {
         });
 
         setVisible(true);
+    }
+
+    /**
+     * Crea un pannello che centra un componente
+     */
+    private JPanel createCenteredComponent(JComponent component) {
+        JPanel wrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        wrapper.setOpaque(false);
+        wrapper.add(component);
+        return wrapper;
     }
 
     private void initializeGame(String saveData) {
@@ -340,13 +319,13 @@ public class GameGUI extends JFrame {
                     saveName.trim(), currentPlayTime);
 
             if (success) {
-                appendToOutput("\n✅ Partita salvata con successo: " + saveName);
+                appendToOutput("\nPartita salvata con successo: " + saveName);
                 JOptionPane.showMessageDialog(this,
                         "Partita salvata con successo!",
                         "Salvataggio",
                         JOptionPane.INFORMATION_MESSAGE);
             } else {
-                appendToOutput("\n❌ Errore nel salvataggio della partita!");
+                appendToOutput("\nErrore nel salvataggio della partita!");
                 JOptionPane.showMessageDialog(this,
                         "Errore nel salvataggio!",
                         "Errore",
@@ -375,7 +354,9 @@ public class GameGUI extends JFrame {
                     e -> toggleSound()
             );
 
-            parent.add(soundToggleButton);
+            // Ricrea il wrapper centrato
+            JPanel centeredWrapper = createCenteredComponent(soundToggleButton);
+            parent.add(centeredWrapper);
             parent.revalidate();
             parent.repaint();
         }
@@ -384,6 +365,7 @@ public class GameGUI extends JFrame {
     private void updateUI() {
         updateDirectionalButtons();
         updateMapDisplay();
+        updateWeaponButtons();
     }
 
     private void updateDirectionalButtons() {
@@ -420,6 +402,33 @@ public class GameGUI extends JFrame {
         }
     }
 
+    /**
+     * Aggiorna la disponibilità dei pulsanti arma in base all'inventario
+     */
+    private void updateWeaponButtons() {
+        // Controlla se il giocatore ha l'arco nell'inventario
+        boolean hasBow = game.getInventory().stream()
+                .anyMatch(item -> item.getName().toLowerCase().contains("arco"));
+
+        boolean hasPotion = game.getInventory().stream() // controllo pozione
+                .anyMatch(item -> item.getName().toLowerCase().contains("pozione"));
+
+        // Il pulsante spada è sempre disponibile (il giocatore inizia con una spada)
+        useSwordButton.setEnabled(true);
+        useAttackButton.setEnabled(true);
+
+        // Il pulsante è disponibile solo se si ha l'oggetto
+        useBowButton.setEnabled(hasBow);
+        usePotionButton.setEnabled(hasPotion);
+
+        // Cambia l'opacità per mostrare visivamente la disponibilità
+        setButtonOpacity(useSwordButton, true);
+        setButtonOpacity(useAttackButton, true);
+        setButtonOpacity(useBowButton, hasBow);
+        setButtonOpacity(usePotionButton, hasPotion);
+
+    }
+
     private void appendToOutput(String text) {
         SwingUtilities.invokeLater(() -> {
             outputArea.append(text + "\n");
@@ -431,13 +440,13 @@ public class GameGUI extends JFrame {
         try {
             InputStream is = getClass().getResourceAsStream("/fonts/yoster.ttf");
             if (is == null) {
-                System.err.println("⚠️ Font personalizzato non trovato, uso font di sistema");
+                System.err.println("Font personalizzato non trovato, uso font di sistema");
                 return new Font("SansSerif", Font.PLAIN, (int) size);
             }
             Font baseFont = Font.createFont(Font.TRUETYPE_FONT, is);
             return baseFont.deriveFont(size);
         } catch (Exception e) {
-            System.err.println("❌ Errore caricamento font: " + e.getMessage());
+            System.err.println("Errore caricamento font: " + e.getMessage());
             return new Font("SansSerif", Font.PLAIN, (int) size);
         }
     }
@@ -459,6 +468,6 @@ public class GameGUI extends JFrame {
         UIImageManager.getInstance().clearCache();
         updateUI();
         repaint();
-        System.out.println("🔄 Immagini ricaricate");
+        System.out.println("Immagini ricaricate");
     }
 }

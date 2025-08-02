@@ -1,11 +1,7 @@
-# =================================================
-# CONFIGURAZIONE PATH IMMAGINI - THE BLACK MOUNTAIN
-# =================================================
-# 
-# Questo file ti permette di cambiare facilmente i percorsi
-# delle immagini senza modificare il codice Java.
-#
-# Salva questo file in: src/main/resources/config/image_paths.properties
+# ============================
+# CONFIGURAZIONE PATH IMMAGINI 
+# ============================
+
 
 # PATH BASE
 images.base=/images/
@@ -39,12 +35,16 @@ button.exit.hover=/images/buttons/exit_hover.png
 # =================================================
 button.inventory=/images/buttons/inventory.png
 button.inventory.hover=/images/buttons/inventory_hover.png
-button.attack=/images/buttons/sword.png
-button.attack.hover=/images/buttons/sword_hover.png
+button.use_attack=/images/buttons/use_attack.png
+button.use_sword=/images/buttons/use_sword.png
+button.use_bow=/images/buttons/use_bow.png
+button.use_potion=/images/buttons/use_potion.png
 button.save=/images/buttons/save.png
 button.save.hover=/images/buttons/save_hover.png
 button.look=/images/buttons/magnifier.png
 button.look.hover=/images/buttons/magnifier_hover.png
+volume.on=/images/buttons/volume_on.png
+volume.off=/images/buttons/volume_off.png
 
 # =================================================
 # PULSANTI DIREZIONALI
