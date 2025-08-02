@@ -21,9 +21,14 @@ public class UIComponents {
     public static final Color HOVER_COLOR = new Color(100, 60, 140);
     
     // Dimensioni standard
-    public static final Dimension BUTTON_SIZE = new Dimension(80, 80);
-    public static final Dimension SMALL_BUTTON_SIZE = new Dimension(60, 60);
+    public static final Dimension BUTTON_SIZE = new Dimension(50, 50);
+    public static final Dimension SMALL_BUTTON_SIZE = new Dimension(60, 60);  //volume
     public static final Dimension LARGE_BUTTON_SIZE = new Dimension(120, 80);
+    public static final Dimension INVENTORY_SIZE = new Dimension(130, 50);
+    public static final Dimension SAVE_SIZE = new Dimension(90, 50);
+    public static final Dimension ATTACK_SIZE = new Dimension(100, 50);
+
+    
     
     /**
      * Crea un pulsante con immagine personalizzabile
@@ -228,9 +233,9 @@ public class UIComponents {
      * Enum per i tipi di azione
      */
     public enum ActionType {
-        INVENTORY("inventory", "Inventario", "", BUTTON_SIZE),
-        ATTACK("sword", "Attacca", "", BUTTON_SIZE),
-        SAVE("save", "Salva Partita", "", BUTTON_SIZE),
+        INVENTORY("inventory", "Inventario", "", INVENTORY_SIZE),
+        ATTACK("sword", "Attacca", "", ATTACK_SIZE),
+        SAVE("save", "Salva Partita", "", SAVE_SIZE),
         LOOK("magnifier", "Osserva", "", BUTTON_SIZE),
         SOUND_ON("volume_on", "Disattiva Audio", "", SMALL_BUTTON_SIZE),
         SOUND_OFF("volume_off", "Attiva Audio", "", SMALL_BUTTON_SIZE);

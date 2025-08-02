@@ -17,7 +17,7 @@ images.backgrounds=/images/backgrounds/
 images.icons=/images/icons/
 
 # =================================================
-# SFONDI SPECIFICI
+# SFONDI
 # =================================================
 menu.background=/images/backgrounds/menu_background.png
 game.background=/images/backgrounds/game_background.png
@@ -66,9 +66,8 @@ volume.on=/images/icons/volume_on.png
 volume.off=/images/icons/volume_off.png
 
 # =================================================
-# MAPPE STANZE (Opzionale - se vuoi override specifici)
+# MAPPE STANZE
 # =================================================
-# Se non specifichi, usa il pattern automatico: /images/maps/{nome_stanza}.png
 map.ingresso_della_fortezza=/images/maps/ingresso_della_fortezza.png
 map.stanza_del_topo=/images/maps/stanza_del_topo.png
 map.mensa_abbandonata=/images/maps/mensa_abbandonata.png
