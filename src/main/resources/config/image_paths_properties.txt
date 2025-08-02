@@ -42,7 +42,8 @@ button.use_potion=/images/buttons/use_potion.png
 button.save=/images/buttons/save.png
 button.save.hover=/images/buttons/save_hover.png
 button.look=/images/buttons/magnifier.png
-button.look.hover=/images/buttons/magnifier_hover.png
+button.look.hover=/images/buttons/magnifier.png
+button.commands=/images/buttons/commands.png
 volume.on=/images/buttons/volume_on.png
 volume.off=/images/buttons/volume_off.png
 
@@ -57,6 +58,13 @@ button.arrow_left=/images/buttons/arrow_left.png
 button.arrow_left.hover=/images/buttons/arrow_left_hover.png
 button.arrow_right=/images/buttons/arrow_right.png
 button.arrow_right.hover=/images/buttons/arrow_right_hover.png
+
+# =================================================
+# PULSANTI COMANDI AGGIUNTIVI
+# =================================================
+button.open_chest=/images/buttons/open_chest.png
+button.open_chest.hover=/images/buttons/open_chest_hover.png
+button.command_placeholder=/images/buttons/command_placeholder.png
 
 # =================================================
 # ICONE SISTEMA

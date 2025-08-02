@@ -32,6 +32,7 @@ public class GameGUI extends JFrame {
     private JButton northButton, southButton, eastButton, westButton;
     private JButton lookButton, inventoryButton, saveButton, soundToggleButton;
     private JButton useAttackButton, useSwordButton, useBowButton, usePotionButton;
+    private JButton commandsButton; // NUOVO: pulsante per comandi aggiuntivi
     private UIComponents.MapPanel mapPanel;
     private UIComponents.BackgroundPanel backgroundPanel;
 
@@ -171,6 +172,9 @@ public class GameGUI extends JFrame {
         soundToggleButton = UIComponents.createActionButton(
                 UIComponents.ActionType.SOUND_ON, e -> toggleSound()
         );
+        commandsButton = UIComponents.createActionButton(
+                UIComponents.ActionType.COMMANDS, e -> openCommandsDialog()
+        );
 
         // Aggiungi pulsanti centrati
         actionButtonsPanel.add(createCenteredComponent(saveButton));
@@ -212,7 +216,7 @@ public class GameGUI extends JFrame {
         directionPanel.add(new JLabel()); // vuoto
         southButton = UIComponents.createDirectionButton("sud", e -> moveDirection("sud"));
         directionPanel.add(southButton);
-        directionPanel.add(new JLabel()); // vuoto
+        directionPanel.add(commandsButton); // NUOVO: pulsante comandi a fianco del sud
 
         // Contenitore per direzioni centrato in basso
         JPanel directionWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
@@ -305,6 +309,17 @@ public class GameGUI extends JFrame {
 
     private void moveDirection(String direction) {
         performAction(direction);
+    }
+
+    /**
+     * NUOVO: Apre la finestra dei comandi aggiuntivi
+     */
+    private void openCommandsDialog() {
+        CommandsDialog dialog = new CommandsDialog(this, command -> {
+            // Callback per eseguire il comando selezionato
+            performAction(command);
+        });
+        dialog.setVisible(true);
     }
 
     private void saveGame() {
@@ -469,5 +484,87 @@ public class GameGUI extends JFrame {
         updateUI();
         repaint();
         System.out.println("Immagini ricaricate");
+    }
+
+    /**
+     * NUOVO: Metodo per ricaricare specificamente i pulsanti azione
+     * Utile quando cambi le immagini durante lo sviluppo
+     */
+    public void reloadActionButtons() {
+        UIImageManager.getInstance().clearCache();
+        
+        // Ricrea tutti i pulsanti azione con le nuove immagini
+        Container actionParent = inventoryButton.getParent();
+        if (actionParent != null) {
+            // Rimuovi tutti i componenti
+            actionParent.removeAll();
+            
+            // Ricrea i pulsanti con le immagini aggiornate
+            int actionButtonSpacing = 5;
+            
+            inventoryButton = UIComponents.createActionButton(
+                    UIComponents.ActionType.INVENTORY, e -> performAction("inventario")
+            );
+            useAttackButton = UIComponents.createActionButton(
+                    UIComponents.ActionType.ATTACK, e -> performAction("attacca")
+            );
+            useSwordButton = UIComponents.createActionButton(
+                    UIComponents.ActionType.USE_SWORD, e -> performAction("usa spada")
+            );
+            useBowButton = UIComponents.createActionButton(
+                    UIComponents.ActionType.USE_BOW, e -> performAction("usa arco")
+            );
+            usePotionButton = UIComponents.createActionButton(
+                    UIComponents.ActionType.USE_POTION, e -> performAction("usa pozione di cura")
+            );
+            
+            // Ricrea anche il pulsante look
+            lookButton = UIComponents.createActionButton(
+                    UIComponents.ActionType.LOOK, e -> performAction("osserva")
+            );
+            
+            // Ricostruisci il layout
+            actionParent.add(createCenteredComponent(saveButton));
+            actionParent.add(createCenteredComponent(soundToggleButton));
+            actionParent.add(Box.createVerticalStrut(actionButtonSpacing));
+            actionParent.add(createCenteredComponent(inventoryButton));
+            actionParent.add(Box.createVerticalStrut(actionButtonSpacing));
+            actionParent.add(createCenteredComponent(useAttackButton));
+            actionParent.add(Box.createVerticalStrut(actionButtonSpacing));
+            actionParent.add(createCenteredComponent(useSwordButton));
+            actionParent.add(Box.createVerticalStrut(actionButtonSpacing));
+            actionParent.add(createCenteredComponent(useBowButton));
+            actionParent.add(Box.createVerticalStrut(actionButtonSpacing));
+            actionParent.add(createCenteredComponent(usePotionButton));
+            
+            actionParent.revalidate();
+            actionParent.repaint();
+        }
+        
+        // Ricrea anche il pulsante look centrale nelle direzioni
+        Container directionParent = northButton.getParent();
+        if (directionParent != null) {
+            // Trova e sostituisci il pulsante look centrale
+            Component[] components = directionParent.getComponents();
+            for (int i = 0; i < components.length; i++) {
+                if (components[i] instanceof JButton) {
+                    JButton btn = (JButton) components[i];
+                    if ("Osserva".equals(btn.getToolTipText())) {
+                        directionParent.remove(i);
+                        JButton newLookButton = UIComponents.createActionButton(
+                                UIComponents.ActionType.LOOK,
+                                e -> performAction("osserva")
+                        );
+                        directionParent.add(newLookButton, i);
+                        break;
+                    }
+                }
+            }
+            directionParent.revalidate();
+            directionParent.repaint();
+        }
+        
+        updateWeaponButtons();
+        System.out.println("Pulsanti azione ricaricati con nuove immagini");
     }
 }
