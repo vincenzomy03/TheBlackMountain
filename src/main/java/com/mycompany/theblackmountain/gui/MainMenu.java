@@ -47,15 +47,17 @@ public class MainMenu extends JFrame {
         );
         add(backgroundPanel);
 
-       // === TITOLO CON IMMAGINE ===
+        // === TITOLO ===
         JPanel titlePanel = new JPanel();
         titlePanel.setOpaque(false);
         titlePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 80));
 
-        // Pannello contenitore per titolo e immagine
-        JPanel titleContainer = createTitleWithImage();
-        titlePanel.add(titleContainer);
-        
+        JLabel titleLabel = new JLabel("THE BLACK MOUNTAIN");
+        titleLabel.setFont(createTitleFont());
+        titleLabel.setForeground(new Color(100, 22, 22));
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        titlePanel.add(titleLabel);
         backgroundPanel.add(titlePanel, BorderLayout.NORTH);
 
         // === BOTTONI CENTRALI ===
@@ -197,50 +199,6 @@ public class MainMenu extends JFrame {
             }
         });
     }
-    
-    /**
-     * Crea il pannello del titolo con immagine di sfondo
-     */
-    private JPanel createTitleWithImage() {
-        JPanel container = new JPanel();
-        container.setOpaque(false);
-        container.setLayout(new OverlayLayout(container));
-        
-        // Carica l'immagine per il titolo
-        UIImageManager imageManager = UIImageManager.getInstance();
-        ImageIcon titleImage = imageManager.loadScaledImage(
-                UIImageManager.IMAGES_PATH + "title_frame.png", 600, 200);
-        
-        // Label per l'immagine di sfondo
-        JLabel imageLabel = new JLabel(titleImage);
-        imageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        imageLabel.setAlignmentY(Component.CENTER_ALIGNMENT);
-        
-        // Pannello per il testo del titolo
-        JPanel textPanel = new JPanel();
-        textPanel.setOpaque(false);
-        textPanel.setLayout(new BorderLayout());
-        textPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        textPanel.setAlignmentY(Component.CENTER_ALIGNMENT);
-        
-        // Label del titolo
-        JLabel titleLabel = new JLabel("THE BLACK MOUNTAIN");
-        titleLabel.setFont(createTitleFont());
-        titleLabel.setForeground(Color.WHITE);
-        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        
-        // Aggiungi ombra al testo per migliorare la leggibilità
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        
-        textPanel.add(titleLabel, BorderLayout.CENTER);
-        
-        // Aggiungi i componenti al container (l'ordine è importante!)
-        container.add(textPanel);  // Testo sopra
-        container.add(imageLabel); // Immagine sotto
-        
-        return container;
-    }
-
 
     /**
      * Verifica se un'icona è un placeholder (creato quando l'immagine non
@@ -317,12 +275,12 @@ public class MainMenu extends JFrame {
             InputStream is = getClass().getResourceAsStream("/fonts/yoster.ttf");
             if (is != null) {
                 Font baseFont = Font.createFont(Font.TRUETYPE_FONT, is);
-                return baseFont.deriveFont(Font.BOLD, 48f);
+                return baseFont.deriveFont(Font.BOLD, 60f);
             }
         } catch (Exception e) {
             System.err.println("⚠️ Font personalizzato non trovato per il titolo");
         }
-        return new Font("Serif", Font.BOLD, 48);
+        return new Font("Serif", Font.BOLD, 60);
     }
 
     private void setWindowIcon() {
