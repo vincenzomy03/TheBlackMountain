@@ -7,7 +7,6 @@ import com.mycompany.theblackmountain.gui.utils.UIImageManager;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
 import javax.sound.sampled.AudioInputStream;
@@ -21,7 +20,6 @@ public class MainMenu extends JFrame {
     private JButton loadGameButton;
     private JButton soundToggleButton;
     private JButton exitButton;
-    private JButton creditsButton;
 
     private boolean soundEffectsEnabled = true;
 
@@ -49,37 +47,16 @@ public class MainMenu extends JFrame {
         );
         add(backgroundPanel);
 
-        // === TITOLO ===
+       // === TITOLO CON IMMAGINE ===
         JPanel titlePanel = new JPanel();
         titlePanel.setOpaque(false);
         titlePanel.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 80));
 
-        JLabel titleLabel = new JLabel("THE BLACK MOUNTAIN");
-        titleLabel.setFont(createTitleFont());
-        titleLabel.setForeground(Color.WHITE);
-        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-
-        // Aggiungi effetto ombra al titolo
-        titleLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(20, 0, 0, 0),
-                BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(100, 50, 150), 2),
-                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
-                )
-        ));
-
-        titlePanel.add(titleLabel);
+        // Pannello contenitore per titolo e immagine
+        JPanel titleContainer = createTitleWithImage();
+        titlePanel.add(titleContainer);
+        
         backgroundPanel.add(titlePanel, BorderLayout.NORTH);
-
-        // === SOTTOTITOLO ===
-        JPanel subtitlePanel = new JPanel();
-        subtitlePanel.setOpaque(false);
-        subtitlePanel.setLayout(new FlowLayout(FlowLayout.CENTER));
-
-        JLabel subtitleLabel = new JLabel("Un'Avventura Testuale Epica");
-        subtitleLabel.setFont(new Font("Serif", Font.ITALIC, 18));
-        subtitleLabel.setForeground(new Color(200, 200, 200));
-        subtitlePanel.add(subtitleLabel);
 
         // === BOTTONI CENTRALI ===
         JPanel mainButtonPanel = createMainButtonPanel();
@@ -87,7 +64,6 @@ public class MainMenu extends JFrame {
         // Contenitore per centrare i pulsanti
         JPanel centerContainer = new JPanel(new BorderLayout());
         centerContainer.setOpaque(false);
-        centerContainer.add(subtitlePanel, BorderLayout.NORTH);
         centerContainer.add(mainButtonPanel, BorderLayout.CENTER);
 
         backgroundPanel.add(centerContainer, BorderLayout.CENTER);
@@ -116,10 +92,6 @@ public class MainMenu extends JFrame {
         loadGameButton = createImageMenuButton("load_game", "CARICA PARTITA",
                 "Continua un'avventura salvata", buttonSize, e -> loadGame());
 
-        // CREDITI
-        creditsButton = createImageMenuButton("credits", "CREDITI",
-                "Informazioni sul gioco", buttonSize, e -> showCredits());
-
         // ESCI
         exitButton = createImageMenuButton("exit", "ESCI",
                 "Chiudi il gioco", buttonSize, e -> exitGame());
@@ -130,8 +102,6 @@ public class MainMenu extends JFrame {
         buttonPanel.add(Box.createVerticalStrut(spacing));
         buttonPanel.add(createCenteredButton(loadGameButton));
         buttonPanel.add(Box.createVerticalStrut(spacing));
-        buttonPanel.add(createCenteredButton(creditsButton));
-        buttonPanel.add(Box.createVerticalStrut(spacing));
         buttonPanel.add(createCenteredButton(exitButton));
         buttonPanel.add(Box.createVerticalGlue());
 
@@ -140,7 +110,8 @@ public class MainMenu extends JFrame {
 
     /**
      * Crea un pulsante del menu principale che supporta immagini personalizzate
-     * Questo metodo usa UIComponents per supportare le immagini che aggiungerai in futuro
+     * Questo metodo usa UIComponents per supportare le immagini che aggiungerai
+     * in futuro
      */
     private JButton createImageMenuButton(String imageName, String text, String tooltip,
             Dimension size, ActionListener action) {
@@ -161,7 +132,7 @@ public class MainMenu extends JFrame {
         if (buttonIcons[0] != null && !isPlaceholderIcon(buttonIcons[0])) {
             button.setIcon(buttonIcons[0]);
             button.setHorizontalTextPosition(SwingConstants.CENTER);
-            button.setVerticalTextPosition(SwingConstants.BOTTOM);
+            button.setVerticalTextPosition(SwingConstants.CENTER);
 
             // Effetto hover con immagine
             button.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -184,7 +155,7 @@ public class MainMenu extends JFrame {
         }
 
         // Configurazione comune
-        button.setFont(new Font("SansSerif", Font.BOLD, 16));
+        button.setFont(new Font("SansSerif", Font.BOLD, 18));
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
         button.setBorderPainted(false);
@@ -226,9 +197,54 @@ public class MainMenu extends JFrame {
             }
         });
     }
+    
+    /**
+     * Crea il pannello del titolo con immagine di sfondo
+     */
+    private JPanel createTitleWithImage() {
+        JPanel container = new JPanel();
+        container.setOpaque(false);
+        container.setLayout(new OverlayLayout(container));
+        
+        // Carica l'immagine per il titolo
+        UIImageManager imageManager = UIImageManager.getInstance();
+        ImageIcon titleImage = imageManager.loadScaledImage(
+                UIImageManager.IMAGES_PATH + "title_frame.png", 600, 200);
+        
+        // Label per l'immagine di sfondo
+        JLabel imageLabel = new JLabel(titleImage);
+        imageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        imageLabel.setAlignmentY(Component.CENTER_ALIGNMENT);
+        
+        // Pannello per il testo del titolo
+        JPanel textPanel = new JPanel();
+        textPanel.setOpaque(false);
+        textPanel.setLayout(new BorderLayout());
+        textPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        textPanel.setAlignmentY(Component.CENTER_ALIGNMENT);
+        
+        // Label del titolo
+        JLabel titleLabel = new JLabel("THE BLACK MOUNTAIN");
+        titleLabel.setFont(createTitleFont());
+        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        
+        // Aggiungi ombra al testo per migliorare la leggibilità
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        
+        textPanel.add(titleLabel, BorderLayout.CENTER);
+        
+        // Aggiungi i componenti al container (l'ordine è importante!)
+        container.add(textPanel);  // Testo sopra
+        container.add(imageLabel); // Immagine sotto
+        
+        return container;
+    }
+
 
     /**
-     * Verifica se un'icona è un placeholder (creato quando l'immagine non esiste)
+     * Verifica se un'icona è un placeholder (creato quando l'immagine non
+     * esiste)
      */
     private boolean isPlaceholderIcon(ImageIcon icon) {
         // Un modo semplice per rilevare i placeholder: controllare se l'immagine è molto piccola
@@ -342,7 +358,6 @@ public class MainMenu extends JFrame {
 
     private void startNewGame() {
         try {
-            // Non fermare la musica - continua nel gioco
             GameGUI gameGUI = new GameGUI();
             gameGUI.setVisible(true);
             this.dispose();
@@ -380,27 +395,6 @@ public class MainMenu extends JFrame {
                 ex.printStackTrace();
             }
         }
-    }
-
-    private void showCredits() {
-        String creditsText = """
-                === THE BLACK MOUNTAIN ===
-                
-                Un'avventura testuale epica
-                
-                🎮 Sviluppato da: Il tuo team
-                🎵 Musica: Composizioni originali
-                🎨 Arte: Immagini e mappe personalizzate
-                ⚔️ Sistema di combattimento avanzato
-                💾 Sistema di salvataggio completo
-                
-                Grazie per aver giocato!
-                
-                Versione 1.0 - 2024
-                """;
-
-        JOptionPane.showMessageDialog(this, creditsText,
-                "Crediti", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void exitGame() {
