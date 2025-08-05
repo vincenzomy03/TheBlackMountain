@@ -95,7 +95,7 @@ public class GameDatabaseService {
         List<Character> characters = new ArrayList<>();
         
         for (CharacterEntity entity : entities) {
-            Character character = (Character) DatabaseConverter.toCharacter(entity);
+            Character character = DatabaseConverter.toCharacter(entity);
             if (character != null) {
                 characters.add(character);
             }
@@ -105,20 +105,23 @@ public class GameDatabaseService {
     }
     
     /**
-     * Carica i personaggi di una stanza specifica
+     * Carica i personaggi di una stanza specifica (SOLO nemici, non il giocatore)
      */
-    public List<Character> loadRoomCharacters(int roomId) throws SQLException {
+    public List<Character> loadRoomEnemies(int roomId) throws SQLException {
         List<CharacterEntity> entities = characterDAO.findByRoomId(roomId);
-        List<Character> characters = new ArrayList<>();
+        List<Character> enemies = new ArrayList<>();
         
         for (CharacterEntity entity : entities) {
-            Character character = (Character) DatabaseConverter.toCharacter(entity);
-            if (character != null) {
-                characters.add(character);
+            // Esclude il giocatore
+            if (!"PLAYER".equals(entity.getCharacterType())) {
+                Character enemy = DatabaseConverter.toCharacter(entity);
+                if (enemy != null) {
+                    enemies.add(enemy);
+                }
             }
         }
         
-        return characters;
+        return enemies;
     }
     
     /**
@@ -126,7 +129,18 @@ public class GameDatabaseService {
      */
     public Character loadPlayer() throws SQLException {
         CharacterEntity entity = characterDAO.findPlayer();
-        return (Character) DatabaseConverter.toCharacter(entity);
+        return DatabaseConverter.toCharacter(entity);
+    }
+    
+    /**
+     * Ottiene l'ID della stanza in cui si trova il giocatore
+     */
+    public int getPlayerRoomId(int playerId) throws SQLException {
+        CharacterEntity player = characterDAO.findById(playerId);
+        if (player != null && player.getRoomId() != null) {
+            return player.getRoomId();
+        }
+        return 0; // Stanza iniziale di default
     }
     
     /**
