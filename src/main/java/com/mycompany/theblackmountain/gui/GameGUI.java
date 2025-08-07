@@ -32,7 +32,7 @@ public class GameGUI extends JFrame {
     private JButton northButton, southButton, eastButton, westButton;
     private JButton lookButton, inventoryButton, saveButton, soundToggleButton;
     private JButton useAttackButton, useSwordButton, useBowButton, usePotionButton;
-    private JButton commandsButton; // NUOVO: pulsante per comandi aggiuntivi
+    private JButton commandsButton;
     private UIComponents.MapPanel mapPanel;
     private UIComponents.BackgroundPanel backgroundPanel;
 
@@ -216,7 +216,7 @@ public class GameGUI extends JFrame {
         directionPanel.add(new JLabel()); // vuoto
         southButton = UIComponents.createDirectionButton("sud", e -> moveDirection("sud"));
         directionPanel.add(southButton);
-        directionPanel.add(commandsButton); // NUOVO: pulsante comandi a fianco del sud
+        directionPanel.add(commandsButton);
 
         // Contenitore per direzioni centrato in basso
         JPanel directionWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));

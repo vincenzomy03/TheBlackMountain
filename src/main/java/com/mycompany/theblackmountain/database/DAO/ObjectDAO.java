@@ -2,11 +2,12 @@ package com.mycompany.theblackmountain.database.dao;
 
 import com.mycompany.theblackmountain.database.entities.ObjectEntity;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * DAO migliorato per gli oggetti
+ * DAO per gli oggetti
  */
 public class ObjectDAO extends BaseDAO<ObjectEntity, Integer> {
     
@@ -83,8 +84,6 @@ public class ObjectDAO extends BaseDAO<ObjectEntity, Integer> {
         stmt.setInt(10, object.getId());
     }
     
-    // Metodi specifici per Object
-    
     /**
      * Trova oggetti per nome o alias (ricerca parziale)
      */
@@ -106,7 +105,7 @@ public class ObjectDAO extends BaseDAO<ObjectEntity, Integer> {
     public List<ObjectEntity> findByRoomId(int roomId) throws SQLException {
         String sql = "SELECT o.* FROM objects o " +
                     "JOIN room_objects ro ON o.id = ro.object_id " +
-                    "WHERE ro.room_id = ? AND ro.is_container_content = false " +
+                    "WHERE ro.room_id = ? AND (ro.is_container_content = false OR ro.is_container_content IS NULL) " +
                     "ORDER BY o.id";
         return executeQuery(sql, roomId);
     }
@@ -123,32 +122,10 @@ public class ObjectDAO extends BaseDAO<ObjectEntity, Integer> {
     }
     
     /**
-     * Trova oggetti raccoglibili
-     */
-    public List<ObjectEntity> findPickupable() throws SQLException {
-        return executeQuery("SELECT * FROM objects WHERE is_pickupable = true ORDER BY id");
-    }
-    
-    /**
-     * Trova oggetti apribili
-     */
-    public List<ObjectEntity> findOpenable() throws SQLException {
-        return executeQuery("SELECT * FROM objects WHERE is_openable = true ORDER BY id");
-    }
-    
-    /**
      * Aggiorna lo stato di apertura di un oggetto
      */
     public void updateOpenState(int id, boolean isOpen) throws SQLException {
         executeUpdate("UPDATE objects SET is_open = ? WHERE id = ?", isOpen, id);
-    }
-    
-    /**
-     * Sposta un oggetto da una stanza a un'altra
-     */
-    public void moveObjectToRoom(int objectId, int fromRoomId, int toRoomId) throws SQLException {
-        executeUpdate("UPDATE room_objects SET room_id = ? WHERE object_id = ? AND room_id = ?", 
-                     toRoomId, objectId, fromRoomId);
     }
     
     /**
@@ -162,7 +139,6 @@ public class ObjectDAO extends BaseDAO<ObjectEntity, Integer> {
      * Aggiunge un oggetto a una stanza
      */
     public void addToRoom(int objectId, int roomId) throws SQLException {
-        // Verifica che l'associazione non esista già
         Optional<Integer> existing = executeScalarQuery(
             "SELECT 1 FROM room_objects WHERE object_id = ? AND room_id = ?",
             Integer.class, objectId, roomId
@@ -173,36 +149,6 @@ public class ObjectDAO extends BaseDAO<ObjectEntity, Integer> {
         }
     }
     
-    /**
-     * Ottiene statistiche degli oggetti per tipo
-     */
-    public List<ObjectTypeStats> getObjectStatsByType() throws SQLException {
-        String sql = "SELECT object_type, COUNT(*) as count, " +
-                    "SUM(CASE WHEN is_pickupable = true THEN 1 ELSE 0 END) as pickupable_count, " +
-                    "SUM(CASE WHEN is_openable = true THEN 1 ELSE 0 END) as openable_count, " +
-                    "SUM(CASE WHEN is_open = true THEN 1 ELSE 0 END) as open_count " +
-                    "FROM objects GROUP BY object_type";
-        
-        List<ObjectTypeStats> stats = new ArrayList<>();
-        
-        try (Connection conn = databaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            
-            while (rs.next()) {
-                ObjectTypeStats stat = new ObjectTypeStats();
-                stat.objectType = rs.getString("object_type");
-                stat.totalCount = rs.getInt("count");
-                stat.pickupableCount = rs.getInt("pickupable_count");
-                stat.openableCount = rs.getInt("openable_count");
-                stat.openCount = rs.getInt("open_count");
-                stats.add(stat);
-            }
-        }
-        
-        return stats;
-    }
-    
     @Override
     protected void validateBeforeSave(ObjectEntity entity) throws SQLException {
         if (entity.getName() == null || entity.getName().trim().isEmpty()) {
@@ -210,23 +156,6 @@ public class ObjectDAO extends BaseDAO<ObjectEntity, Integer> {
         }
         if (entity.getObjectType() == null || entity.getObjectType().trim().isEmpty()) {
             throw new SQLException("Il tipo dell'oggetto non può essere vuoto");
-        }
-    }
-    
-    /**
-     * Classe per statistiche degli oggetti per tipo
-     */
-    public static class ObjectTypeStats {
-        public String objectType;
-        public int totalCount;
-        public int pickupableCount;
-        public int openableCount;
-        public int openCount;
-        
-        @Override
-        public String toString() {
-            return String.format("Tipo: %s, Totali: %d, Raccoglibili: %d, Apribili: %d, Aperti: %d",
-                objectType, totalCount, pickupableCount, openableCount, openCount);
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.mycompany.theblackmountain.database.dao;
 
-import com.mycompany.theblackmountain.database.DatabaseException;
 import com.mycompany.theblackmountain.database.DatabaseManager;
 
 import java.sql.*;
@@ -70,6 +69,7 @@ public abstract class BaseDAO<T, ID> {
      * Salva una nuova entità
      */
     public void save(T entity) throws SQLException {
+        validateBeforeSave(entity);
         String sql = buildInsertSql();
         
         try (Connection conn = databaseManager.getConnection();
@@ -81,6 +81,8 @@ public abstract class BaseDAO<T, ID> {
             if (affected == 0) {
                 throw new SQLException("Inserimento fallito, nessuna riga interessata");
             }
+            
+            afterSave(entity);
         }
     }
     
@@ -88,6 +90,7 @@ public abstract class BaseDAO<T, ID> {
      * Aggiorna un'entità esistente
      */
     public void update(T entity) throws SQLException {
+        validateBeforeSave(entity);
         String sql = buildUpdateSql();
         
         try (Connection conn = databaseManager.getConnection();

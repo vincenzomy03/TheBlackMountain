@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * DAO migliorato per i personaggi
+ * DAO per i personaggi
  */
 public class CharacterDAO extends BaseDAO<CharacterEntity, Integer> {
     
@@ -154,43 +154,6 @@ public class CharacterDAO extends BaseDAO<CharacterEntity, Integer> {
         return count.orElse(0);
     }
     
-    /**
-     * Trova personaggi con HP sotto una soglia
-     */
-    public List<CharacterEntity> findLowHealthCharacters(int healthThreshold) throws SQLException {
-        return executeQuery("SELECT * FROM characters WHERE current_hp <= ? AND is_alive = true ORDER BY current_hp", healthThreshold);
-    }
-    
-    /**
-     * Ottiene statistiche dei personaggi per tipo
-     */
-    public List<CharacterStats> getCharacterStatsByType() throws SQLException {
-        String sql = "SELECT character_type, COUNT(*) as count, " +
-                    "AVG(CAST(current_hp as FLOAT)) as avg_hp, " +
-                    "AVG(CAST(attack as FLOAT)) as avg_attack, " +
-                    "SUM(CASE WHEN is_alive = true THEN 1 ELSE 0 END) as alive_count " +
-                    "FROM characters GROUP BY character_type";
-        
-        List<CharacterStats> stats = new ArrayList<>();
-        
-        try (Connection conn = databaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            
-            while (rs.next()) {
-                CharacterStats stat = new CharacterStats();
-                stat.characterType = rs.getString("character_type");
-                stat.totalCount = rs.getInt("count");
-                stat.averageHp = rs.getDouble("avg_hp");
-                stat.averageAttack = rs.getDouble("avg_attack");
-                stat.aliveCount = rs.getInt("alive_count");
-                stats.add(stat);
-            }
-        }
-        
-        return stats;
-    }
-    
     @Override
     protected void validateBeforeSave(CharacterEntity entity) throws SQLException {
         if (entity.getName() == null || entity.getName().trim().isEmpty()) {
@@ -204,23 +167,6 @@ public class CharacterDAO extends BaseDAO<CharacterEntity, Integer> {
         }
         if (entity.getCurrentHp() > entity.getMaxHp()) {
             throw new SQLException("Gli HP correnti non possono superare quelli massimi");
-        }
-    }
-    
-    /**
-     * Classe per statistiche dei personaggi
-     */
-    public static class CharacterStats {
-        public String characterType;
-        public int totalCount;
-        public int aliveCount;
-        public double averageHp;
-        public double averageAttack;
-        
-        @Override
-        public String toString() {
-            return String.format("Tipo: %s, Totali: %d, Vivi: %d, HP Medio: %.1f, ATT Medio: %.1f",
-                characterType, totalCount, aliveCount, averageHp, averageAttack);
         }
     }
 }
