@@ -1,267 +1,46 @@
 package com.mycompany.theblackmountain.database.dao;
 
-import com.mycompany.theblackmountain.database.DatabaseManager;
 import com.mycompany.theblackmountain.database.entities.ObjectEntity;
-
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
- * Data Access Object per gli oggetti
- * @author vince
+ * DAO migliorato per gli oggetti
  */
-public class ObjectDAO {
+public class ObjectDAO extends BaseDAO<ObjectEntity, Integer> {
     
-    /**
-     * Trova un oggetto per ID
-     */
-    public ObjectEntity findById(int id) throws SQLException {
-        String sql = "SELECT * FROM objects WHERE id = ?";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, id);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return mapResultSetToEntity(rs);
-                }
-            }
-        }
-        return null;
+    @Override
+    protected String getTableName() {
+        return "objects";
     }
     
-    /**
-     * Trova tutti gli oggetti
-     */
-    public List<ObjectEntity> findAll() throws SQLException {
-        String sql = "SELECT * FROM objects ORDER BY id";
-        List<ObjectEntity> objects = new ArrayList<>();
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            
-            while (rs.next()) {
-                objects.add(mapResultSetToEntity(rs));
-            }
-        }
-        return objects;
+    @Override
+    protected String getIdColumn() {
+        return "id";
     }
     
-    /**
-     * Trova oggetti per nome (ricerca parziale)
-     */
-    public List<ObjectEntity> findByName(String name) throws SQLException {
-        String sql = "SELECT * FROM objects WHERE name LIKE ? OR aliases LIKE ? ORDER BY id";
-        List<ObjectEntity> objects = new ArrayList<>();
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            String searchPattern = "%" + name + "%";
-            stmt.setString(1, searchPattern);
-            stmt.setString(2, searchPattern);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    objects.add(mapResultSetToEntity(rs));
-                }
-            }
-        }
-        return objects;
+    @Override
+    protected Integer getEntityId(ObjectEntity entity) {
+        return entity.getId();
     }
     
-    /**
-     * Trova oggetti per tipo
-     */
-    public List<ObjectEntity> findByType(String objectType) throws SQLException {
-        String sql = "SELECT * FROM objects WHERE object_type = ? ORDER BY id";
-        List<ObjectEntity> objects = new ArrayList<>();
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, objectType);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    objects.add(mapResultSetToEntity(rs));
-                }
-            }
-        }
-        return objects;
+    @Override
+    protected String buildInsertSql() {
+        return "INSERT INTO objects (id, name, description, aliases, is_openable, " +
+               "is_pickupable, is_pushable, is_open, is_pushed, object_type) " +
+               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     }
     
-    /**
-     * Trova oggetti in una stanza specifica
-     */
-    public List<ObjectEntity> findByRoomId(int roomId) throws SQLException {
-        String sql = "SELECT o.* FROM objects o " +
-                    "JOIN room_objects ro ON o.id = ro.object_id " +
-                    "WHERE ro.room_id = ? AND ro.is_container_content = false " +
-                    "ORDER BY o.id";
-        List<ObjectEntity> objects = new ArrayList<>();
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, roomId);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    objects.add(mapResultSetToEntity(rs));
-                }
-            }
-        }
-        return objects;
+    @Override
+    protected String buildUpdateSql() {
+        return "UPDATE objects SET name = ?, description = ?, aliases = ?, " +
+               "is_openable = ?, is_pickupable = ?, is_pushable = ?, " +
+               "is_open = ?, is_pushed = ?, object_type = ? WHERE id = ?";
     }
     
-    /**
-     * Trova oggetti contenuti in un container
-     */
-    public List<ObjectEntity> findByContainerId(int containerId) throws SQLException {
-        String sql = "SELECT o.* FROM objects o " +
-                    "JOIN room_objects ro ON o.id = ro.object_id " +
-                    "WHERE ro.container_id = ? AND ro.is_container_content = true " +
-                    "ORDER BY o.id";
-        List<ObjectEntity> objects = new ArrayList<>();
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, containerId);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    objects.add(mapResultSetToEntity(rs));
-                }
-            }
-        }
-        return objects;
-    }
-    
-    /**
-     * Salva un nuovo oggetto
-     */
-    public void save(ObjectEntity object) throws SQLException {
-        String sql = "INSERT INTO objects (id, name, description, aliases, is_openable, " +
-                    "is_pickupable, is_pushable, is_open, is_pushed, object_type) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            mapEntityToStatement(stmt, object);
-            stmt.executeUpdate();
-        }
-    }
-    
-    /**
-     * Aggiorna un oggetto esistente
-     */
-    public void update(ObjectEntity object) throws SQLException {
-        String sql = "UPDATE objects SET name = ?, description = ?, aliases = ?, " +
-                    "is_openable = ?, is_pickupable = ?, is_pushable = ?, " +
-                    "is_open = ?, is_pushed = ?, object_type = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, object.getName());
-            stmt.setString(2, object.getDescription());
-            stmt.setString(3, object.getAliases());
-            stmt.setBoolean(4, object.isOpenable());
-            stmt.setBoolean(5, object.isPickupable());
-            stmt.setBoolean(6, object.isPushable());
-            stmt.setBoolean(7, object.isOpen());
-            stmt.setBoolean(8, object.isPushed());
-            stmt.setString(9, object.getObjectType());
-            stmt.setInt(10, object.getId());
-            
-            stmt.executeUpdate();
-        }
-    }
-    
-    /**
-     * Elimina un oggetto
-     */
-    public void delete(int id) throws SQLException {
-        String sql = "DELETE FROM objects WHERE id = ?";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-        }
-    }
-    
-    /**
-     * Aggiorna lo stato di apertura di un oggetto
-     */
-    public void updateOpenState(int id, boolean isOpen) throws SQLException {
-        String sql = "UPDATE objects SET is_open = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setBoolean(1, isOpen);
-            stmt.setInt(2, id);
-            stmt.executeUpdate();
-        }
-    }
-    
-    /**
-     * Sposta un oggetto da una stanza a un'altra
-     */
-    public void moveObjectToRoom(int objectId, int fromRoomId, int toRoomId) throws SQLException {
-        String sql = "UPDATE room_objects SET room_id = ? WHERE object_id = ? AND room_id = ?";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, toRoomId);
-            stmt.setInt(2, objectId);
-            stmt.setInt(3, fromRoomId);
-            stmt.executeUpdate();
-        }
-    }
-    
-    /**
-     * Rimuove un oggetto da una stanza
-     */
-    public void removeFromRoom(int objectId, int roomId) throws SQLException {
-        String sql = "DELETE FROM room_objects WHERE object_id = ? AND room_id = ?";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, objectId);
-            stmt.setInt(2, roomId);
-            stmt.executeUpdate();
-        }
-    }
-    
-    /**
-     * Aggiunge un oggetto a una stanza
-     */
-    public void addToRoom(int objectId, int roomId) throws SQLException {
-        String sql = "INSERT INTO room_objects (room_id, object_id) VALUES (?, ?)";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, roomId);
-            stmt.setInt(2, objectId);
-            stmt.executeUpdate();
-        }
-    }
-    
-    // Metodi di utilità
-    private ObjectEntity mapResultSetToEntity(ResultSet rs) throws SQLException {
+    @Override
+    protected ObjectEntity mapResultSetToEntity(ResultSet rs) throws SQLException {
         ObjectEntity entity = new ObjectEntity();
         entity.setId(rs.getInt("id"));
         entity.setName(rs.getString("name"));
@@ -276,7 +55,8 @@ public class ObjectDAO {
         return entity;
     }
     
-    private void mapEntityToStatement(PreparedStatement stmt, ObjectEntity object) throws SQLException {
+    @Override
+    protected void mapEntityToInsertStatement(PreparedStatement stmt, ObjectEntity object) throws SQLException {
         stmt.setInt(1, object.getId());
         stmt.setString(2, object.getName());
         stmt.setString(3, object.getDescription());
@@ -287,5 +67,166 @@ public class ObjectDAO {
         stmt.setBoolean(8, object.isOpen());
         stmt.setBoolean(9, object.isPushed());
         stmt.setString(10, object.getObjectType());
+    }
+    
+    @Override
+    protected void mapEntityToUpdateStatement(PreparedStatement stmt, ObjectEntity object) throws SQLException {
+        stmt.setString(1, object.getName());
+        stmt.setString(2, object.getDescription());
+        stmt.setString(3, object.getAliases());
+        stmt.setBoolean(4, object.isOpenable());
+        stmt.setBoolean(5, object.isPickupable());
+        stmt.setBoolean(6, object.isPushable());
+        stmt.setBoolean(7, object.isOpen());
+        stmt.setBoolean(8, object.isPushed());
+        stmt.setString(9, object.getObjectType());
+        stmt.setInt(10, object.getId());
+    }
+    
+    // Metodi specifici per Object
+    
+    /**
+     * Trova oggetti per nome o alias (ricerca parziale)
+     */
+    public List<ObjectEntity> findByNameOrAlias(String searchTerm) throws SQLException {
+        String pattern = "%" + searchTerm + "%";
+        return executeQuery("SELECT * FROM objects WHERE name LIKE ? OR aliases LIKE ? ORDER BY id", pattern, pattern);
+    }
+    
+    /**
+     * Trova oggetti per tipo
+     */
+    public List<ObjectEntity> findByType(String objectType) throws SQLException {
+        return executeQuery("SELECT * FROM objects WHERE object_type = ? ORDER BY id", objectType);
+    }
+    
+    /**
+     * Trova oggetti in una stanza specifica
+     */
+    public List<ObjectEntity> findByRoomId(int roomId) throws SQLException {
+        String sql = "SELECT o.* FROM objects o " +
+                    "JOIN room_objects ro ON o.id = ro.object_id " +
+                    "WHERE ro.room_id = ? AND ro.is_container_content = false " +
+                    "ORDER BY o.id";
+        return executeQuery(sql, roomId);
+    }
+    
+    /**
+     * Trova oggetti contenuti in un container
+     */
+    public List<ObjectEntity> findByContainerId(int containerId) throws SQLException {
+        String sql = "SELECT o.* FROM objects o " +
+                    "JOIN room_objects ro ON o.id = ro.object_id " +
+                    "WHERE ro.container_id = ? AND ro.is_container_content = true " +
+                    "ORDER BY o.id";
+        return executeQuery(sql, containerId);
+    }
+    
+    /**
+     * Trova oggetti raccoglibili
+     */
+    public List<ObjectEntity> findPickupable() throws SQLException {
+        return executeQuery("SELECT * FROM objects WHERE is_pickupable = true ORDER BY id");
+    }
+    
+    /**
+     * Trova oggetti apribili
+     */
+    public List<ObjectEntity> findOpenable() throws SQLException {
+        return executeQuery("SELECT * FROM objects WHERE is_openable = true ORDER BY id");
+    }
+    
+    /**
+     * Aggiorna lo stato di apertura di un oggetto
+     */
+    public void updateOpenState(int id, boolean isOpen) throws SQLException {
+        executeUpdate("UPDATE objects SET is_open = ? WHERE id = ?", isOpen, id);
+    }
+    
+    /**
+     * Sposta un oggetto da una stanza a un'altra
+     */
+    public void moveObjectToRoom(int objectId, int fromRoomId, int toRoomId) throws SQLException {
+        executeUpdate("UPDATE room_objects SET room_id = ? WHERE object_id = ? AND room_id = ?", 
+                     toRoomId, objectId, fromRoomId);
+    }
+    
+    /**
+     * Rimuove un oggetto da una stanza
+     */
+    public void removeFromRoom(int objectId, int roomId) throws SQLException {
+        executeUpdate("DELETE FROM room_objects WHERE object_id = ? AND room_id = ?", objectId, roomId);
+    }
+    
+    /**
+     * Aggiunge un oggetto a una stanza
+     */
+    public void addToRoom(int objectId, int roomId) throws SQLException {
+        // Verifica che l'associazione non esista già
+        Optional<Integer> existing = executeScalarQuery(
+            "SELECT 1 FROM room_objects WHERE object_id = ? AND room_id = ?",
+            Integer.class, objectId, roomId
+        );
+        
+        if (!existing.isPresent()) {
+            executeUpdate("INSERT INTO room_objects (room_id, object_id) VALUES (?, ?)", roomId, objectId);
+        }
+    }
+    
+    /**
+     * Ottiene statistiche degli oggetti per tipo
+     */
+    public List<ObjectTypeStats> getObjectStatsByType() throws SQLException {
+        String sql = "SELECT object_type, COUNT(*) as count, " +
+                    "SUM(CASE WHEN is_pickupable = true THEN 1 ELSE 0 END) as pickupable_count, " +
+                    "SUM(CASE WHEN is_openable = true THEN 1 ELSE 0 END) as openable_count, " +
+                    "SUM(CASE WHEN is_open = true THEN 1 ELSE 0 END) as open_count " +
+                    "FROM objects GROUP BY object_type";
+        
+        List<ObjectTypeStats> stats = new ArrayList<>();
+        
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                ObjectTypeStats stat = new ObjectTypeStats();
+                stat.objectType = rs.getString("object_type");
+                stat.totalCount = rs.getInt("count");
+                stat.pickupableCount = rs.getInt("pickupable_count");
+                stat.openableCount = rs.getInt("openable_count");
+                stat.openCount = rs.getInt("open_count");
+                stats.add(stat);
+            }
+        }
+        
+        return stats;
+    }
+    
+    @Override
+    protected void validateBeforeSave(ObjectEntity entity) throws SQLException {
+        if (entity.getName() == null || entity.getName().trim().isEmpty()) {
+            throw new SQLException("Il nome dell'oggetto non può essere vuoto");
+        }
+        if (entity.getObjectType() == null || entity.getObjectType().trim().isEmpty()) {
+            throw new SQLException("Il tipo dell'oggetto non può essere vuoto");
+        }
+    }
+    
+    /**
+     * Classe per statistiche degli oggetti per tipo
+     */
+    public static class ObjectTypeStats {
+        public String objectType;
+        public int totalCount;
+        public int pickupableCount;
+        public int openableCount;
+        public int openCount;
+        
+        @Override
+        public String toString() {
+            return String.format("Tipo: %s, Totali: %d, Raccoglibili: %d, Apribili: %d, Aperti: %d",
+                objectType, totalCount, pickupableCount, openableCount, openCount);
+        }
     }
 }

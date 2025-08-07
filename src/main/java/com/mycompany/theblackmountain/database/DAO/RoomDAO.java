@@ -1,183 +1,46 @@
 package com.mycompany.theblackmountain.database.dao;
 
-import com.mycompany.theblackmountain.database.DatabaseManager;
 import com.mycompany.theblackmountain.database.entities.RoomEntity;
-
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
- * Data Access Object per le stanze
- * @author vince
+ * DAO migliorato per le stanze
  */
-public class RoomDAO {
+public class RoomDAO extends BaseDAO<RoomEntity, Integer> {
     
-    /**
-     * Trova una stanza per ID
-     */
-    public RoomEntity findById(int id) throws SQLException {
-        String sql = "SELECT * FROM rooms WHERE id = ?";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, id);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return mapResultSetToEntity(rs);
-                }
-            }
-        }
-        return null;
+    @Override
+    protected String getTableName() {
+        return "rooms";
     }
     
-    /**
-     * Trova tutte le stanze
-     */
-    public List<RoomEntity> findAll() throws SQLException {
-        String sql = "SELECT * FROM rooms ORDER BY id";
-        List<RoomEntity> rooms = new ArrayList<>();
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            
-            while (rs.next()) {
-                rooms.add(mapResultSetToEntity(rs));
-            }
-        }
-        return rooms;
+    @Override
+    protected String getIdColumn() {
+        return "id";
     }
     
-    /**
-     * Trova stanze per nome (ricerca parziale)
-     */
-    public List<RoomEntity> findByName(String name) throws SQLException {
-        String sql = "SELECT * FROM rooms WHERE name LIKE ? ORDER BY id";
-        List<RoomEntity> rooms = new ArrayList<>();
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, "%" + name + "%");
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    rooms.add(mapResultSetToEntity(rs));
-                }
-            }
-        }
-        return rooms;
+    @Override
+    protected Integer getEntityId(RoomEntity entity) {
+        return entity.getId();
     }
     
-    /**
-     * Salva una nuova stanza
-     */
-    public void save(RoomEntity room) throws SQLException {
-        String sql = "INSERT INTO rooms (id, name, description, look_description, " +
-                    "north_room_id, south_room_id, east_room_id, west_room_id, is_visible) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            mapEntityToStatement(stmt, room);
-            stmt.executeUpdate();
-        }
+    @Override
+    protected String buildInsertSql() {
+        return "INSERT INTO rooms (id, name, description, look_description, " +
+               "north_room_id, south_room_id, east_room_id, west_room_id, is_visible) " +
+               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     }
     
-    /**
-     * Aggiorna una stanza esistente
-     */
-    public void update(RoomEntity room) throws SQLException {
-        String sql = "UPDATE rooms SET name = ?, description = ?, look_description = ?, " +
-                    "north_room_id = ?, south_room_id = ?, east_room_id = ?, west_room_id = ?, " +
-                    "is_visible = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, room.getName());
-            stmt.setString(2, room.getDescription());
-            stmt.setString(3, room.getLookDescription());
-            
-            setIntegerOrNull(stmt, 4, room.getNorthRoomId());
-            setIntegerOrNull(stmt, 5, room.getSouthRoomId());
-            setIntegerOrNull(stmt, 6, room.getEastRoomId());
-            setIntegerOrNull(stmt, 7, room.getWestRoomId());
-            
-            stmt.setBoolean(8, room.isVisible());
-            stmt.setInt(9, room.getId());
-            
-            stmt.executeUpdate();
-        }
+    @Override
+    protected String buildUpdateSql() {
+        return "UPDATE rooms SET name = ?, description = ?, look_description = ?, " +
+               "north_room_id = ?, south_room_id = ?, east_room_id = ?, west_room_id = ?, " +
+               "is_visible = ? WHERE id = ?";
     }
     
-    /**
-     * Elimina una stanza
-     */
-    public void delete(int id) throws SQLException {
-        String sql = "DELETE FROM rooms WHERE id = ?";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, id);
-            stmt.executeUpdate();
-        }
-    }
-    
-    /**
-     * Aggiorna la descrizione di una stanza
-     */
-    public void updateDescription(int id, String description) throws SQLException {
-        String sql = "UPDATE rooms SET description = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, description);
-            stmt.setInt(2, id);
-            stmt.executeUpdate();
-        }
-    }
-    
-    /**
-     * Aggiorna la descrizione look di una stanza
-     */
-    public void updateLookDescription(int id, String lookDescription) throws SQLException {
-        String sql = "UPDATE rooms SET look_description = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, lookDescription);
-            stmt.setInt(2, id);
-            stmt.executeUpdate();
-        }
-    }
-    
-    /**
-     * Conta il numero totale di stanze
-     */
-    public int count() throws SQLException {
-        String sql = "SELECT COUNT(*) FROM rooms";
-        
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            
-            if (rs.next()) {
-                return rs.getInt(1);
-            }
-        }
-        return 0;
-    }
-    
-    // Metodi di utilità
-    private RoomEntity mapResultSetToEntity(ResultSet rs) throws SQLException {
+    @Override
+    protected RoomEntity mapResultSetToEntity(ResultSet rs) throws SQLException {
         RoomEntity entity = new RoomEntity();
         entity.setId(rs.getInt("id"));
         entity.setName(rs.getString("name"));
@@ -191,30 +54,78 @@ public class RoomDAO {
         return entity;
     }
     
-    private void mapEntityToStatement(PreparedStatement stmt, RoomEntity room) throws SQLException {
+    @Override
+    protected void mapEntityToInsertStatement(PreparedStatement stmt, RoomEntity room) throws SQLException {
         stmt.setInt(1, room.getId());
         stmt.setString(2, room.getName());
         stmt.setString(3, room.getDescription());
         stmt.setString(4, room.getLookDescription());
-        
         setIntegerOrNull(stmt, 5, room.getNorthRoomId());
         setIntegerOrNull(stmt, 6, room.getSouthRoomId());
         setIntegerOrNull(stmt, 7, room.getEastRoomId());
         setIntegerOrNull(stmt, 8, room.getWestRoomId());
-        
         stmt.setBoolean(9, room.isVisible());
     }
     
-    private Integer getIntegerOrNull(ResultSet rs, String columnName) throws SQLException {
-        int value = rs.getInt(columnName);
-        return rs.wasNull() ? null : value;
+    @Override
+    protected void mapEntityToUpdateStatement(PreparedStatement stmt, RoomEntity room) throws SQLException {
+        stmt.setString(1, room.getName());
+        stmt.setString(2, room.getDescription());
+        stmt.setString(3, room.getLookDescription());
+        setIntegerOrNull(stmt, 4, room.getNorthRoomId());
+        setIntegerOrNull(stmt, 5, room.getSouthRoomId());
+        setIntegerOrNull(stmt, 6, room.getEastRoomId());
+        setIntegerOrNull(stmt, 7, room.getWestRoomId());
+        stmt.setBoolean(8, room.isVisible());
+        stmt.setInt(9, room.getId());
     }
     
-    private void setIntegerOrNull(PreparedStatement stmt, int parameterIndex, Integer value) throws SQLException {
-        if (value == null) {
-            stmt.setNull(parameterIndex, Types.INTEGER);
-        } else {
-            stmt.setInt(parameterIndex, value);
+    // Metodi specifici per Room
+    
+    /**
+     * Trova stanze per nome (ricerca parziale)
+     */
+    public List<RoomEntity> findByNameContaining(String name) throws SQLException {
+        return executeQuery("SELECT * FROM rooms WHERE name LIKE ? ORDER BY id", "%" + name + "%");
+    }
+    
+    /**
+     * Trova stanze visibili
+     */
+    public List<RoomEntity> findVisible() throws SQLException {
+        return executeQuery("SELECT * FROM rooms WHERE is_visible = true ORDER BY id");
+    }
+    
+    /**
+     * Aggiorna solo la descrizione di una stanza
+     */
+    public void updateDescription(int id, String description) throws SQLException {
+        executeUpdate("UPDATE rooms SET description = ? WHERE id = ?", description, id);
+    }
+    
+    /**
+     * Aggiorna solo la descrizione look di una stanza
+     */
+    public void updateLookDescription(int id, String lookDescription) throws SQLException {
+        executeUpdate("UPDATE rooms SET look_description = ? WHERE id = ?", lookDescription, id);
+    }
+    
+    /**
+     * Trova stanze connesse a una stanza specifica
+     */
+    public List<RoomEntity> findConnectedRooms(int roomId) throws SQLException {
+        String sql = "SELECT * FROM rooms WHERE " +
+                    "north_room_id = ? OR south_room_id = ? OR east_room_id = ? OR west_room_id = ?";
+        return executeQuery(sql, roomId, roomId, roomId, roomId);
+    }
+    
+    @Override
+    protected void validateBeforeSave(RoomEntity entity) throws SQLException {
+        if (entity.getName() == null || entity.getName().trim().isEmpty()) {
+            throw new SQLException("Il nome della stanza non può essere vuoto");
+        }
+        if (entity.getDescription() == null || entity.getDescription().trim().isEmpty()) {
+            throw new SQLException("La descrizione della stanza non può essere vuota");
         }
     }
 }
