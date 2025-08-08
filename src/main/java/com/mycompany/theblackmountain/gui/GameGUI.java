@@ -18,7 +18,9 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.StringWriter;
 import java.util.HashSet;
 
 public class GameGUI extends JFrame {
@@ -289,14 +291,39 @@ public class GameGUI extends JFrame {
         ParserOutput output = parser.parse(command, game.getCommands(),
                 game.getCurrentRoom().getObjects(), game.getInventory());
 
-        PrintStream out = new PrintStream(System.out) {
+        // ===== FIX PRINCIPALE =====
+        // Crea un StringWriter per catturare l'output
+        StringWriter stringWriter = new StringWriter();
+        PrintStream out = new PrintStream(new OutputStream() {
+            public void write(int b) {
+                stringWriter.write(b);
+            }
+
+            public void write(byte[] b, int off, int len) {
+                stringWriter.write(new String(b, off, len));
+            }
+        }) {
             @Override
             public void println(String x) {
-                appendToOutput(x);
+                stringWriter.write(x + "\n");
+            }
+
+            @Override
+            public void print(String x) {
+                stringWriter.write(x);
             }
         };
 
+        // Esegui il comando
         game.nextMove(output, out);
+
+        // Stampa la risposta catturata
+        String response = stringWriter.toString().trim();
+        if (!response.isEmpty()) {
+            appendToOutput(response);
+        }
+        // ==========================
+
         updateUI();
         inputField.setText("");
         inputField.requestFocus();
@@ -487,21 +514,21 @@ public class GameGUI extends JFrame {
     }
 
     /**
-     * NUOVO: Metodo per ricaricare specificamente i pulsanti azione
-     * Utile quando cambi le immagini durante lo sviluppo
+     * NUOVO: Metodo per ricaricare specificamente i pulsanti azione Utile
+     * quando cambi le immagini durante lo sviluppo
      */
     public void reloadActionButtons() {
         UIImageManager.getInstance().clearCache();
-        
+
         // Ricrea tutti i pulsanti azione con le nuove immagini
         Container actionParent = inventoryButton.getParent();
         if (actionParent != null) {
             // Rimuovi tutti i componenti
             actionParent.removeAll();
-            
+
             // Ricrea i pulsanti con le immagini aggiornate
             int actionButtonSpacing = 5;
-            
+
             inventoryButton = UIComponents.createActionButton(
                     UIComponents.ActionType.INVENTORY, e -> performAction("inventario")
             );
@@ -517,12 +544,12 @@ public class GameGUI extends JFrame {
             usePotionButton = UIComponents.createActionButton(
                     UIComponents.ActionType.USE_POTION, e -> performAction("usa pozione di cura")
             );
-            
+
             // Ricrea anche il pulsante look
             lookButton = UIComponents.createActionButton(
                     UIComponents.ActionType.LOOK, e -> performAction("osserva")
             );
-            
+
             // Ricostruisci il layout
             actionParent.add(createCenteredComponent(saveButton));
             actionParent.add(createCenteredComponent(soundToggleButton));
@@ -536,11 +563,11 @@ public class GameGUI extends JFrame {
             actionParent.add(createCenteredComponent(useBowButton));
             actionParent.add(Box.createVerticalStrut(actionButtonSpacing));
             actionParent.add(createCenteredComponent(usePotionButton));
-            
+
             actionParent.revalidate();
             actionParent.repaint();
         }
-        
+
         // Ricrea anche il pulsante look centrale nelle direzioni
         Container directionParent = northButton.getParent();
         if (directionParent != null) {
@@ -563,7 +590,7 @@ public class GameGUI extends JFrame {
             directionParent.revalidate();
             directionParent.repaint();
         }
-        
+
         updateWeaponButtons();
         System.out.println("Pulsanti azione ricaricati con nuove immagini");
     }

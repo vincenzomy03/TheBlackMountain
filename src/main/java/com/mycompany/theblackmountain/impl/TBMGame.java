@@ -10,6 +10,8 @@ import com.mycompany.theblackmountain.type.GameCharacter;
 import com.mycompany.theblackmountain.type.GameObjects;
 import com.mycompany.theblackmountain.type.Room;
 import com.mycompany.theblackmountain.parser.ParserOutput;
+import com.mycompany.theblackmountain.type.Command;
+import com.mycompany.theblackmountain.type.CommandType;
 
 import java.io.PrintStream;
 import java.sql.SQLException;
@@ -35,6 +37,7 @@ public class TBMGame extends GameDescription implements GameObservable {
         try {
             initializeDatabase();
             loadGameData();
+            initializeCommands();
             initializeCombatSystem();
             initializeObservers();
             verifyGameState();
@@ -99,10 +102,18 @@ public class TBMGame extends GameDescription implements GameObservable {
 
     private void verifyGameState() throws Exception {
         List<String> errors = new ArrayList<>();
-        if (getRooms().isEmpty()) errors.add("Nessuna stanza caricata");
-        if (getCurrentRoom() == null) errors.add("Stanza corrente non impostata");
-        if (player == null) errors.add("Giocatore non trovato");
-        if (getInventory() == null) errors.add("Inventario non inizializzato");
+        if (getRooms().isEmpty()) {
+            errors.add("Nessuna stanza caricata");
+        }
+        if (getCurrentRoom() == null) {
+            errors.add("Stanza corrente non impostata");
+        }
+        if (player == null) {
+            errors.add("Giocatore non trovato");
+        }
+        if (getInventory() == null) {
+            errors.add("Inventario non inizializzato");
+        }
 
         if (!errors.isEmpty()) {
             throw new Exception("Problemi nella verifica dello stato: " + String.join(", ", errors));
@@ -121,13 +132,39 @@ public class TBMGame extends GameDescription implements GameObservable {
             // Salva l'ultimo comando per gli observer
             this.lastParserOutput = p;
 
-            // Notifica observer
-            notifyObservers();
+            // ===== MODIFICA PRINCIPALE =====
+            // Raccogli i risultati degli observer
+            StringBuilder result = new StringBuilder();
+
+            for (GameObserver observer : observers) {
+                try {
+                    String observerResult = observer.update(this, lastParserOutput);
+                    if (observerResult != null && !observerResult.trim().isEmpty()) {
+                        result.append(observerResult);
+                        if (!observerResult.endsWith("\n")) {
+                            result.append("\n");
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("⚠️ Errore in observer " + observer.getClass().getSimpleName() + ": " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+
+            // Stampa il risultato raccolto
+            if (result.length() > 0) {
+                out.print(result.toString());
+            } else {
+                // Messaggio di fallback se nessun observer ha risposto
+                out.println("Comando non riconosciuto o non applicabile qui.");
+            }
+            // ===============================
 
             // Salvataggio automatico
             if (autoSaveEnabled) {
                 saveGameState();
             }
+
         } catch (Exception e) {
             System.err.println("⚠️ Errore nell'elaborazione comando: " + e.getMessage());
             out.println("Si è verificato un errore nell'elaborazione del comando.");
@@ -159,8 +196,71 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
     }
 
+    private void initializeCommands() {
+        System.out.println("🎮 Inizializzazione comandi...");
+
+        //Commands
+        Command nord = new Command(CommandType.NORD, "nord");
+        nord.setAlias(new String[]{"n", "N", "Nord", "NORD"});
+        getCommands().add(nord);
+        
+        Command iventory = new Command(CommandType.INVENTORY, "inventario");
+        iventory.setAlias(new String[]{"inv"});
+        getCommands().add(iventory);
+        
+        Command sud = new Command(CommandType.SOUTH, "sud");
+        sud.setAlias(new String[]{"s", "S", "Sud", "SUD"});
+        getCommands().add(sud);
+        
+        Command est = new Command(CommandType.EAST, "est");
+        est.setAlias(new String[]{"e", "E", "Est", "EST"});
+        getCommands().add(est);
+        
+        Command ovest = new Command(CommandType.WEST, "ovest");
+        ovest.setAlias(new String[]{"o", "O", "Ovest", "OVEST"});
+        getCommands().add(ovest);
+        
+        Command end = new Command(CommandType.END, "end");
+        end.setAlias(new String[]{"end", "fine", "esci", "muori", "ammazzati", "ucciditi", "suicidati", "exit", "basta"});
+        getCommands().add(end);
+        
+        Command look = new Command(CommandType.LOOK_AT, "osserva");
+        look.setAlias(new String[]{"guarda", "vedi", "trova", "cerca", "descrivi"});
+        getCommands().add(look);
+        
+        Command pickup = new Command(CommandType.PICK_UP, "raccogli");
+        pickup.setAlias(new String[]{"prendi"});
+        getCommands().add(pickup);
+        
+        Command open = new Command(CommandType.OPEN, "apri");
+        open.setAlias(new String[]{});
+        getCommands().add(open);
+        
+        Command push = new Command(CommandType.PUSH, "premi");
+        push.setAlias(new String[]{"spingi", "attiva"});
+        getCommands().add(push);
+        
+        Command use = new Command(CommandType.USE, "usa");
+        use.setAlias(new String[]{"utilizza", "combina"});
+        getCommands().add(use);
+        
+        // Comando per iniziare il combattimento
+        Command fight = new Command(CommandType.USE, "combatti");
+        fight.setAlias(new String[]{"combattimento", "inizia combattimento", "battaglia"});
+        getCommands().add(fight);
+        
+        // Comando per attaccare
+        Command attack = new Command(CommandType.USE, "attacca");
+        attack.setAlias(new String[]{"attacco", "colpisci", "fight"});
+        getCommands().add(attack);
+
+        System.out.println("✅ Inizializzati " + getCommands().size() + " comandi");
+    }
+
     public void dropObject(GameObjects obj) {
-        if (getCurrentRoom() == null || gameLoader == null) return;
+        if (getCurrentRoom() == null || gameLoader == null) {
+            return;
+        }
         getInventory().remove(obj);
         getCurrentRoom().getObjects().add(obj);
         gameLoader.moveObjectToRoom(obj, getCurrentRoom());
@@ -168,8 +268,12 @@ public class TBMGame extends GameDescription implements GameObservable {
     }
 
     public boolean pickupObject(GameObjects obj) {
-        if (getCurrentRoom() == null || gameLoader == null) return false;
-        if (!obj.isPickupable()) return false;
+        if (getCurrentRoom() == null || gameLoader == null) {
+            return false;
+        }
+        if (!obj.isPickupable()) {
+            return false;
+        }
         getCurrentRoom().getObjects().remove(obj);
         getInventory().add(obj);
         gameLoader.moveObjectToInventory(obj, 1);
@@ -178,7 +282,9 @@ public class TBMGame extends GameDescription implements GameObservable {
     }
 
     public void destroyObject(GameObjects obj) {
-        if (gameLoader == null) return;
+        if (gameLoader == null) {
+            return;
+        }
         getInventory().remove(obj);
         for (Room room : getRooms()) {
             room.getObjects().remove(obj);
@@ -188,16 +294,22 @@ public class TBMGame extends GameDescription implements GameObservable {
     }
 
     public void updateObjectState(GameObjects obj) {
-        if (gameLoader != null) gameLoader.updateObjectState(obj);
+        if (gameLoader != null) {
+            gameLoader.updateObjectState(obj);
+        }
     }
 
     public void updateCharacterState(GameCharacter character) {
-        if (gameLoader != null) gameLoader.updateCharacterState(character);
+        if (gameLoader != null) {
+            gameLoader.updateCharacterState(character);
+        }
     }
 
     public void resetGame() throws Exception {
         System.out.println("🔄 Reset completo del gioco...");
-        if (database != null) database.resetDatabase();
+        if (database != null) {
+            database.resetDatabase();
+        }
         loadGameData();
         System.out.println("✅ Gioco resettato");
     }
@@ -205,8 +317,12 @@ public class TBMGame extends GameDescription implements GameObservable {
     public void cleanup() {
         try {
             System.out.println("🧹 Cleanup del gioco...");
-            if (autoSaveEnabled) saveGameState();
-            if (database != null) database.shutdown();
+            if (autoSaveEnabled) {
+                saveGameState();
+            }
+            if (database != null) {
+                database.shutdown();
+            }
             System.out.println("✅ Cleanup completato");
         } catch (Exception e) {
             System.err.println("⚠️ Errore durante cleanup: " + e.getMessage());

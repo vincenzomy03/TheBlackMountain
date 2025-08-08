@@ -228,7 +228,7 @@ public class GameLoader {
             FROM INVENTORY i
             JOIN OBJECTS o ON i.OBJECT_ID = o.ID
             LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
-            WHERE i.CHARACTER_ID = 1
+            WHERE i.CHARACTER_ID = 0
             ORDER BY o.ID
         """;
 
@@ -251,7 +251,7 @@ public class GameLoader {
      * Imposta la stanza corrente del giocatore.
      */
     private void setPlayerCurrentRoom(Connection conn) throws SQLException {
-        String sql = "SELECT ROOM_ID FROM CHARACTERS WHERE CHARACTER_TYPE = 'PLAYER' AND ID = 1";
+        String sql = "SELECT ROOM_ID FROM CHARACTERS WHERE CHARACTER_TYPE = 'PLAYER' AND ID = 0";
 
         try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
 
