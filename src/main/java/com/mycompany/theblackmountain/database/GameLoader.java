@@ -22,8 +22,7 @@ import com.mycompany.theblackmountain.type.CharacterType;
 import com.mycompany.theblackmountain.impl.TBMGame;
 
 /**
- * Classe per caricare i dati dal database nel gioco. Approccio minimal senza
- * layer DAO/Entity.
+ * Classe per caricare i dati dal database nel gioco.
  */
 public class GameLoader {
 

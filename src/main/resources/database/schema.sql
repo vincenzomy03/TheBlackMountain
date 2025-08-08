@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS characters (
     
     -- Vincoli di validazione
     CONSTRAINT chk_character_name_not_empty CHECK (LENGTH(TRIM(name)) > 0),
-    CONSTRAINT chk_character_type CHECK (character_type IN ('PLAYER', 'ENEMY', 'NPC')),
+    CONSTRAINT chk_character_type CHECK (character_type IN ('PLAYER', 'GOBLIN', 'GIANT_RAT', 'DEMON_DOG')),
     CONSTRAINT chk_character_hp_positive CHECK (max_hp > 0 AND current_hp >= 0),
     CONSTRAINT chk_character_hp_max CHECK (current_hp <= max_hp),
     CONSTRAINT chk_character_stats_positive CHECK (attack >= 0 AND defense >= 0)
@@ -411,22 +411,6 @@ FROM rooms r
 WHERE r.west_room_id IS NOT NULL 
   AND NOT EXISTS (SELECT 1 FROM rooms r2 WHERE r2.id = r.west_room_id);
 
--- Vista per statistiche generali del gioco
-CREATE VIEW IF NOT EXISTS v_game_statistics AS
-SELECT 
-    (SELECT COUNT(*) FROM rooms) as total_rooms,
-    (SELECT COUNT(*) FROM objects) as total_objects,
-    (SELECT COUNT(*) FROM characters) as total_characters,
-    (SELECT COUNT(*) FROM characters WHERE character_type = 'PLAYER') as player_count,
-    (SELECT COUNT(*) FROM characters WHERE character_type = 'ENEMY') as enemy_count,
-    (SELECT COUNT(*) FROM characters WHERE character_type = 'ENEMY' AND is_alive = true) as alive_enemies,
-    (SELECT COUNT(*) FROM characters WHERE character_type = 'ENEMY' AND is_alive = false) as dead_enemies,
-    (SELECT COUNT(*) FROM weapons) as total_weapons,
-    (SELECT COUNT(*) FROM weapons WHERE is_poisoned = true) as poisoned_weapons,
-    (SELECT COUNT(*) FROM objects WHERE is_openable = true) as openable_objects,
-    (SELECT COUNT(*) FROM objects WHERE is_openable = true AND is_open = true) as opened_objects,
-    (SELECT AVG(CAST(current_hp AS FLOAT)) FROM characters WHERE is_alive = true) as avg_hp_alive,
-    (SELECT MAX(attack_bonus) FROM weapons) as max_weapon_damage;
 
 -- ====== CLEANUP E MANUTENZIONE ======
 
@@ -497,7 +481,7 @@ CREATE TRIGGER IF NOT EXISTS tr_game_config_updated_at
 -- Le tabelle principali sono:
 -- - rooms: Stanze del gioco con connessioni nord/sud/est/ovest
 -- - objects: Oggetti generici con proprietà base
--- - characters: Personaggi (giocatore, nemici, NPC)
+-- - characters: Personaggi (giocatore, nemici vari)
 -- - weapons: Estensione degli oggetti per le armi
 -- - room_objects: Associazione oggetti-stanze con supporto container
 -- - inventory: Inventario dei personaggi

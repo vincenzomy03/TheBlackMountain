@@ -43,7 +43,7 @@ public class TBMDatabase {
             return;
         }
         
-        System.out.println("🔧 Inizializzazione database semplificato...");
+        System.out.println("🔧 Inizializzazione database...");
         
         // Testa la connessione
         if (!testConnection()) {

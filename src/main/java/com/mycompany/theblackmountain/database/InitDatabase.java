@@ -128,21 +128,36 @@ public class InitDatabase {
             int count = rs.getInt(1);
             rs.close();
             
+            // Verifica e inserimento ROOMS - Aggiornato con le stanze del gioco effettivo
+            checkDataSql = "SELECT COUNT(*) FROM ROOMS";
+            stm = conn.createStatement();
+            rs = stm.executeQuery(checkDataSql);
+            rs.next();
+            count = rs.getInt(1);
+            rs.close();
+            
             if (count == 0) {
                 stm = conn.createStatement();
+                // Stanze del gioco "The Black Mountain" 
                 stm.execute("INSERT INTO ROOMS VALUES "
-                    + "(1, 'Entrance Hall', 'Una grande sala d''ingresso con alte colonne di pietra. La luce filtra attraverso vetrate colorate.', "
-                    + "'Osservando con più attenzione noti antiche incisioni sulle colonne.', TRUE, 'entrance_hall'), "
-                    + "(2, 'Armory', 'Un''armeria piena di armi e armature. Molte sono arrugginite dal tempo.', "
-                    + "'Tra le armi noti una spada che sembra in buone condizioni.', TRUE, 'armory'), "
-                    + "(3, 'Library', 'Una vasta biblioteca con scaffali che raggiungono il soffitto. L''aria sa di carta antica.', "
-                    + "'Alcuni libri sono aperti su un tavolo, come se qualcuno li stesse leggendo di recente.', TRUE, 'library'), "
-                    + "(4, 'Throne Room', 'Una maestosa sala del trono. Il trono è vuoto e coperto di polvere.', "
-                    + "'Il trono sembra nascondere qualcosa dietro di sé.', TRUE, 'throne_room'), "
-                    + "(5, 'Dungeon', 'Umide segrete del castello. L''aria è pesante e malsana.', "
-                    + "'Senti strani rumori provenire dalle celle più buie.', TRUE, 'dungeon'), "
-                    + "(6, 'Tower Top', 'La cima della torre più alta. Da qui si vede tutto il regno.', "
-                    + "'Un telescopio è puntato verso l''orizzonte.', TRUE, 'tower_top');");
+                    + "(0, 'Ingresso della Fortezza', 'Ti trovi all''ingresso della fortezza maledetta. L''aria è densa di umidità e il pavimento è cosparso di muschio. Un enorme goblin dalla pelle verde scuro ti osserva con occhi colmi d''odio.', "
+                    + "'Scorgi una vecchia cassa, probabilmente abbandonata dai precedenti avventurieri. Dentro potrebbe esserci qualcosa di utile per iniziare il tuo cammino.', TRUE, 'entrance'), "
+                    + "(1, 'Stanza del Topo', 'Le pareti sono coperte di ragnatele e muffa. Un enorme topo, con denti giallastri e occhi rossi, grugnisce in un angolo buio.', "
+                    + "'Tra le ragnatele, potresti trovare qualcosa di utile o... disgustoso.', TRUE, 'rat_room'), "
+                    + "(2, 'Mensa Abbandonata', 'Le tavole di legno sono rovesciate, piatti infranti ovunque. Due goblin chiassosi stanno litigando per un osso ancora sanguinante.', "
+                    + "'Non sembra esserci nulla di valore qui, a parte i goblin pronti a combattere.', TRUE, 'mess_hall'), "
+                    + "(3, 'Dormitorio delle Guardie', 'Letti rotti e coperte lacerate giacciono sparsi ovunque. Il silenzio regna sovrano: nessun nemico in vista.', "
+                    + "'Una cassa giace accanto a un letto distrutto. Dentro, potresti trovare qualcosa di prezioso.', TRUE, 'dormitory'), "
+                    + "(4, 'Sala delle Guardie', 'I resti di un banchetto interrotto sono sparsi ovunque. Un goblin gigante impugna una clava insanguinata.', "
+                    + "'Tra i resti di una barricata, spunta una cassa semiaperta.', TRUE, 'guard_hall'), "
+                    + "(5, 'Sala degli Incantesimi', 'Le pareti sono incise con simboli magici che pulsano di luce blu. Nel centro, un altare emette un suono basso e costante.', "
+                    + "'Un''iscrizione recita: Offri parte della tua essenza, e il tuo braccio sarà guidato da un arco etereo.', TRUE, 'magic_room'), "
+                    + "(6, 'Stanza delle Torture', 'Catene arrugginite pendono dal soffitto. Il pavimento è macchiato di vecchio sangue secco. Non ci sono nemici.', "
+                    + "'Una cassa chiusa giace in un angolo, apparentemente dimenticata.', TRUE, 'torture_room'), "
+                    + "(7, 'Sala del Signore dei Goblin', 'L''aria è irrespirabile. Un fumo denso copre il volto del cane demone, una creatura infernale con zanne fumanti.', "
+                    + "'Sul piedistallo alle spalle del demone c''è una chiave che potrebbe aprire la cella.', TRUE, 'boss_room'), "
+                    + "(8, 'Uscita', 'L''uscita dalla Montagna Nera. La libertà ti aspetta.', "
+                    + "'Finalmente libero!', TRUE, 'exit');");
                 stm.close();
             }
 
@@ -154,15 +169,27 @@ public class InitDatabase {
             count = rs.getInt(1);
             rs.close();
             
+            // Verifica e inserimento ROOM_CONNECTIONS - Aggiornato con le connessioni corrette
+            checkDataSql = "SELECT COUNT(*) FROM ROOM_CONNECTIONS";
+            stm = conn.createStatement();
+            rs = stm.executeQuery(checkDataSql);
+            rs.next();
+            count = rs.getInt(1);
+            rs.close();
+            
             if (count == 0) {
                 stm = conn.createStatement();
+                // Connessioni secondo data.sql
                 stm.execute("INSERT INTO ROOM_CONNECTIONS VALUES "
-                    + "(1, NULL, NULL, 2, 3), "  // Entrance: est=Armory, ovest=Library
-                    + "(2, NULL, NULL, NULL, 1), " // Armory: ovest=Entrance
-                    + "(3, 4, NULL, 1, NULL), "    // Library: nord=Throne Room, est=Entrance
-                    + "(4, 6, 3, NULL, NULL), "    // Throne Room: nord=Tower, sud=Library
-                    + "(5, 1, NULL, NULL, NULL), " // Dungeon: nord=Entrance
-                    + "(6, NULL, 4, NULL, NULL);");  // Tower: sud=Throne Room
+                    + "(0, NULL, NULL, 1, NULL), "  // Ingresso: est=Stanza del Topo
+                    + "(1, NULL, 6, 2, 0), "        // Stanza del Topo: est=Mensa, ovest=Ingresso, sud=Torture
+                    + "(2, NULL, NULL, 3, 1), "     // Mensa: est=Dormitorio, ovest=Stanza del Topo
+                    + "(3, NULL, 4, NULL, 2), "     // Dormitorio: sud=Sala Guardie, ovest=Mensa
+                    + "(4, 3, NULL, NULL, 5), "     // Sala Guardie: nord=Dormitorio, ovest=Sala Incantesimi
+                    + "(5, NULL, NULL, 4, NULL), "  // Sala Incantesimi: est=Sala Guardie
+                    + "(6, 1, 7, NULL, NULL), "     // Torture: nord=Stanza Topo, sud=Boss
+                    + "(7, 6, NULL, NULL, 8), "     // Boss: nord=Torture, ovest=Uscita
+                    + "(8, NULL, NULL, 7, NULL);"); // Uscita: est=Boss
                 stm.close();
             }
 
@@ -174,16 +201,34 @@ public class InitDatabase {
             count = rs.getInt(1);
             rs.close();
             
+            // Verifica e inserimento OBJECTS - Oggetti del gioco effettivo
+            checkDataSql = "SELECT COUNT(*) FROM OBJECTS";
+            stm = conn.createStatement();
+            rs = stm.executeQuery(checkDataSql);
+            rs.next();
+            count = rs.getInt(1);
+            rs.close();
+            
             if (count == 0) {
                 stm = conn.createStatement();
+                // Oggetti secondo data.sql - oggetti effettivi del gioco
                 stm.execute("INSERT INTO OBJECTS VALUES "
-                    + "(1, 'Spada di Ferro', 'Una spada ben bilanciata con lama affilata.', 'spada,ferro,lama', FALSE, TRUE, FALSE, FALSE, FALSE, 'WEAPON'), "
-                    + "(2, 'Pozione di Cura', 'Una fiala contenente un liquido rosso rigenerante.', 'pozione,cura,fiala', FALSE, TRUE, FALSE, FALSE, FALSE, 'CONSUMABLE'), "
-                    + "(3, 'Chiave Dorata', 'Una chiave ornata d''oro con incisioni misteriose.', 'chiave,oro,dorata', FALSE, TRUE, FALSE, FALSE, FALSE, 'KEY'), "
-                    + "(4, 'Libro Antico', 'Un tomo rilegato in pelle con pagine ingiallite.', 'libro,tomo,antico', TRUE, TRUE, FALSE, FALSE, FALSE, 'READABLE'), "
-                    + "(5, 'Forziere', 'Un grande forziere di legno con serratura.', 'forziere,cassa,baule', TRUE, FALSE, FALSE, FALSE, FALSE, 'CONTAINER'), "
-                    + "(6, 'Gemma Magica', 'Una gemma che pulsa di luce blu.', 'gemma,pietra,magica', FALSE, TRUE, FALSE, FALSE, FALSE, 'MAGICAL'), "
-                    + "(7, 'Torcia', 'Una torcia che può essere accesa per illuminare.', 'torcia,luce,fiamma', FALSE, TRUE, FALSE, FALSE, FALSE, 'LIGHT');");
+                    + "(1, 'chiave ingresso', 'Una chiave d''ottone annerita dal tempo. Potrebbe aprire la porta principale della fortezza.', 'chiave,key', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
+                    + "(2, 'pozione di cura', 'Una fiala dal liquido rosso, emana un lieve calore.', 'pozione,cura,healing', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
+                    + "(3, 'frecce', 'Un piccolo fascio di frecce con punte d''acciaio. Sembrano leggere ma letali.', 'arrow,arrows', FALSE, TRUE, FALSE, FALSE, FALSE, 'WEAPON'), "
+                    + "(4, 'stringhe di ragnatela', 'Filamenti spessi e resistenti. Potrebbero servire per creare qualcosa di utile.', 'ragnatela,filo', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
+                    + "(5, 'pozione cura totale', 'Una pozione brillante di colore dorato. Ti riempie di energia solo a guardarla.', 'pozione totale,cura totale', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
+                    + "(6, 'bastone', 'Un robusto bastone di legno. Può essere combinato con altri oggetti.', 'staff,stick', FALSE, TRUE, FALSE, FALSE, FALSE, 'WEAPON'), "
+                    + "(7, 'arco magico', 'Un arco leggero ma potente, creato con energia arcana e materiali raccolti nella fortezza.', 'arco,bow', FALSE, TRUE, FALSE, FALSE, FALSE, 'WEAPON'), "
+                    + "(8, 'libro incantesimo del fuoco', 'Un grimorio antico, le sue pagine brillano di energia arcana. Contiene l''Incantesimo del Fuoco.', 'libro,grimorio,fuoco', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
+                    + "(9, 'veleno', 'Una boccetta scura. Può essere applicata su armi per aumentare il danno.', 'poison,boccetta', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
+                    + "(10, 'chiave cella principessa', 'Una chiave dorata e decorata, diversa da tutte le altre. Probabilmente apre la cella della principessa.', 'chiave principessa,chiave dorata', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
+                    + "(11, 'chiave del collo del boss', 'Una chiave pesante, con pendaglio di ferro annerito. Cade dal collo del demone canino quando lo sconfiggi.', 'chiave boss,chiave finale', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
+                    + "(12, 'spada', 'Una spada d''acciaio ben bilanciata. Arma affidabile per il combattimento.', 'sword,lama', FALSE, TRUE, FALSE, FALSE, FALSE, 'WEAPON'), "
+                    + "(100, 'cassa', 'Una vecchia cassa di legno, chiusa ma non bloccata.', 'baule,contenitore,scrigno', TRUE, FALSE, FALSE, FALSE, FALSE, 'CONTAINER'), "
+                    + "(101, 'cassa', 'Una cassa giace accanto a un letto distrutto.', 'baule,contenitore,scrigno', TRUE, FALSE, FALSE, FALSE, FALSE, 'CONTAINER'), "
+                    + "(102, 'cassa', 'Una cassa semiaperta tra i resti di una barricata.', 'baule,contenitore,scrigno', TRUE, FALSE, FALSE, FALSE, FALSE, 'CONTAINER'), "
+                    + "(103, 'cassa', 'Una cassa chiusa giace in un angolo, apparentemente dimenticata.', 'baule,contenitore,scrigno', TRUE, FALSE, FALSE, FALSE, FALSE, 'CONTAINER');");
                 stm.close();
             }
 
@@ -195,14 +240,25 @@ public class InitDatabase {
             count = rs.getInt(1);
             rs.close();
             
+            // Verifica e inserimento WEAPONS - Armi del gioco effettivo
+            checkDataSql = "SELECT COUNT(*) FROM WEAPONS";
+            stm = conn.createStatement();
+            rs = stm.executeQuery(checkDataSql);
+            rs.next();
+            count = rs.getInt(1);
+            rs.close();
+            
             if (count == 0) {
                 stm = conn.createStatement();
                 stm.execute("INSERT INTO WEAPONS VALUES "
-                    + "(1, 'SWORD', 15, 10.0, 2.0, FALSE, 0, NULL);"); // Spada di Ferro
+                    + "(3, 'ARROWS', 3, 5.0, 2.0, FALSE, 0, NULL), "    // Frecce
+                    + "(6, 'STAFF', 5, 5.0, 2.0, FALSE, 0, NULL), "     // Bastone
+                    + "(7, 'MAGIC', 12, 15.0, 2.0, FALSE, 0, NULL), "   // Arco magico
+                    + "(12, 'SWORD', 8, 10.0, 2.0, FALSE, 0, NULL);");  // Spada
                 stm.close();
             }
 
-            // Verifica e inserimento CHARACTERS
+            // Verifica e inserimento CHARACTERS - Aggiornato con i personaggi corretti del gioco
             checkDataSql = "SELECT COUNT(*) FROM CHARACTERS";
             stm = conn.createStatement();
             rs = stm.executeQuery(checkDataSql);
@@ -212,11 +268,16 @@ public class InitDatabase {
             
             if (count == 0) {
                 stm = conn.createStatement();
+                // Inserimento ersonaggi effettivi del gioco
                 stm.execute("INSERT INTO CHARACTERS VALUES "
-                    + "(1, 'Avventuriero', 'Un coraggioso esploratore in cerca di avventure.', 'PLAYER', 100, 100, 15, 10, TRUE, 1), "
-                    + "(2, 'Scheletro Guardiano', 'Un antico guardiano ora ridotto a scheletro.', 'ENEMY', 50, 50, 12, 5, TRUE, 5), "
-                    + "(3, 'Mago Oscuro', 'Un potente mago dalle intenzioni malvagie.', 'ENEMY', 80, 80, 20, 8, TRUE, 6), "
-                    + "(4, 'Bibliotecario', 'Un vecchio saggio custode della conoscenza.', 'NPC', 30, 30, 5, 2, TRUE, 3);");
+                    + "(0, 'Giocatore', 'Il coraggioso avventuriero che si addentra nella Montagna Nera per salvare la principessa.', 'PLAYER', 100, 100, 15, 5, TRUE, 0), "
+                    + "(1, 'Goblin', 'Una creatura malvagia dalla pelle verde scuro, con occhi pieni d''odio e artigli affilati.', 'GOBLIN', 40, 40, 12, 3, TRUE, 0), "
+                    + "(2, 'Topo Gigante', 'Un enorme roditore con denti giallastri e occhi rossi.', 'GIANT_RAT', 25, 25, 8, 2, TRUE, 1), "
+                    + "(3, 'Goblin Chiassoso', 'Un goblin aggressivo che litiga per un osso.', 'GOBLIN', 35, 35, 10, 3, TRUE, 2), "
+                    + "(4, 'Goblin Rissoso', 'Un altro goblin altrettanto aggressivo.', 'GOBLIN', 30, 30, 9, 2, TRUE, 2), "
+                    + "(5, 'Goblin Gigante', 'Un goblin enorme che impugna una clava insanguinata.', 'GOBLIN', 60, 60, 16, 5, TRUE, 4), "
+                    + "(6, 'Goblin Minuto', 'Un goblin più piccolo ma altrettanto minaccioso.', 'GOBLIN', 25, 25, 8, 2, TRUE, 4), "
+                    + "(7, 'Cane Demone', 'Una creatura infernale con zanne fumanti e occhi di fuoco.', 'DEMON_DOG', 120, 120, 25, 8, TRUE, 7);");
                 stm.close();
             }
 
@@ -228,21 +289,8 @@ public class InitDatabase {
             count = rs.getInt(1);
             rs.close();
             
-            if (count == 0) {
-                stm = conn.createStatement();
-                stm.execute("INSERT INTO ROOM_OBJECTS VALUES "
-                    + "(1, 7), "  // Torcia nella Entrance Hall
-                    + "(2, 1), "  // Spada di Ferro nell'Armory
-                    + "(2, 2), "  // Pozione di Cura nell'Armory
-                    + "(3, 4), "  // Libro Antico nella Library
-                    + "(4, 5), "  // Forziere nella Throne Room
-                    + "(4, 3), "  // Chiave Dorata nella Throne Room
-                    + "(6, 6);"); // Gemma Magica nella Tower Top
-                stm.close();
-            }
-
-            // Verifica e inserimento INVENTORY (inventario iniziale del giocatore)
-            checkDataSql = "SELECT COUNT(*) FROM INVENTORY WHERE CHARACTER_ID = 1";
+            // Verifica e inserimento ROOM_OBJECTS - Posizionamento oggetti nelle stanze
+            checkDataSql = "SELECT COUNT(*) FROM ROOM_OBJECTS";
             stm = conn.createStatement();
             rs = stm.executeQuery(checkDataSql);
             rs.next();
@@ -251,9 +299,27 @@ public class InitDatabase {
             
             if (count == 0) {
                 stm = conn.createStatement();
-                stm.execute("INSERT INTO INVENTORY VALUES "
-                    + "(1, 2);"); // Giocatore inizia con una Pozione di Cura
+                // Posizionamento secondo data.sql
+                stm.execute("INSERT INTO ROOM_OBJECTS VALUES "
+                    + "(0, 100), " // Cassa nell'Ingresso
+                    + "(1, 4), "   // Stringhe ragnatela nella Stanza del Topo
+                    + "(3, 101), " // Cassa nel Dormitorio
+                    + "(4, 102), " // Cassa nella Sala delle Guardie
+                    + "(6, 103);"); // Cassa nella Stanza delle Torture
                 stm.close();
+            }
+
+            // Verifica e inserimento INVENTORY - Inventario iniziale del giocatore
+            checkDataSql = "SELECT COUNT(*) FROM INVENTORY WHERE CHARACTER_ID = 0";
+            stm = conn.createStatement();
+            rs = stm.executeQuery(checkDataSql);
+            rs.next();
+            count = rs.getInt(1);
+            rs.close();
+            
+            if (count == 0) {
+                // Il giocatore inizia senza oggetti nell'inventario - li deve trovare nel gioco
+                System.out.println("Giocatore inizia con inventario vuoto");
             }
 
             conn.close();
