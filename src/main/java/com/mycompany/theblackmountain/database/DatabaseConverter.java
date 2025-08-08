@@ -120,6 +120,7 @@ public class DatabaseConverter {
     
     /**
      * Converte un CharacterEntity in Character
+     * @param entity
      */
     public static Character toCharacter(CharacterEntity entity) {
         if (entity == null) return null;
@@ -147,6 +148,8 @@ public class DatabaseConverter {
     
     /**
      * Converte Character in CharacterEntity
+     * @param character
+     * @return 
      */
     public static CharacterEntity toCharacterEntity(Character character) {
         if (character == null) return null;

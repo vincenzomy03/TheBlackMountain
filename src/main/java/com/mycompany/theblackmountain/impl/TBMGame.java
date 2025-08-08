@@ -2,19 +2,21 @@ package com.mycompany.theblackmountain.impl;
 
 import com.mycompany.theblackmountain.GameDescription;
 import com.mycompany.theblackmountain.GameObservable;
+import com.mycompany.theblackmountain.combat.CombatSystem;
 import com.mycompany.theblackmountain.database.DatabaseManager;
-import com.mycompany.theblackmountain.database.GameDatabaseService;
+import com.mycompany.theblackmountain.database.TBMDatabase;
+import com.mycompany.theblackmountain.database.DatabaseException;
 import com.mycompany.theblackmountain.type.Room;
 import com.mycompany.theblackmountain.type.Objects;
 import com.mycompany.theblackmountain.type.Character;
 import com.mycompany.theblackmountain.factory.WeaponFactory;
 
-import java.sql.SQLException;
 import java.util.List;
+import java.util.Optional;
 
 public class TBMGame extends GameDescription implements GameObservable {
 
-    private GameDatabaseService databaseService;
+    private TBMDatabase databaseService;
     private boolean useDatabaseMode = true;
 
     @Override
@@ -22,16 +24,12 @@ public class TBMGame extends GameDescription implements GameObservable {
         messages.clear();
 
         if (useDatabaseMode) {
-            try {
-                initializeDatabase();
-                loadGameFromDatabase();
-                System.out.println("✅ Gioco caricato dal database H2");
-            } catch (Exception e) {
-                System.err.println("❌ Errore nell'inizializzazione del database: " + e.getMessage());
-                e.printStackTrace();
+            if (!tryInitializeDatabase()) {
                 System.out.println("🔄 Fallback alla modalità hardcoded...");
                 useDatabaseMode = false;
                 initializeHardcodedGame();
+            } else {
+                loadGameFromDatabase();
             }
         } else {
             initializeHardcodedGame();
@@ -39,82 +37,108 @@ public class TBMGame extends GameDescription implements GameObservable {
 
         // Inizializza il sistema di combattimento dopo aver caricato il giocatore
         combatSystem = new CombatSystem(this);
-        
+
         initializeObservers();
     }
 
-    private void initializeDatabase() throws Exception {
-        DatabaseManager.getInstance().initialize();
-        databaseService = new GameDatabaseService();
+    /**
+     * Prova a inizializzare la connessione al DB
+     */
+    private boolean tryInitializeDatabase() {
+        try {
+            DatabaseManager.getInstance().initialize();
+            databaseService = new TBMDatabase();
 
-        if (!databaseService.testConnection()) {
-            throw new Exception("Test di connessione al database fallito");
+            if (!databaseService.testConnection()) {
+                throw new Exception("Test di connessione al database fallito");
+            }
+            System.out.println("✅ Connessione al database riuscita");
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("❌ Errore di connessione al database: " + e.getMessage());
+            e.printStackTrace();
+            return false;
         }
     }
 
-    private void loadGameFromDatabase() throws SQLException {
+    /**
+     * Carica l'intero gioco dal DB
+     */
+    private void loadGameFromDatabase() throws Exception {
         System.out.println("📋 Caricamento dati dal database...");
 
-        // 1. Carica tutte le stanze
-        List<Room> rooms = databaseService.loadAllRooms();
-        getRooms().clear();
-        getRooms().addAll(rooms);
+        try {
+            List<Room> rooms = databaseService.loadAllRooms();
+            getRooms().clear();
+            getRooms().addAll(rooms);
 
-        // 2. Carica oggetti e nemici per ogni stanza
-        for (Room room : rooms) {
-            // Carica oggetti della stanza
-            List<Objects> roomObjects = databaseService.loadRoomObjects(room.getId());
-            room.getObjects().clear();
-            room.getObjects().addAll(roomObjects);
+            for (Room room : rooms) {
+                loadRoomData(room);
+            }
 
-            // Carica nemici della stanza (esclude il giocatore)
-            List<Character> enemies = databaseService.loadRoomEnemies(room.getId());
-            room.getEnemies().clear();
-            room.getEnemies().addAll(enemies);
+            Character player = loadPlayer();
+            setCurrentRoom(findPlayerRoom(player, rooms));
+
+            initializePlayerInventoryFromDB(player);
+
+            System.out.println("✅ Dati caricati dal database");
+        } catch (DatabaseException e) {
+            throw new Exception("Errore nel caricamento dal database", e);
         }
-
-        // 3. Carica il giocatore
-        Character player = databaseService.loadPlayer();
-        if (player == null) {
-            throw new SQLException("Giocatore non trovato nel database");
-        }
-
-        // 4. Trova la stanza del giocatore
-        int playerRoomId = databaseService.getPlayerRoomId(player.getId());
-        Room playerRoom = rooms.stream()
-                .filter(r -> r.getId() == playerRoomId)
-                .findFirst()
-                .orElse(rooms.get(0)); // Fallback alla prima stanza
-
-        setCurrentRoom(playerRoom);
-
-        // 5. Inizializza inventario (per ora hardcoded, ma potresti estendere il DB)
-        initializePlayerInventory();
-
-        System.out.println("✅ Dati caricati dal database");
-        System.out.println(databaseService.getDatabaseStats());
     }
 
-    private void initializePlayerInventory() {
+    private void loadRoomData(Room room) throws DatabaseException {
+        List<Objects> roomObjects = databaseService.loadRoomObjects(room.getId());
+        room.getObjects().clear();
+        room.getObjects().addAll(roomObjects);
+
+        List<Character> enemies = databaseService.loadRoomEnemies(room.getId());
+        room.getEnemies().clear();
+        room.getEnemies().addAll(enemies);
+    }
+
+    private Character loadPlayer() throws DatabaseException {
+        Optional<Character> playerOpt = databaseService.loadPlayer();
+        if (!playerOpt.isPresent()) {
+            throw new DatabaseException("Giocatore non trovato nel database");
+        }
+        return playerOpt.get();
+    }
+
+    private Room findPlayerRoom(Character player, List<Room> rooms) throws DatabaseException {
+        int playerRoomId = databaseService.getPlayerRoomId(player.getId());
+        return rooms.stream()
+                .filter(r -> r.getId() == playerRoomId)
+                .findFirst()
+                .orElse(rooms.get(0));
+    }
+
+    private void initializePlayerInventoryFromDB(Character player) {
         getInventory().clear();
-
-        // Aggiungi oggetti iniziali al giocatore
-        Objects startingHealPotion = new Objects(2, "pozione di cura", "Una fiala dal liquido rosso, emana un lieve calore.");
-        startingHealPotion.setPickupable(true);
-        getInventory().add(startingHealPotion);
-
-        // Aggiungi spada iniziale
+        // Qui in futuro potresti caricare l'inventario reale dal DB
+        // Per ora mettiamo gli oggetti iniziali
+        getInventory().add(new Objects(2, "pozione di cura", "Una fiala dal liquido rosso, emana un lieve calore.", true));
         getInventory().add(WeaponFactory.createSword());
     }
 
+    /**
+     * Modalità hardcoded
+     */
     private void initializeHardcodedGame() throws Exception {
         System.out.println("🔧 Inizializzazione gioco con dati hardcoded...");
-        
-        // Qui dovresti implementare la logica hardcoded originale
-        // Per ora lascio vuoto, ma dovresti copiare la logica di inizializzazione
-        // che avevi prima dell'introduzione del database
-        
+        initializeRoomsHardcoded();
+        initializePlayerInventoryFromDB(null);
+        if (!getRooms().isEmpty()) {
+            setCurrentRoom(getRooms().get(0));
+        }
         System.out.println("✅ Gioco inizializzato in modalità hardcoded");
+    }
+
+    private void initializeRoomsHardcoded() {
+        Room startRoom = new Room(0, "Ingresso", "Ti trovi all'ingresso della fortezza maledetta.");
+        getRooms().add(startRoom);
+        // Aggiungi qui altre stanze hardcoded...
     }
 
     private void initializeObservers() {
@@ -133,9 +157,6 @@ public class TBMGame extends GameDescription implements GameObservable {
         this.attach(new Use());
     }
 
-    /**
-     * Salva lo stato completo del gioco nel database
-     */
     public void saveGameState() {
         if (!useDatabaseMode || databaseService == null) {
             System.out.println("⚠️ Database non disponibile per il salvataggio");
@@ -145,114 +166,83 @@ public class TBMGame extends GameDescription implements GameObservable {
         try {
             System.out.println("💾 Salvataggio stato gioco nel database...");
 
-            // 1. Salva tutte le stanze
             for (Room room : getRooms()) {
                 databaseService.saveRoom(room);
-                
-                // Salva i nemici nella stanza
                 for (Character enemy : room.getEnemies()) {
                     databaseService.saveCharacter(enemy);
                 }
             }
 
-            // 2. Salva il giocatore
             if (combatSystem != null && combatSystem.getPlayer() != null) {
                 Character player = combatSystem.getPlayer();
                 databaseService.saveCharacter(player);
-
-                // Aggiorna la posizione del giocatore
                 if (getCurrentRoom() != null) {
-                    databaseService.updatePlayerRoom(player.getId(), getCurrentRoom().getId());
+                    databaseService.updatePlayerPosition(player.getId(), getCurrentRoom().getId());
                 }
             }
 
-            // 3. Gestisci inventario (rimuovi oggetti dalle stanze se sono nell'inventario)
-            // Nota: questa è una semplificazione. Potresti voler creare una tabella separata per l'inventario
-
             System.out.println("✅ Stato gioco salvato nel database");
-
-        } catch (SQLException e) {
+        } catch (DatabaseException e) {
             System.err.println("❌ Errore nel salvataggio: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    /**
-     * Aggiorna lo stato di un oggetto nel database
-     */
     public void updateObjectState(Objects obj) {
         if (!useDatabaseMode || databaseService == null) return;
-
         try {
-            if (obj.isOpenable()) {
-                databaseService.updateObjectOpenState(obj.getId(), obj.isOpen());
-            }
-        } catch (SQLException e) {
+            databaseService.updateObjectState(obj);
+        } catch (DatabaseException e) {
             System.err.println("Errore nell'aggiornamento oggetto: " + e.getMessage());
         }
     }
 
-    /**
-     * Aggiorna lo stato di un personaggio nel database
-     */
     public void updateCharacterState(Character character) {
         if (!useDatabaseMode || databaseService == null) return;
-
         try {
-            databaseService.updateCharacterHp(character.getId(), character.getCurrentHp(), character.getMaxHp());
-            databaseService.updateCharacterAliveStatus(character.getId(), character.isAlive());
-        } catch (SQLException e) {
+            databaseService.updateCharacterState(character);
+        } catch (DatabaseException e) {
             System.err.println("Errore nell'aggiornamento personaggio: " + e.getMessage());
         }
     }
 
-    /**
-     * Sposta un oggetto dall'inventario alla stanza corrente
-     */
     public void moveObjectToCurrentRoom(Objects obj) {
         if (!useDatabaseMode || databaseService == null || getCurrentRoom() == null) return;
-
         try {
             databaseService.moveObjectToRoom(obj.getId(), getCurrentRoom().getId());
-        } catch (SQLException e) {
+        } catch (DatabaseException e) {
             System.err.println("Errore nello spostamento oggetto: " + e.getMessage());
         }
     }
 
-    /**
-     * Sposta un oggetto dalla stanza corrente all'inventario
-     */
     public void moveObjectToInventory(Objects obj) {
         if (!useDatabaseMode || databaseService == null || getCurrentRoom() == null) return;
-
         try {
             databaseService.moveObjectToInventory(obj.getId(), getCurrentRoom().getId());
-        } catch (SQLException e) {
+        } catch (DatabaseException e) {
             System.err.println("Errore nello spostamento oggetto nell'inventario: " + e.getMessage());
         }
     }
 
-    /**
-     * Verifica se il database è abilitato
-     */
     public boolean isDatabaseModeEnabled() {
         return useDatabaseMode;
     }
 
-    /**
-     * Ottiene il servizio database (per accesso diretto se necessario)
-     */
-    public GameDatabaseService getDatabaseService() {
+    public TBMDatabase getDatabaseService() {
         return databaseService;
     }
 
-    /**
-     * Forza il salvataggio quando il gioco termina
-     */
-    @Override
-    public void finalize() {
+    public void cleanup() {
         if (useDatabaseMode) {
             saveGameState();
         }
+        if (databaseService != null) {
+            try {
+                DatabaseManager.getInstance().shutdown();
+            } catch (Exception e) {
+                System.err.println("Errore nella chiusura del database: " + e.getMessage());
+            }
+        }
+        System.out.println("🧹 Cleanup completato");
     }
 }
