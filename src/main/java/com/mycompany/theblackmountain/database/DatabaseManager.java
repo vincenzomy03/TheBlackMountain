@@ -289,7 +289,7 @@ public class DatabaseManager {
     /**
      * Esegue un'operazione in una transazione
      */
-    public <T> T executeInTransaction(TransactionalOperation<T> operation) throws DatabaseException {
+    public <T> T executeInTransaction(TransactionalOperation<T> operation) throws DBException, Exception {
         try (Connection conn = getTransactionalConnection()) {
             try {
                 T result = operation.execute(conn);
@@ -300,14 +300,14 @@ public class DatabaseManager {
                 throw e;
             }
         } catch (SQLException e) {
-            throw new DatabaseException("Errore nell'esecuzione della transazione", e);
+            throw new DBException("Errore nell'esecuzione della transazione", e);
         }
     }
     
     /**
      * Esegue un'operazione senza valore di ritorno in una transazione
      */
-    public void executeInTransaction(VoidTransactionalOperation operation) throws DatabaseException {
+    public void executeInTransaction(VoidTransactionalOperation operation) throws DBException, Exception {
         executeInTransaction(conn -> {
             operation.execute(conn);
             return null;
@@ -492,13 +492,13 @@ public class DatabaseManager {
 /**
  * Eccezione personalizzata per errori del database
  */
-class DatabaseException extends Exception {
+class DBException extends Exception {
     
-    public DatabaseException(String message) {
+    public DBException(String message) {
         super(message);
     }
     
-    public DatabaseException(String message, Throwable cause) {
+    public DBException(String message, Throwable cause) {
         super(message, cause);
     }
 }

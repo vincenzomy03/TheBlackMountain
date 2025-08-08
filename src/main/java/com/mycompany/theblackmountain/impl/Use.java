@@ -9,7 +9,7 @@ import com.mycompany.theblackmountain.GameObserver;
 import com.mycompany.theblackmountain.GameUtils;
 import com.mycompany.theblackmountain.parser.ParserOutput;
 import com.mycompany.theblackmountain.type.CommandType;
-import com.mycompany.theblackmountain.type.Objects;
+import com.mycompany.theblackmountain.type.GameObjects;
 
 /**
  *
@@ -64,7 +64,7 @@ public class Use extends GameObserver {
                     removeFromInventory(description, 6);
                     
                     // Aggiungi arco magico
-                    Objects magicBow = new Objects(7, "arco magico", 
+                    GameObjects magicBow = new GameObjects(7, "arco magico", 
                         "Un arco leggero ma potente, creato con energia arcana e materiali raccolti nella fortezza.");
                     magicBow.setPickupable(true);
                     description.getInventory().add(magicBow);
@@ -107,7 +107,7 @@ public class Use extends GameObserver {
                 msg.append("\nLa principessa ti ringrazia e ti consegna la chiave finale per uscire dalla montagna.");
                 
                 // Aggiungi chiave del boss
-                Objects bossKey = new Objects(11, "chiave del collo del boss",
+                GameObjects bossKey = new GameObjects(11, "chiave del collo del boss",
                     "Una chiave pesante che apre l'uscita dalla Montagna Nera.");
                 bossKey.setPickupable(true);
                 description.getInventory().add(bossKey);
@@ -128,7 +128,7 @@ public class Use extends GameObserver {
                 msg.append("Ti avvicini all'altare magico. Una voce sussurra: 'Sacrifica parte della tua essenza per ottenere potere.'");
                 msg.append("\n(-20 HP) Hai ricevuto un arco magico dall'altare!");
                 
-                Objects magicBow = new Objects(7, "arco magico", 
+                GameObjects magicBow = new GameObjects(7, "arco magico", 
                     "Un arco etereo ottenuto attraverso un sacrificio magico.");
                 magicBow.setPickupable(true);
                 description.getInventory().add(magicBow);
@@ -159,7 +159,7 @@ public class Use extends GameObserver {
      * @param objectId
      */
     private void removeFromInventory(GameDescription description, int objectId) {
-        Objects obj = GameUtils.getObjectFromInventory(description.getInventory(), objectId);
+        GameObjects obj = GameUtils.getObjectFromInventory(description.getInventory(), objectId);
         if (obj != null) {
             description.getInventory().remove(obj);
         }

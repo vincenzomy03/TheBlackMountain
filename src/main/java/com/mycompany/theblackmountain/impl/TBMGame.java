@@ -2,69 +2,74 @@ package com.mycompany.theblackmountain.impl;
 
 import com.mycompany.theblackmountain.GameDescription;
 import com.mycompany.theblackmountain.GameObservable;
+import com.mycompany.theblackmountain.GameObserver;
 import com.mycompany.theblackmountain.combat.CombatSystem;
 import com.mycompany.theblackmountain.database.DatabaseManager;
 import com.mycompany.theblackmountain.database.TBMDatabase;
-import com.mycompany.theblackmountain.database.DatabaseException;
 import com.mycompany.theblackmountain.type.Room;
-import com.mycompany.theblackmountain.type.Objects;
-import com.mycompany.theblackmountain.type.Character;
+import com.mycompany.theblackmountain.type.GameObjects;
+import com.mycompany.theblackmountain.type.GameCharacter;
+import com.mycompany.theblackmountain.type.CharacterType;
 import com.mycompany.theblackmountain.factory.WeaponFactory;
+import com.mycompany.theblackmountain.parser.ParserOutput;
 
+import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 public class TBMGame extends GameDescription implements GameObservable {
 
     private TBMDatabase databaseService;
-    private boolean useDatabaseMode = true;
+    private CombatSystem combatSystem;
+    private final List<GameObserver> observers = new ArrayList<>();
 
     @Override
     public void init() throws Exception {
-        messages.clear();
-
-        if (useDatabaseMode) {
-            if (!tryInitializeDatabase()) {
-                System.out.println("🔄 Fallback alla modalità hardcoded...");
-                useDatabaseMode = false;
-                initializeHardcodedGame();
-            } else {
-                loadGameFromDatabase();
-            }
-        } else {
-            initializeHardcodedGame();
+        // Inizializza la lista messaggi se serve (da implementare in GameDescription)
+        if (getMessages() == null) {
+            initializeMessages();
         }
 
-        // Inizializza il sistema di combattimento dopo aver caricato il giocatore
+        // Inizializza il database (se fallisce, esce con eccezione)
+        DatabaseManager.getInstance().initialize();
+        databaseService = new TBMDatabase();
+
+        if (!databaseService.testConnection()) {
+            throw new Exception("Test di connessione al database fallito");
+        }
+        System.out.println("✅ Connessione al database riuscita");
+
+        // Carica gioco da DB
+        loadGameFromDatabase();
+
+        // Inizializza combat system dopo caricamento giocatore
         combatSystem = new CombatSystem(this);
 
+        // Inizializza observer
         initializeObservers();
     }
 
-    /**
-     * Prova a inizializzare la connessione al DB
-     */
-    private boolean tryInitializeDatabase() {
-        try {
-            DatabaseManager.getInstance().initialize();
-            databaseService = new TBMDatabase();
-
-            if (!databaseService.testConnection()) {
-                throw new Exception("Test di connessione al database fallito");
-            }
-            System.out.println("✅ Connessione al database riuscita");
-            return true;
-
-        } catch (Exception e) {
-            System.err.println("❌ Errore di connessione al database: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
+    private void initializeMessages() {
+        // Implementa se serve
     }
 
-    /**
-     * Carica l'intero gioco dal DB
-     */
+    @Override
+    public void nextMove(ParserOutput p, PrintStream out) {
+        if (p == null || p.getCommand() == null) {
+            out.println("Non capisco quello che mi vuoi dire.");
+            return;
+        }
+
+        notifyObservers(p);
+
+        saveGameState();
+    }
+
+    public CombatSystem getCombatSystem() {
+        return combatSystem;
+    }
+
     private void loadGameFromDatabase() throws Exception {
         System.out.println("📋 Caricamento dati dal database...");
 
@@ -77,9 +82,8 @@ public class TBMGame extends GameDescription implements GameObservable {
                 loadRoomData(room);
             }
 
-            Character player = loadPlayer();
+            GameCharacter player = loadPlayer();
             setCurrentRoom(findPlayerRoom(player, rooms));
-
             initializePlayerInventoryFromDB(player);
 
             System.out.println("✅ Dati caricati dal database");
@@ -89,92 +93,123 @@ public class TBMGame extends GameDescription implements GameObservable {
     }
 
     private void loadRoomData(Room room) throws DatabaseException {
-        List<Objects> roomObjects = databaseService.loadRoomObjects(room.getId());
+        List<GameObjects> roomObjects = databaseService.loadRoomObjects(room.getId());
         room.getObjects().clear();
         room.getObjects().addAll(roomObjects);
 
-        List<Character> enemies = databaseService.loadRoomEnemies(room.getId());
-        room.getEnemies().clear();
-        room.getEnemies().addAll(enemies);
+        // Gestisci nemici solo se Room li supporta
+        if (hasEnemiesSupport()) {
+            List<GameCharacter> enemies = databaseService.loadRoomEnemies(room.getId());
+            room.getEnemies().clear();
+            room.getEnemies().addAll(enemies);
+        }
     }
 
-    private Character loadPlayer() throws DatabaseException {
-        Optional<Character> playerOpt = databaseService.loadPlayer();
+    private boolean hasEnemiesSupport() {
+        // Modifica secondo implementazione Room
+        return false;
+    }
+
+    private GameCharacter loadPlayer() throws DatabaseException {
+        Optional<GameCharacter> playerOpt = databaseService.loadPlayer();
         if (!playerOpt.isPresent()) {
-            throw new DatabaseException("Giocatore non trovato nel database");
+            GameCharacter defaultPlayer = createDefaultPlayer();
+            databaseService.saveCharacter(defaultPlayer);
+            return defaultPlayer;
         }
         return playerOpt.get();
     }
 
-    private Room findPlayerRoom(Character player, List<Room> rooms) throws DatabaseException {
-        int playerRoomId = databaseService.getPlayerRoomId(player.getId());
-        return rooms.stream()
-                .filter(r -> r.getId() == playerRoomId)
-                .findFirst()
-                .orElse(rooms.get(0));
+    private GameCharacter createDefaultPlayer() {
+        return new GameCharacter(
+                1,
+                "Avventuriero",
+                "Un coraggioso avventuriero",
+                100,
+                15,
+                10,
+                CharacterType.PLAYER
+        );
     }
 
-    private void initializePlayerInventoryFromDB(Character player) {
+    private Room findPlayerRoom(GameCharacter player, List<Room> rooms) throws DatabaseException {
+        try {
+            int playerRoomId = databaseService.getPlayerRoomId(player.getId());
+            return rooms.stream()
+                    .filter(r -> r.getId() == playerRoomId)
+                    .findFirst()
+                    .orElse(rooms.get(0));
+        } catch (DatabaseException e) {
+            return rooms.isEmpty() ? null : rooms.get(0);
+        }
+    }
+
+    private void initializePlayerInventoryFromDB(GameCharacter player) {
         getInventory().clear();
-        // Qui in futuro potresti caricare l'inventario reale dal DB
-        // Per ora mettiamo gli oggetti iniziali
-        getInventory().add(new Objects(2, "pozione di cura", "Una fiala dal liquido rosso, emana un lieve calore.", true));
+        // Per ora oggetti fissi (in futuro da DB)
+        getInventory().add(new GameObjects(2, "pozione di cura", "Una fiala dal liquido rosso, emana un lieve calore.", true));
         getInventory().add(WeaponFactory.createSword());
     }
 
-    /**
-     * Modalità hardcoded
-     */
-    private void initializeHardcodedGame() throws Exception {
-        System.out.println("🔧 Inizializzazione gioco con dati hardcoded...");
-        initializeRoomsHardcoded();
-        initializePlayerInventoryFromDB(null);
-        if (!getRooms().isEmpty()) {
-            setCurrentRoom(getRooms().get(0));
-        }
-        System.out.println("✅ Gioco inizializzato in modalità hardcoded");
-    }
-
-    private void initializeRoomsHardcoded() {
-        Room startRoom = new Room(0, "Ingresso", "Ti trovi all'ingresso della fortezza maledetta.");
-        getRooms().add(startRoom);
-        // Aggiungi qui altre stanze hardcoded...
-    }
-
     private void initializeObservers() {
-        CombatObserver combatObserver = new CombatObserver();
-        combatObserver.setCombatSystem(combatSystem);
-        this.attach(combatObserver);
-
-        Move moveObserver = new Move();
-        moveObserver.setCombatSystem(combatSystem);
-        this.attach(moveObserver);
-
-        this.attach(new OpenInventory());
-        this.attach(new LookAt());
-        this.attach(new PickUp());
-        this.attach(new Open());
-        this.attach(new Use());
-    }
-
-    public void saveGameState() {
-        if (!useDatabaseMode || databaseService == null) {
-            System.out.println("⚠️ Database non disponibile per il salvataggio");
+        if (combatSystem == null) {
+            System.err.println("⚠️ CombatSystem non inizializzato, skip inizializzazione observers");
             return;
         }
 
+        try {
+            CombatObserver combatObserver = new CombatObserver();
+            combatObserver.setCombatSystem(combatSystem);
+            this.attach(combatObserver);
+
+            Move moveObserver = new Move();
+            moveObserver.setCombatSystem(combatSystem);
+            this.attach(moveObserver);
+
+            this.attach(new OpenInventory());
+            this.attach(new LookAt());
+            this.attach(new PickUp());
+            this.attach(new Open());
+            this.attach(new Use());
+        } catch (Exception e) {
+            System.err.println("⚠️ Alcuni observer non sono disponibili: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void attach(GameObserver observer) {
+        if (observer != null && !observers.contains(observer)) {
+            observers.add(observer);
+        }
+    }
+
+    @Override
+    public void detach(GameObserver observer) {
+        observers.remove(observer);
+    }
+
+    @Override
+    public void notifyObservers(ParserOutput p) {
+        for (GameObserver observer : observers) {
+            observer.update(p);
+        }
+    }
+
+    public void saveGameState() {
         try {
             System.out.println("💾 Salvataggio stato gioco nel database...");
 
             for (Room room : getRooms()) {
                 databaseService.saveRoom(room);
-                for (Character enemy : room.getEnemies()) {
-                    databaseService.saveCharacter(enemy);
+                if (hasEnemiesSupport()) {
+                    for (GameCharacter enemy : room.getEnemies()) {
+                        databaseService.saveCharacter(enemy);
+                    }
                 }
             }
 
             if (combatSystem != null && combatSystem.getPlayer() != null) {
-                Character player = combatSystem.getPlayer();
+                GameCharacter player = combatSystem.getPlayer();
                 databaseService.saveCharacter(player);
                 if (getCurrentRoom() != null) {
                     databaseService.updatePlayerPosition(player.getId(), getCurrentRoom().getId());
@@ -188,8 +223,7 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
     }
 
-    public void updateObjectState(Objects obj) {
-        if (!useDatabaseMode || databaseService == null) return;
+    public void updateObjectState(GameObjects obj) {
         try {
             databaseService.updateObjectState(obj);
         } catch (DatabaseException e) {
@@ -197,8 +231,7 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
     }
 
-    public void updateCharacterState(Character character) {
-        if (!useDatabaseMode || databaseService == null) return;
+    public void updateCharacterState(GameCharacter character) {
         try {
             databaseService.updateCharacterState(character);
         } catch (DatabaseException e) {
@@ -206,8 +239,10 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
     }
 
-    public void moveObjectToCurrentRoom(Objects obj) {
-        if (!useDatabaseMode || databaseService == null || getCurrentRoom() == null) return;
+    public void moveObjectToCurrentRoom(GameObjects obj) {
+        if (getCurrentRoom() == null) {
+            return;
+        }
         try {
             databaseService.moveObjectToRoom(obj.getId(), getCurrentRoom().getId());
         } catch (DatabaseException e) {
@@ -215,27 +250,17 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
     }
 
-    public void moveObjectToInventory(Objects obj) {
-        if (!useDatabaseMode || databaseService == null || getCurrentRoom() == null) return;
+    public void moveObjectToInventory(GameObjects obj) {
         try {
-            databaseService.moveObjectToInventory(obj.getId(), getCurrentRoom().getId());
+            // Assumendo giocatore con ID 1
+            databaseService.moveObjectToInventory(obj.getId(), 1);
         } catch (DatabaseException e) {
             System.err.println("Errore nello spostamento oggetto nell'inventario: " + e.getMessage());
         }
     }
 
-    public boolean isDatabaseModeEnabled() {
-        return useDatabaseMode;
-    }
-
-    public TBMDatabase getDatabaseService() {
-        return databaseService;
-    }
-
     public void cleanup() {
-        if (useDatabaseMode) {
-            saveGameState();
-        }
+        saveGameState();
         if (databaseService != null) {
             try {
                 DatabaseManager.getInstance().shutdown();
@@ -244,5 +269,12 @@ public class TBMGame extends GameDescription implements GameObservable {
             }
         }
         System.out.println("🧹 Cleanup completato");
+    }
+
+    /**
+     * Getter per i messaggi (implementa come serve)
+     */
+    public List<String> getMessages() {
+        return null; // da implementare se serve
     }
 }

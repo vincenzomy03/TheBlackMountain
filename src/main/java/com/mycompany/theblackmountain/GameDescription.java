@@ -5,7 +5,7 @@
 package com.mycompany.theblackmountain;
 
 import com.mycompany.theblackmountain.parser.ParserOutput;
-import com.mycompany.theblackmountain.type.Objects;
+import com.mycompany.theblackmountain.type.GameObjects;
 import com.mycompany.theblackmountain.type.Command;
 import com.mycompany.theblackmountain.type.Room;
 import java.io.PrintStream;
@@ -22,7 +22,7 @@ public abstract class GameDescription {
 
     private final List<Command> commands = new ArrayList<>();
 
-    private final List<Objects> inventory = new ArrayList<>();
+    private final List<GameObjects> inventory = new ArrayList<>();
 
     private Room currentRoom;
 
@@ -62,7 +62,7 @@ public abstract class GameDescription {
      *
      * @return
      */
-    public List<Objects> getInventory() {
+    public List<GameObjects> getInventory() {
         return inventory;
     }
 

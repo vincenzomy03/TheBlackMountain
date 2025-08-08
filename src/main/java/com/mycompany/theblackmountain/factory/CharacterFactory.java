@@ -4,7 +4,7 @@
  */
 package com.mycompany.theblackmountain.factory;
 
-import com.mycompany.theblackmountain.type.Character;
+import com.mycompany.theblackmountain.type.GameCharacter;
 import com.mycompany.theblackmountain.type.CharacterType;
 
 /**
@@ -17,10 +17,10 @@ public class CharacterFactory {
     /**
      * Crea il protagonista del gioco
      *
-     * @return Character protagonista
+     * @return GameCharacter protagonista
      */
-    public static Character createPlayer() {
-        return new Character(
+    public static GameCharacter createPlayer() {
+        return new GameCharacter(
                 0,
                 "Avventuriero",
                 "Un coraggioso avventuriero che si addentra nella Montagna Nera per salvare la principessa.",
@@ -35,10 +35,10 @@ public class CharacterFactory {
      * Crea un Goblin normale
      *
      * @param id ID univoco del goblin
-     * @return Character goblin
+     * @return GameCharacter goblin
      */
-    public static Character createGoblin(int id) {
-        return new Character(
+    public static GameCharacter createGoblin(int id) {
+        return new GameCharacter(
                 1,
                 "Goblin",
                 "Una creatura malvagia dalla pelle verde scuro, con occhi pieni d'odio e artigli affilati.",
@@ -53,10 +53,10 @@ public class CharacterFactory {
      * Crea un Goblin Gigante (più forte)
      *
      * @param id ID univoco del goblin gigante
-     * @return Character goblin gigante
+     * @return GameCharacter goblin gigante
      */
-    public static Character createGiantGoblin(int id) {
-        return new Character(
+    public static GameCharacter createGiantGoblin(int id) {
+        return new GameCharacter(
                 2,
                 "Goblin Gigante",
                 "Un goblin di dimensioni enormi che impugna una clava insanguinata. La sua forza è leggendaria.",
@@ -71,10 +71,10 @@ public class CharacterFactory {
      * Crea un Topo Gigante
      *
      * @param id ID univoco del topo
-     * @return Character topo gigante
+     * @return GameCharacter topo gigante
      */
-    public static Character createGiantRat(int id) {
-        return new Character(
+    public static GameCharacter createGiantRat(int id) {
+        return new GameCharacter(
                 3,
                 "Topo Gigante",
                 "Un enorme topo con denti giallastri e occhi rossi che brillano nel buio. Veloce e aggressivo.",
@@ -88,10 +88,10 @@ public class CharacterFactory {
     /**
      * Crea il Boss finale - Cane Demone
      *
-     * @return Character boss
+     * @return GameCharacter boss
      */
-    public static Character createDemonDog() {
-        return new Character(
+    public static GameCharacter createDemonDog() {
+        return new GameCharacter(
                 4,
                 "Cane Demone",
                 "Una creatura infernale con zanne fumanti e occhi di fuoco. Il suo pelo nero come la notte emana un calore terrificante.",
@@ -112,11 +112,11 @@ public class CharacterFactory {
      * @param attack attacco
      * @param defense difesa
      * @param type tipo di personaggio
-     * @return Character personalizzato
+     * @return GameCharacter personalizzato
      */
-    public static Character createCustomCharacter(int id, String name, String description,
+    public static GameCharacter createCustomCharacter(int id, String name, String description,
             int hp, int attack, int defense, CharacterType type) {
-        return new Character(id, name, description, hp, attack, defense, type);
+        return new GameCharacter(id, name, description, hp, attack, defense, type);
     }
 
     /**

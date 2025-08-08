@@ -12,7 +12,7 @@ import java.util.Set;
  *
  * @author vince
  */
-public class ContainerObj extends Objects {
+public class ContainerObj extends GameObjects {
 
     private List<Object> list = new ArrayList<>();
 

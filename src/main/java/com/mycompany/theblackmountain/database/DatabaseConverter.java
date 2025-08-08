@@ -52,18 +52,18 @@ public class DatabaseConverter {
     }
     
     /**
-     * Converte un ObjectEntity in Objects
+     * Converte un ObjectEntity in GameObjects
      */
-    public static Objects toObject(ObjectEntity entity) {
+    public static GameObjects toObject(ObjectEntity entity) {
         if (entity == null) return null;
         
-        Objects obj;
+        GameObjects obj;
         
         // Crea il tipo appropriato di oggetto
         if ("CONTAINER".equals(entity.getObjectType())) {
             obj = new ContainerObj(entity.getId(), entity.getName(), entity.getDescription());
         } else {
-            obj = new Objects(entity.getId(), entity.getName(), entity.getDescription());
+            obj = new GameObjects(entity.getId(), entity.getName(), entity.getDescription());
         }
         
         // Imposta le proprietà
@@ -86,9 +86,9 @@ public class DatabaseConverter {
     }
     
     /**
-     * Converte Objects in ObjectEntity
+     * Converte GameObjects in ObjectEntity
      */
-    public static ObjectEntity toObjectEntity(Objects obj) {
+    public static ObjectEntity toObjectEntity(GameObjects obj) {
         if (obj == null) return null;
         
         ObjectEntity entity = new ObjectEntity();
@@ -119,23 +119,24 @@ public class DatabaseConverter {
     }
     
     /**
-     * Converte un CharacterEntity in Character
-     * @param entity
+     * Converte un CharacterEntity in GameCharacter (RISOLTO CONFLITTO)
+ Usa il nome completo della classe per evitare ambiguità con java.lang.GameCharacter
      */
-    public static Character toCharacter(CharacterEntity entity) {
+    public static com.mycompany.theblackmountain.type.GameCharacter toCharacter(CharacterEntity entity) {
         if (entity == null) return null;
         
         CharacterType type = CharacterType.valueOf(entity.getCharacterType());
         
-        Character character = new Character(
-            entity.getId(),
-            entity.getName(),
-            entity.getDescription(),
-            entity.getMaxHp(),
-            entity.getAttack(),
-            entity.getDefense(),
-            type
-        );
+        com.mycompany.theblackmountain.type.GameCharacter character = 
+            new com.mycompany.theblackmountain.type.GameCharacter(
+                entity.getId(),
+                entity.getName(),
+                entity.getDescription(),
+                entity.getMaxHp(),
+                entity.getAttack(),
+                entity.getDefense(),
+                type
+            );
         
         character.setCurrentHp(entity.getCurrentHp());
         if (!entity.isAlive()) {
@@ -147,11 +148,9 @@ public class DatabaseConverter {
     }
     
     /**
-     * Converte Character in CharacterEntity
-     * @param character
-     * @return 
+     * Converte GameCharacter in CharacterEntity (RISOLTO CONFLITTO)
      */
-    public static CharacterEntity toCharacterEntity(Character character) {
+    public static CharacterEntity toCharacterEntity(com.mycompany.theblackmountain.type.GameCharacter character) {
         if (character == null) return null;
         
         CharacterEntity entity = new CharacterEntity();
@@ -221,7 +220,7 @@ public class DatabaseConverter {
         
         WeaponEntity entity = new WeaponEntity();
         entity.setId(weapon.getId());
-        entity.setObjectId(weapon.getId()); // Weapon estende Objects, quindi stesso ID
+        entity.setObjectId(weapon.getId()); // Weapon estende GameObjects, quindi stesso ID
         entity.setWeaponType(weapon.getWeaponType().name());
         entity.setAttackBonus(weapon.getAttackBonus());
         entity.setCriticalChance(weapon.getCriticalChance());

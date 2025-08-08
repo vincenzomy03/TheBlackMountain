@@ -5,7 +5,7 @@
 package com.mycompany.theblackmountain.parser;
 
 import com.mycompany.theblackmountain.Utils;
-import com.mycompany.theblackmountain.type.Objects;
+import com.mycompany.theblackmountain.type.GameObjects;
 import com.mycompany.theblackmountain.type.Command;
 import java.util.List;
 import java.util.Set;
@@ -28,7 +28,7 @@ public class Parser {
         return -1;
     }
 
-    private int checkForObject(String token, List<Objects> objects) {
+    private int checkForObject(String token, List<GameObjects> objects) {
         for (int i = 0; i < objects.size(); i++) {
             // Controlla nome esatto
             if (objects.get(i).getName().equals(token)) {
@@ -46,7 +46,7 @@ public class Parser {
         return -1;
     }
 
-    public ParserOutput parse(String command, List<Command> commands, List<Objects> objects, List<Objects> inventory) {
+    public ParserOutput parse(String command, List<Command> commands, List<GameObjects> objects, List<GameObjects> inventory) {
         List<String> tokens = Utils.parseString(command, stopwords);
 
         if (!tokens.isEmpty()) {

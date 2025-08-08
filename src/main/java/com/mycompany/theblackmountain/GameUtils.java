@@ -4,7 +4,7 @@
  */
 package com.mycompany.theblackmountain;
 
-import com.mycompany.theblackmountain.type.Objects;
+import com.mycompany.theblackmountain.type.GameObjects;
 import java.util.List;
 
 /**
@@ -19,8 +19,8 @@ public class GameUtils {
      * @param objectId ID dell'oggetto da cercare
      * @return l'oggetto se trovato, null altrimenti
      */
-    public static Objects getObjectFromInventory(List<Objects> inventory, int objectId) {
-        for (Objects obj : inventory) {
+    public static GameObjects getObjectFromInventory(List<GameObjects> inventory, int objectId) {
+        for (GameObjects obj : inventory) {
             if (obj.getId() == objectId) {
                 return obj;
             }
@@ -34,8 +34,8 @@ public class GameUtils {
      * @param objectName nome dell'oggetto da cercare
      * @return l'oggetto se trovato, null altrimenti
      */
-    public static Objects getObjectFromInventoryByName(List<Objects> inventory, String objectName) {
-        for (Objects obj : inventory) {
+    public static GameObjects getObjectFromInventoryByName(List<GameObjects> inventory, String objectName) {
+        for (GameObjects obj : inventory) {
             if (obj.getName().equalsIgnoreCase(objectName)) {
                 return obj;
             }
@@ -49,7 +49,7 @@ public class GameUtils {
      * @param objectId ID dell'oggetto da verificare
      * @return true se l'oggetto è presente, false altrimenti
      */
-    public static boolean inventoryContains(List<Objects> inventory, int objectId) {
+    public static boolean inventoryContains(List<GameObjects> inventory, int objectId) {
         return getObjectFromInventory(inventory, objectId) != null;
     }
     
@@ -59,9 +59,9 @@ public class GameUtils {
      * @param objectId ID dell'oggetto da contare
      * @return numero di oggetti con quell'ID
      */
-    public static int countObjectsInInventory(List<Objects> inventory, int objectId) {
+    public static int countObjectsInInventory(List<GameObjects> inventory, int objectId) {
         int count = 0;
-        for (Objects obj : inventory) {
+        for (GameObjects obj : inventory) {
             if (obj.getId() == objectId) {
                 count++;
             }
@@ -75,8 +75,8 @@ public class GameUtils {
      * @param objectId ID dell'oggetto da rimuovere
      * @return true se l'oggetto è stato rimosso, false se non trovato
      */
-    public static boolean removeObjectFromInventory(List<Objects> inventory, int objectId) {
-        Objects obj = getObjectFromInventory(inventory, objectId);
+    public static boolean removeObjectFromInventory(List<GameObjects> inventory, int objectId) {
+        GameObjects obj = getObjectFromInventory(inventory, objectId);
         if (obj != null) {
             inventory.remove(obj);
             return true;
@@ -90,8 +90,8 @@ public class GameUtils {
      * @param objectId ID dell'oggetto da cercare
      * @return l'oggetto se trovato, null altrimenti
      */
-    public static Objects getObjectFromRoom(List<Objects> roomObjects, int objectId) {
-        for (Objects obj : roomObjects) {
+    public static GameObjects getObjectFromRoom(List<GameObjects> roomObjects, int objectId) {
+        for (GameObjects obj : roomObjects) {
             if (obj.getId() == objectId) {
                 return obj;
             }

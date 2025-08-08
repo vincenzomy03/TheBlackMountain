@@ -12,7 +12,7 @@ import java.util.Set;
  *
  * @author vince
  */
-public class Objects {
+public class GameObjects {
 
     private final int id;
 
@@ -36,7 +36,7 @@ public class Objects {
      *
      * @param id
      */
-    public Objects (int id) {
+    public GameObjects (int id) {
         this.id = id;
     }
 
@@ -45,7 +45,7 @@ public class Objects {
      * @param id
      * @param name
      */
-    public Objects (int id, String name) {
+    public GameObjects (int id, String name) {
         this.id = id;
         this.name = name;
     }
@@ -56,7 +56,7 @@ public class Objects {
      * @param name
      * @param description
      */
-    public Objects (int id, String name, String description) {
+    public GameObjects (int id, String name, String description) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -69,7 +69,7 @@ public class Objects {
      * @param description
      * @param alias
      */
-    public Objects(int id, String name, String description, Set<String> alias) {
+    public GameObjects(int id, String name, String description, Set<String> alias) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -244,7 +244,7 @@ public boolean equals(Object obj) {
     if (obj == null || getClass() != obj.getClass()) {
         return false;
     }
-    final Objects other = (Objects) obj;
+    final GameObjects other = (GameObjects) obj;
     return this.id == other.id;
 }
 

@@ -9,7 +9,7 @@ package com.mycompany.theblackmountain.type;
  *
  * @author vince
  */
-public class Character {
+public class GameCharacter {
 
     private final int id;
     private String name;
@@ -32,7 +32,7 @@ public class Character {
      * @param defense
      * @param type
      */
-    public Character(int id, String name, String description, int maxHp, int attack, int defense, CharacterType type) {
+    public GameCharacter(int id, String name, String description, int maxHp, int attack, int defense, CharacterType type) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -206,7 +206,7 @@ public class Character {
         if (obj == null || getClass() != obj.getClass()) {
             return false;
         }
-        Character character = (Character) obj;
+        GameCharacter character = (GameCharacter) obj;
         return id == character.id;
     }
 

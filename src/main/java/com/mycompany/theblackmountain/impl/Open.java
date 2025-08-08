@@ -6,7 +6,7 @@ package com.mycompany.theblackmountain.impl;
 
 import com.mycompany.theblackmountain.GameDescription;
 import com.mycompany.theblackmountain.parser.ParserOutput;
-import com.mycompany.theblackmountain.type.Objects;
+import com.mycompany.theblackmountain.type.GameObjects;
 import com.mycompany.theblackmountain.type.ContainerObj;
 import com.mycompany.theblackmountain.type.CommandType;
 import com.mycompany.theblackmountain.GameObserver;
@@ -33,7 +33,7 @@ public class Open extends GameObserver{
             } else {
                 // Gestione oggetti nella stanza
                 if (parserOutput.getObject() != null) {
-                    Objects obj = parserOutput.getObject();
+                    GameObjects obj = parserOutput.getObject();
                     
                     // Gestione casse (id 100)
                     if (obj.getId() == 100) {
@@ -44,7 +44,7 @@ public class Open extends GameObserver{
                                     msg.append("\n").append(containerObj.getName()).append(" contiene:");
                                     Iterator<Object> it = containerObj.getList().iterator();
                                     while (it.hasNext()) {
-                                        Objects next = (Objects) it.next();
+                                        GameObjects next = (GameObjects) it.next();
                                         description.getCurrentRoom().getObjects().add(next);
                                         msg.append(" ").append(next.getName());
                                         it.remove();
@@ -72,7 +72,7 @@ public class Open extends GameObserver{
                 
                 // Gestione oggetti nell'inventario
                 if (parserOutput.getInvObject() != null) {
-                    Objects invObj = parserOutput.getInvObject();
+                    GameObjects invObj = parserOutput.getInvObject();
                     
                     if (invObj.isOpenable() && !invObj.isOpen()) {
                         if (invObj instanceof ContainerObj containerObj) {
@@ -81,7 +81,7 @@ public class Open extends GameObserver{
                                 msg.append("\n").append(containerObj.getName()).append(" contiene:");
                                 Iterator<Object> it = containerObj.getList().iterator();
                                 while (it.hasNext()) {
-                                    Objects next = (Objects) it.next();
+                                    GameObjects next = (GameObjects) it.next();
                                     description.getInventory().add(next);
                                     msg.append(" ").append(next.getName());
                                     it.remove();

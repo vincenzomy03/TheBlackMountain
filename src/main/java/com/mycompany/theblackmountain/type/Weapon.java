@@ -8,7 +8,7 @@ package com.mycompany.theblackmountain.type;
  * Classe che rappresenta un'arma nel gioco
  * @author vince  
  */
-public class Weapon extends Objects {
+public class Weapon extends GameObjects {
     
     private int attackBonus;
     private int criticalChance; // Percentuale (0-100)

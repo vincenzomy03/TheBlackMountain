@@ -4,7 +4,7 @@
  */
 package com.mycompany.theblackmountain.parser;
 
-import com.mycompany.theblackmountain.type.Objects;
+import com.mycompany.theblackmountain.type.GameObjects;
 import com.mycompany.theblackmountain.type.Command;
 
 /**
@@ -15,16 +15,16 @@ public class ParserOutput {
 
     private Command command;
 
-    private Objects object;
+    private GameObjects object;
     
-    private Objects invObject;
+    private GameObjects invObject;
 
     /**
      *
      * @param command
      * @param object
      */
-    public ParserOutput(Command command, Objects object) {
+    public ParserOutput(Command command, GameObjects object) {
         this.command = command;
         this.object = object;
     }
@@ -35,7 +35,7 @@ public class ParserOutput {
      * @param object
      * @param invObejct
      */
-    public ParserOutput(Command command, Objects object, Objects invObejct) {
+    public ParserOutput(Command command, GameObjects object, GameObjects invObejct) {
         this.command = command;
         this.object = object;
         this.invObject = invObejct;
@@ -61,7 +61,7 @@ public class ParserOutput {
      *
      * @return
      */
-    public Objects getObject() {
+    public GameObjects getObject() {
         return object;
     }
 
@@ -69,7 +69,7 @@ public class ParserOutput {
      *
      * @param object
      */
-    public void setObject(Objects object) {
+    public void setObject(GameObjects object) {
         this.object = object;
     }
 
@@ -77,7 +77,7 @@ public class ParserOutput {
      *
      * @return
      */
-    public Objects getInvObject() {
+    public GameObjects getInvObject() {
         return invObject;
     }
 
@@ -85,7 +85,7 @@ public class ParserOutput {
      *
      * @param invObject
      */
-    public void setInvObject(Objects invObject) {
+    public void setInvObject(GameObjects invObject) {
         this.invObject = invObject;
     }
 

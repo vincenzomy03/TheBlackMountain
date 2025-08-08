@@ -3,7 +3,7 @@ package com.mycompany.theblackmountain.save;
 import com.mycompany.theblackmountain.GameDescription;
 import com.mycompany.theblackmountain.combat.CombatSystem;
 import com.mycompany.theblackmountain.impl.TBMGame;
-import com.mycompany.theblackmountain.type.Objects;
+import com.mycompany.theblackmountain.type.GameObjects;
 import com.mycompany.theblackmountain.type.ContainerObj;
 import com.mycompany.theblackmountain.type.Room;
 
@@ -60,7 +60,7 @@ public class SaveManager {
 
         // Inventario
         StringBuilder inventoryStr = new StringBuilder();
-        for (Objects obj : gameDescription.getInventory()) {
+        for (GameObjects obj : gameDescription.getInventory()) {
             if (obj != null && obj.getName() != null) {
                 if (inventoryStr.length() > 0) inventoryStr.append(";");
                 inventoryStr.append(obj.getId()).append(",").append(obj.getName());
@@ -83,7 +83,7 @@ public class SaveManager {
         StringBuilder chestsStr = new StringBuilder();
         for (Room room : gameDescription.getRooms()) {
             if (room.getObjects() == null) continue;
-            for (Objects obj : room.getObjects()) {
+            for (GameObjects obj : room.getObjects()) {
                 if (obj instanceof ContainerObj) {
                     if (chestsStr.length() > 0) chestsStr.append(";");
                     chestsStr.append(obj.getId()).append(",").append(obj.isOpen());
@@ -180,7 +180,7 @@ public class SaveManager {
                             String objName = parts[1];
                             
                             // Trova l'oggetto originale nel gioco e aggiungilo all'inventario
-                            Objects obj = findObjectInGame(gameDescription, objId, objName);
+                            GameObjects obj = findObjectInGame(gameDescription, objId, objName);
                             if (obj != null) {
                                 gameDescription.getInventory().add(obj);
                             }
@@ -259,7 +259,7 @@ public class SaveManager {
      */
     private static ContainerObj findChestById(GameDescription gameDescription, int chestId) {
         for (Room room : gameDescription.getRooms()) {
-            for (Objects obj : room.getObjects()) {
+            for (GameObjects obj : room.getObjects()) {
                 if (obj instanceof ContainerObj && obj.getId() == chestId) {
                     return (ContainerObj) obj;
                 }
@@ -271,13 +271,13 @@ public class SaveManager {
     /**
      * Trova un oggetto nel gioco (per ricostruire l'inventario)
      */
-    private static Objects findObjectInGame(GameDescription gameDescription, int objId, String objName) {
+    private static GameObjects findObjectInGame(GameDescription gameDescription, int objId, String objName) {
         // Cerca in tutte le stanze
         for (Room room : gameDescription.getRooms()) {
-            for (Objects obj : room.getObjects()) {
+            for (GameObjects obj : room.getObjects()) {
                 if (obj.getId() == objId || obj.getName().equals(objName)) {
                     // Crea una copia dell'oggetto
-                    Objects copy = new Objects(obj.getId(), obj.getName(), obj.getDescription());
+                    GameObjects copy = new GameObjects(obj.getId(), obj.getName(), obj.getDescription());
                     copy.setAlias(obj.getAlias());
                     copy.setPickupable(obj.isPickupable());
                     return copy;
@@ -287,10 +287,10 @@ public class SaveManager {
                 if (obj instanceof ContainerObj) {
                     ContainerObj container = (ContainerObj) obj;
                     for (Object item : container.getList()) {
-                        if (item instanceof Objects) {
-                            Objects containerObj = (Objects) item;
+                        if (item instanceof GameObjects) {
+                            GameObjects containerObj = (GameObjects) item;
                             if (containerObj.getId() == objId || containerObj.getName().equals(objName)) {
-                                Objects copy = new Objects(containerObj.getId(), containerObj.getName(), containerObj.getDescription());
+                                GameObjects copy = new GameObjects(containerObj.getId(), containerObj.getName(), containerObj.getDescription());
                                 copy.setAlias(containerObj.getAlias());
                                 copy.setPickupable(containerObj.isPickupable());
                                 return copy;
@@ -302,7 +302,7 @@ public class SaveManager {
         }
         
         // Se non trovato, crea un oggetto base
-        return new Objects(objId, objName, "Oggetto caricato dal salvataggio");
+        return new GameObjects(objId, objName, "Oggetto caricato dal salvataggio");
     }
     
     /**
