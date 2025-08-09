@@ -14,6 +14,7 @@ import com.mycompany.theblackmountain.type.Command;
 import com.mycompany.theblackmountain.type.CommandType;
 
 import java.io.PrintStream;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +62,7 @@ public class TBMGame extends GameDescription implements GameObservable {
         System.out.println("Caricamento dati di gioco...");
         gameLoader = new GameLoader(this);
         gameLoader.loadGame();
+        resetForNewGame();
         gameLoader.printDatabaseStats();
         gameLoader.verifyDatabaseIntegrity();
         System.out.println("Dati di gioco caricati");
@@ -120,7 +122,6 @@ public class TBMGame extends GameDescription implements GameObservable {
         System.out.println("Stato del gioco verificato");
     }
 
-    
     @Override
     public void nextMove(ParserOutput p, PrintStream out) {
         if (p == null || p.getCommand() == null) {
@@ -174,14 +175,14 @@ public class TBMGame extends GameDescription implements GameObservable {
     private void initializeCommands() {
         System.out.println("Inizializzazione comandi...");
 
-        //Commands
+        // Commands
         Command nord = new Command(CommandType.NORD, "nord");
         nord.setAlias(new String[]{"n", "N", "Nord", "NORD"});
         getCommands().add(nord);
 
-        Command iventory = new Command(CommandType.INVENTORY, "inventario");
-        iventory.setAlias(new String[]{"inv"});
-        getCommands().add(iventory);
+        Command inventory = new Command(CommandType.INVENTORY, "inventario");
+        inventory.setAlias(new String[]{"inv"});
+        getCommands().add(inventory);
 
         Command sud = new Command(CommandType.SOUTH, "sud");
         sud.setAlias(new String[]{"s", "S", "Sud", "SUD"});
@@ -224,13 +225,156 @@ public class TBMGame extends GameDescription implements GameObservable {
         Command attack = new Command(CommandType.ATTACK, "attacca");
         attack.setAlias(new String[]{"attacco", "colpisci", "fight"});
         getCommands().add(attack);
-        
-        // Comando per creare arco
-        Command attack = new Command(CommandType.CREATE, "crea");
-        attack.setAlias(new String[]{"crea", "costruisci", "build", "create"});
+
+        // Comando per creare arco (CORREZIONE: era attack.setAlias invece di create.setAlias)
+        Command create = new Command(CommandType.CREATE, "crea");
+        create.setAlias(new String[]{"costruisci", "build", "create"});
         getCommands().add(create);
 
         System.out.println("Inizializzati " + getCommands().size() + " comandi");
+    }
+
+    /**
+     * Reset del gioco per una nuova partita
+     */
+    public void resetForNewGame() {
+        try {
+            System.out.println("🔄 Resetting gioco per nuova partita...");
+
+            // Reset posizione giocatore all'ingresso
+            Room entrance = null;
+            for (Room room : getRooms()) {
+                if (room.getId() == 0) {
+                    entrance = room;
+                    break;
+                }
+            }
+
+            if (entrance != null) {
+                setCurrentRoom(entrance);
+                System.out.println("✅ Giocatore riposizionato all'ingresso");
+            }
+
+            // Reset HP giocatore
+            if (player != null) {
+                player.setCurrentHp(player.getMaxHp());
+                updateCharacterState(player);
+                System.out.println("✅ HP giocatore ripristinati: " + player.getCurrentHp());
+            }
+
+            // Reset stato nemici - li rimette tutti vivi
+            if (gameLoader != null && database != null) {
+                try (Connection conn = database.getConnection()) {
+                    String resetEnemiesSql = "UPDATE CHARACTERS SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE WHERE CHARACTER_TYPE != 'PLAYER'";
+                    try (var stmt = conn.prepareStatement(resetEnemiesSql)) {
+                        int updated = stmt.executeUpdate();
+                        System.out.println("✅ " + updated + " nemici ripristinati nel database");
+                    }
+
+                    // Ricarica i nemici nelle stanze
+                    for (Room room : getRooms()) {
+                        room.getEnemies().clear();
+                    }
+                    
+                    // Ricarica caratteri dal database (metodo privato chiamato attraverso GameLoader)
+                    reloadCharactersFromDatabase();
+                    
+                } catch (SQLException e) {
+                    System.err.println("❌ Errore nel reset nemici: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+
+            // Termina eventuali combattimenti in corso
+            if (combatSystem != null && combatSystem.isInCombat()) {
+                combatSystem.endCombat();
+                System.out.println("✅ Combattimento in corso terminato");
+            }
+
+            System.out.println("🎮 Gioco pronto per una nuova avventura!");
+
+        } catch (Exception e) {
+            System.err.println("❌ Errore nel reset del gioco: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Ricarica i personaggi dal database dopo il reset
+     */
+    private void reloadCharactersFromDatabase() {
+        try {
+            // Creare un nuovo GameLoader temporaneo per ricaricare solo i caratteri
+            GameLoader tempLoader = new GameLoader(this);
+            
+            // Chiama il metodo pubblico loadGame che ricaricherà tutti i dati
+            // Ma dato che abbiamo già le stanze, ricaricherà solo i personaggi
+            try (Connection conn = database.getConnection()) {
+                // Usa reflection per chiamare il metodo privato loadCharacters
+                // In alternativa, potresti rendere loadCharacters pubblico in GameLoader
+                java.lang.reflect.Method loadCharactersMethod = 
+                    GameLoader.class.getDeclaredMethod("loadCharacters", Connection.class);
+                loadCharactersMethod.setAccessible(true);
+                loadCharactersMethod.invoke(gameLoader, conn);
+                
+                System.out.println("✅ Personaggi ricaricati dalle stanze");
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Errore nel ricaricamento personaggi: " + e.getMessage());
+            // Fallback: ricrea manualmente i nemici nelle stanze
+            createDefaultEnemiesInRooms();
+        }
+    }
+
+    /**
+     * Crea manualmente i nemici nelle stanze come fallback
+     */
+    private void createDefaultEnemiesInRooms() {
+        try {
+            System.out.println("🔄 Creazione nemici di default...");
+            
+            for (Room room : getRooms()) {
+                room.getEnemies().clear();
+                
+                switch (room.getId()) {
+                    case 0: // Ingresso - Goblin
+                        room.getEnemies().add(new GameCharacter(1, "Goblin", 
+                            "Una creatura malvagia dalla pelle verde scuro.", 40, 12, 3, 
+                            com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
+                        break;
+                    case 1: // Stanza del Topo
+                        room.getEnemies().add(new GameCharacter(2, "Topo Gigante", 
+                            "Un enorme roditore con denti giallastri.", 25, 8, 2, 
+                            com.mycompany.theblackmountain.type.CharacterType.GIANT_RAT));
+                        break;
+                    case 2: // Mensa - Due Goblin
+                        room.getEnemies().add(new GameCharacter(3, "Goblin Chiassoso", 
+                            "Un goblin aggressivo.", 35, 10, 3, 
+                            com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
+                        room.getEnemies().add(new GameCharacter(4, "Goblin Rissoso", 
+                            "Un altro goblin aggressivo.", 30, 9, 2, 
+                            com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
+                        break;
+                    case 4: // Sala delle Guardie
+                        room.getEnemies().add(new GameCharacter(5, "Goblin Gigante", 
+                            "Un goblin enorme con clava.", 60, 16, 5, 
+                            com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
+                        room.getEnemies().add(new GameCharacter(6, "Goblin Minuto", 
+                            "Un goblin piccolo ma minaccioso.", 25, 8, 2, 
+                            com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
+                        break;
+                    case 7: // Boss - Cane Demone
+                        room.getEnemies().add(new GameCharacter(7, "Cane Demone", 
+                            "Una creatura infernale.", 120, 25, 8, 
+                            com.mycompany.theblackmountain.type.CharacterType.DEMON_DOG));
+                        break;
+                }
+            }
+            
+            System.out.println("✅ Nemici di default creati");
+        } catch (Exception e) {
+            System.err.println("❌ Errore nella creazione nemici: " + e.getMessage());
+        }
     }
 
     public void dropObject(GameObjects obj) {
@@ -252,7 +396,7 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
         getCurrentRoom().getObjects().remove(obj);
         getInventory().add(obj);
-        gameLoader.moveObjectToInventory(obj, 1);
+        gameLoader.moveObjectToInventory(obj, 0); // ID giocatore = 0
         System.out.println("Oggetto " + obj.getName() + " aggiunto all'inventario");
         return true;
     }
@@ -284,9 +428,6 @@ public class TBMGame extends GameDescription implements GameObservable {
     public void cleanup() {
         try {
             System.out.println("Cleanup del gioco...");
-            if (autoSaveEnabled) {
-                saveGameState();
-            }
             if (database != null) {
                 database.shutdown();
             }

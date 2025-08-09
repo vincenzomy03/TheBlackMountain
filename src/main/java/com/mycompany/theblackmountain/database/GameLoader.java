@@ -174,40 +174,42 @@ public class GameLoader {
     }
 
     /**
-     * Carica i personaggi dal database.
-     */
-    private void loadCharacters(Connection conn) throws SQLException {
-        String sql = "SELECT * FROM CHARACTERS ORDER BY ID";
+ * Carica i personaggi dal database - MODIFICATA per non ricaricare nemici morti
+ */
+private void loadCharacters(Connection conn) throws SQLException {
+    String sql = "SELECT * FROM CHARACTERS ORDER BY ID";
 
-        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+    try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
 
-            while (rs.next()) {
-                GameCharacter character = new GameCharacter(
-                        rs.getInt("ID"),
-                        rs.getString("NAME"),
-                        rs.getString("DESCRIPTION"),
-                        rs.getInt("MAX_HP"),
-                        rs.getInt("ATTACK"),
-                        rs.getInt("DEFENSE"),
-                        CharacterType.valueOf(rs.getString("CHARACTER_TYPE"))
-                );
+        while (rs.next()) {
+            GameCharacter character = new GameCharacter(
+                    rs.getInt("ID"),
+                    rs.getString("NAME"),
+                    rs.getString("DESCRIPTION"),
+                    rs.getInt("MAX_HP"),
+                    rs.getInt("ATTACK"),
+                    rs.getInt("DEFENSE"),
+                    CharacterType.valueOf(rs.getString("CHARACTER_TYPE"))
+            );
 
-                character.setCurrentHp(rs.getInt("CURRENT_HP"));
+            character.setCurrentHp(rs.getInt("CURRENT_HP"));
 
-                // Se non è vivo, imposta HP a 0
-                if (!rs.getBoolean("IS_ALIVE")) {
-                    character.setCurrentHp(0);
-                }
+            // Se non è vivo, imposta HP a 0
+            boolean isAlive = rs.getBoolean("IS_ALIVE");
+            if (!isAlive) {
+                character.setCurrentHp(0);
+            }
 
-                // Aggiungi alla lista appropriata
-                CharacterType type = character.getType();
-                if (type == CharacterType.PLAYER) {
-                    // Il giocatore viene gestito separatamente
-                    game.setPlayer(character);
-                } else if (character.getType() == CharacterType.GOBLIN
-                        || character.getType() == CharacterType.GIANT_RAT
-                        || character.getType() == CharacterType.DEMON_DOG) {
-                    // Aggiungi nemico alla stanza appropriata
+            // Aggiungi alla lista appropriata
+            CharacterType type = character.getType();
+            if (type == CharacterType.PLAYER) {
+                game.setPlayer(character);
+            } else if (character.getType() == CharacterType.GOBLIN
+                    || character.getType() == CharacterType.GIANT_RAT
+                    || character.getType() == CharacterType.DEMON_DOG) {
+                
+                // *** NUOVO: Solo aggiungi nemici se sono vivi ***
+                if (isAlive && character.getCurrentHp() > 0) {
                     int roomId = rs.getInt("ROOM_ID");
                     Room room = roomMap.get(roomId);
                     if (room != null) {
@@ -216,9 +218,10 @@ public class GameLoader {
                 }
             }
         }
-
-        System.out.println("👤 Personaggi caricati");
     }
+
+    System.out.println("👤 Personaggi caricati");
+}
 
     /**
      * Carica l'inventario del giocatore.

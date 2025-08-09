@@ -6,6 +6,7 @@ package com.mycompany.theblackmountain.combat;
 
 import com.mycompany.theblackmountain.GameDescription;
 import com.mycompany.theblackmountain.GameUtils;
+import com.mycompany.theblackmountain.impl.TBMGame;
 import com.mycompany.theblackmountain.parser.ParserOutput;
 import com.mycompany.theblackmountain.type.GameCharacter;
 import com.mycompany.theblackmountain.type.CharacterType;
@@ -13,6 +14,7 @@ import com.mycompany.theblackmountain.type.GameObjects;
 import com.mycompany.theblackmountain.type.Weapon;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Sistema di combattimento del gioco
@@ -23,17 +25,27 @@ public class CombatSystem {
     private GameDescription gameDescription;
     private boolean inCombat;
     private GameCharacter player;
-    private List<GameCharacter> enemies;
+    private List<GameCharacter> currentEnemies;
     private int currentTurn;
+    private Random random;
     
     public CombatSystem(GameDescription gameDescription) {
         this.gameDescription = gameDescription;
         this.inCombat = false;
-        this.enemies = new ArrayList<>();
+        this.currentEnemies = new ArrayList<>();
         this.currentTurn = 0;
+        this.random = new Random();
         
-        // Inizializza il giocatore
-        this.player = new GameCharacter(0, "Giocatore", "Il coraggioso avventuriero", 100, 15, 5, CharacterType.PLAYER);
+        // Ottieni il giocatore dalla GameDescription se possibile
+        if (gameDescription instanceof TBMGame) {
+            TBMGame game = (TBMGame) gameDescription;
+            this.player = game.getPlayer();
+        }
+        
+        // Fallback se il giocatore non è disponibile
+        if (this.player == null) {
+            this.player = new GameCharacter(0, "Giocatore", "Il coraggioso avventuriero", 100, 15, 5, CharacterType.PLAYER);
+        }
     }
     
     /**
@@ -42,71 +54,96 @@ public class CombatSystem {
      */
     public String startCombat() {
         if (inCombat) {
-            return "Sei già in combattimento!";
+            return ""; // Già in combattimento
         }
         
-        enemies.clear();
-        int roomId = gameDescription.getCurrentRoom().getId();
+        // Controlla se ci sono nemici vivi nella stanza
+        List<GameCharacter> roomEnemies = gameDescription.getCurrentRoom().getEnemies();
+        currentEnemies.clear();
         
-        // Crea nemici basati sulla stanza
-        switch (roomId) {
-            case 0: // Ingresso - Goblin
-                enemies.add(new GameCharacter(1, "Goblin", 
-                    "Una creatura malvagia dalla pelle verde scuro, con occhi pieni d'odio e artigli affilati.", 
-                    40, 12, 3, CharacterType.GOBLIN));
-                break;
-            case 1: // Stanza del Topo - Topo gigante
-                enemies.add(new GameCharacter(2, "Topo Gigante", 
-                    "Un enorme roditore con denti giallastri e occhi rossi.", 
-                    25, 8, 2, CharacterType.GIANT_RAT));
-                break;
-            case 2: // Mensa - Due Goblin
-                enemies.add(new GameCharacter(3, "Goblin Chiassoso", 
-                    "Un goblin aggressivo che litiga per un osso.", 
-                    35, 10, 3, CharacterType.GOBLIN));
-                enemies.add(new GameCharacter(4, "Goblin Rissoso", 
-                    "Un altro goblin altrettanto aggressivo.", 
-                    30, 9, 2, CharacterType.GOBLIN));
-                break;
-            case 4: // Sala delle Guardie - Goblin Gigante + Goblin normale
-                enemies.add(new GameCharacter(5, "Goblin Gigante", 
-                    "Un goblin enorme che impugna una clava insanguinata.", 
-                    60, 16, 5, CharacterType.GOBLIN));
-                enemies.add(new GameCharacter(6, "Goblin Minuto", 
-                    "Un goblin più piccolo ma altrettanto minaccioso.", 
-                    25, 8, 2, CharacterType.GOBLIN));
-                break;
-            case 7: // Sala del Boss - Cane Demone
-                enemies.add(new GameCharacter(7, "Cane Demone", 
-                    "Una creatura infernale con zanne fumanti e occhi di fuoco.", 
-                    120, 25, 8, CharacterType.DEMON_DOG));
-                break;
-            default:
-                return ""; // Nessun nemico in questa stanza
+        // Aggiungi solo nemici vivi
+        for (GameCharacter enemy : roomEnemies) {
+            if (enemy.isAlive()) {
+                currentEnemies.add(enemy);
+            }
         }
         
-        if (enemies.isEmpty()) {
-            return "";
+        if (currentEnemies.isEmpty()) {
+            return ""; // Nessun nemico da combattere
         }
         
         inCombat = true;
         currentTurn = 0;
         
         StringBuilder msg = new StringBuilder();
-        msg.append("\n=== COMBATTIMENTO ===\n");
-        if (enemies.size() == 1) {
-            msg.append("Un ").append(enemies.get(0).getName()).append(" ti blocca il passaggio!\n");
-            msg.append(enemies.get(0).getDescription()).append("\n");
+        msg.append("\n⚔️ === COMBATTIMENTO ===\n");
+        
+        if (currentEnemies.size() == 1) {
+            GameCharacter enemy = currentEnemies.get(0);
+            msg.append(" ").append(enemy.getName()).append(" ti blocca il passaggio!\n");
+            msg.append(" ").append(enemy.getDescription()).append("\n");
+            msg.append("️ HP Nemico: ").append(enemy.getCurrentHp()).append("/").append(enemy.getMaxHp()).append("\n");
         } else {
-            msg.append("Sei circondato da ").append(enemies.size()).append(" nemici!\n");
-            for (GameCharacter enemy : enemies) {
-                msg.append("- ").append(enemy.getName()).append("\n");
+            msg.append("😱 Sei circondato da ").append(currentEnemies.size()).append(" nemici!\n");
+            for (int i = 0; i < currentEnemies.size(); i++) {
+                GameCharacter enemy = currentEnemies.get(i);
+                msg.append("🎯 ").append(i + 1).append(". ").append(enemy.getName())
+                   .append(" (HP: ").append(enemy.getCurrentHp()).append("/").append(enemy.getMaxHp()).append(")\n");
             }
         }
-        msg.append("Scrivi 'attacca' per combattere, 'usa [arma]' per usare un'arma specifica, o 'usa cura' per curarti!\n");
-        msg.append("===================");
+        
+        msg.append(" I tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp()).append("\n");
+        msg.append("🗡️ Scrivi 'attacca' per combattere, 'usa [oggetto]' per usare un oggetto!\n");
+        msg.append("=========================");
         
         return msg.toString();
+    }
+    
+    /**
+     * Termina il combattimento e rimuove i nemici morti
+     */
+    public void endCombat() {
+        if (!inCombat) {
+            return;
+        }
+        
+        inCombat = false;
+        
+        // Rimuovi nemici morti dalla stanza
+        if (gameDescription.getCurrentRoom() != null) {
+            gameDescription.getCurrentRoom().getEnemies().removeIf(enemy -> !enemy.isAlive());
+            
+            // Aggiorna lo stato dei nemici morti nel database se disponibile
+            if (gameDescription instanceof TBMGame) {
+                TBMGame game = (TBMGame) gameDescription;
+                for (GameCharacter deadEnemy : currentEnemies) {
+                    if (!deadEnemy.isAlive()) {
+                        game.updateCharacterState(deadEnemy);
+                    }
+                }
+            }
+        }
+        
+        currentEnemies.clear();
+        System.out.println(" Combattimento terminato - nemici morti rimossi dalla stanza");
+    }
+    
+    /**
+     * Controlla se tutti i nemici sono morti e termina il combattimento
+     */
+    public boolean checkCombatEnd() {
+        if (!inCombat) {
+            return false;
+        }
+        
+        boolean allEnemiesDead = currentEnemies.stream().noneMatch(GameCharacter::isAlive);
+        
+        if (allEnemiesDead) {
+            endCombat();
+            return true;
+        }
+        
+        return false;
     }
     
     /**
@@ -125,18 +162,19 @@ public class CombatSystem {
         String playerAction = processPlayerAction(parserOutput);
         result.append(playerAction);
         
-        // Rimuovi nemici morti
-        enemies.removeIf(enemy -> !enemy.isAlive());
+        // Rimuovi nemici morti dalla lista corrente
+        currentEnemies.removeIf(enemy -> !enemy.isAlive());
         
-        // Controlla se il combattimento è finito
-        if (enemies.isEmpty()) {
-            inCombat = false;
-            result.append("\n\n Hai vinto il combattimento! ");
+        // Controlla se il combattimento è finito (tutti i nemici morti)
+        if (currentEnemies.isEmpty()) {
+            endCombat();
+            result.append("\n\n Vittoria! Hai sconfitto tutti i nemici! 🎉");
             return result.toString();
         }
         
         // Turno dei nemici
-        for (GameCharacter enemy : enemies) {
+        result.append("\n\n--- Turno dei nemici ---");
+        for (GameCharacter enemy : currentEnemies) {
             if (enemy.isAlive()) {
                 String enemyAction = processEnemyAction(enemy);
                 result.append("\n").append(enemyAction);
@@ -145,9 +183,27 @@ public class CombatSystem {
         
         // Controlla se il giocatore è morto
         if (!player.isAlive()) {
-            inCombat = false;
-            result.append("\n\n Sei stato sconfitto! Game Over! ");
-            // Qui potresti implementare un sistema di restart
+            endCombat();
+            result.append("\n\n Sei stato sconfitto! Game Over!");
+            // Reset HP giocatore per permettere di riprovare
+            if (gameDescription instanceof TBMGame) {
+                TBMGame game = (TBMGame) gameDescription;
+                player.setCurrentHp(player.getMaxHp());
+                game.updateCharacterState(player);
+                result.append("\n✨ Ma la magia della montagna ti riporta in vita...");
+            }
+        }
+        
+        // Mostra stato attuale se il combattimento continua
+        if (inCombat) {
+            result.append("\n\n Stato attuale:");
+            result.append("\n️ I tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
+            for (GameCharacter enemy : currentEnemies) {
+                if (enemy.isAlive()) {
+                    result.append("\n ").append(enemy.getName()).append(": ")
+                           .append(enemy.getCurrentHp()).append("/").append(enemy.getMaxHp()).append(" HP");
+                }
+            }
         }
         
         currentTurn++;
@@ -169,7 +225,7 @@ public class CombatSystem {
         }
         
         // Uso di oggetti/armi
-        if (commandName.equals("usa") || parserOutput.getCommand().getName().equals("usa")) {
+        if (commandName.equals("usa") || commandName.startsWith("usa ")) {
             
             // Controlla se ha specificato un oggetto dall'inventario
             if (parserOutput.getInvObject() != null) {
@@ -182,45 +238,44 @@ public class CombatSystem {
                 
                 // Armi
                 if (obj instanceof Weapon || obj.getId() == 12 || obj.getId() == 7 || obj.getId() == 6) {
-                    return attackEnemy((Weapon) obj);
+                    return attackEnemy(obj);
                 }
             }
             
             // Parsing testuale per comandi come "usa cura", "usa spada"
-            if (commandName.contains("cura") || commandName.equals("usa cura")) {
-                // Cerca pozione di cura nell'inventario
-                GameObjects healPotion = GameUtils.getObjectFromInventory(gameDescription.getInventory(), 2);
-                if (healPotion == null) {
-                    healPotion = GameUtils.getObjectFromInventory(gameDescription.getInventory(), 5);
-                }
-                
-                if (healPotion != null) {
-                    return useHealingPotion(healPotion);
-                } else {
-                    return "Non hai pozioni di cura nell'inventario!";
-                }
+            if (commandName.contains("cura") || commandName.contains("pozione")) {
+                return useBestHealingPotion();
             }
             
-            if (commandName.contains("spada") || commandName.equals("usa spada")) {
+            if (commandName.contains("spada")) {
                 GameObjects sword = GameUtils.getObjectFromInventory(gameDescription.getInventory(), 12);
                 if (sword != null) {
-                    return attackEnemy((Weapon) sword);
+                    return attackEnemy(sword);
                 } else {
                     return "Non hai una spada nell'inventario!";
                 }
             }
             
-            if (commandName.contains("arco") || commandName.equals("usa arco")) {
+            if (commandName.contains("arco")) {
                 GameObjects bow = GameUtils.getObjectFromInventory(gameDescription.getInventory(), 7);
                 if (bow != null) {
-                    return attackEnemy((Weapon) bow);
+                    return attackEnemy(bow);
                 } else {
                     return "Non hai un arco nell'inventario!";
                 }
             }
+            
+            if (commandName.contains("bastone")) {
+                GameObjects staff = GameUtils.getObjectFromInventory(gameDescription.getInventory(), 6);
+                if (staff != null) {
+                    return attackEnemy(staff);
+                } else {
+                    return "Non hai un bastone nell'inventario!";
+                }
+            }
         }
         
-        return "Azione non riconosciuta in combattimento!";
+        return "Azione non riconosciuta in combattimento! Prova 'attacca' o 'usa [oggetto]'";
     }
     
     /**
@@ -228,29 +283,86 @@ public class CombatSystem {
      * @param weapon arma da usare (null per attacco a mani nude)
      * @return risultato dell'attacco
      */
-    private String attackEnemy(Weapon weapon) {
-        if (enemies.isEmpty()) {
+    private String attackEnemy(GameObjects weapon) {
+        if (currentEnemies.isEmpty()) {
             return "Non ci sono nemici da attaccare!";
         }
         
         // Attacca il primo nemico vivo
-        GameCharacter target = enemies.get(0);
+        GameCharacter target = currentEnemies.get(0);
         
-        int damage = player.getBaseDamage();
-        String weaponInfo = "";
+        int baseDamage = player.getAttack();
+        int weaponDamage = 0;
+        String weaponInfo = "a mani nude";
+        boolean isCritical = false;
         
         if (weapon != null) {
-            damage = weapon.calculateDamage(damage);
-            weaponInfo = " con " + weapon.getName();
+            weaponInfo = "con " + weapon.getName();
             
-            if (weapon.isCriticalHit()) {
-                weaponInfo += " (COLPO CRITICO!)";
+            // Calcola danni arma in base all'ID
+            switch (weapon.getId()) {
+                case 12: // Spada
+                    weaponDamage = 8 + random.nextInt(4); // 8-11 danni
+                    isCritical = random.nextInt(100) < 10; // 10% critico
+                    break;
+                case 7: // Arco magico
+                    weaponDamage = 12 + random.nextInt(6); // 12-17 danni
+                    isCritical = random.nextInt(100) < 15; // 15% critico
+                    break;
+                case 6: // Bastone
+                    weaponDamage = 5 + random.nextInt(3); // 5-7 danni
+                    isCritical = random.nextInt(100) < 5; // 5% critico
+                    break;
+                default:
+                    weaponDamage = 2 + random.nextInt(3); // 2-4 danni
+                    break;
             }
         }
         
-        String damageResult = target.takeDamage(damage);
+        int totalDamage = baseDamage + weaponDamage + random.nextInt(3); // Variazione casuale 0-2
         
-        return "Attacchi " + target.getName() + weaponInfo + "!\n" + damageResult;
+        if (isCritical) {
+            totalDamage *= 2;
+            weaponInfo += " (COLPO CRITICO!)";
+        }
+        
+        // Applica danni considerando la difesa del nemico
+        int actualDamage = Math.max(1, totalDamage - target.getDefense());
+        target.setCurrentHp(Math.max(0, target.getCurrentHp() - actualDamage));
+        
+        StringBuilder result = new StringBuilder();
+        result.append(" Attacchi ").append(target.getName()).append(" ").append(weaponInfo).append("!");
+        result.append("\nInflitti ").append(actualDamage).append(" danni!");
+        
+        if (target.getCurrentHp() <= 0) {
+            target.setCurrentHp(0);
+            result.append("\n ").append(target.getName()).append(" è stato sconfitto!");
+        } else {
+            result.append("\n ").append(target.getName()).append(" HP: ")
+                   .append(target.getCurrentHp()).append("/").append(target.getMaxHp());
+        }
+        
+        return result.toString();
+    }
+    
+    /**
+     * Usa la migliore pozione di cura disponibile
+     * @return risultato della cura
+     */
+    private String useBestHealingPotion() {
+        // Prima cerca pozione cura totale
+        GameObjects totalPotion = GameUtils.getObjectFromInventory(gameDescription.getInventory(), 5);
+        if (totalPotion != null) {
+            return useHealingPotion(totalPotion);
+        }
+        
+        // Poi cerca pozione normale
+        GameObjects normalPotion = GameUtils.getObjectFromInventory(gameDescription.getInventory(), 2);
+        if (normalPotion != null) {
+            return useHealingPotion(normalPotion);
+        }
+        
+        return "Non hai pozioni di cura nell'inventario!";
     }
     
     /**
@@ -260,19 +372,42 @@ public class CombatSystem {
      */
     private String useHealingPotion(GameObjects potion) {
         int healAmount;
+        String potionName = potion.getName();
         
         if (potion.getId() == 2) { // Pozione normale
             healAmount = 30;
         } else if (potion.getId() == 5) { // Pozione totale
-            return player.fullHeal() + "\nHai usato " + potion.getName() + "!";
+            healAmount = player.getMaxHp() - player.getCurrentHp();
+            player.setCurrentHp(player.getMaxHp());
         } else {
             return "Questa non è una pozione di cura!";
+        }
+        
+        if (potion.getId() == 2) {
+            int oldHp = player.getCurrentHp();
+            player.setCurrentHp(Math.min(player.getMaxHp(), player.getCurrentHp() + healAmount));
+            healAmount = player.getCurrentHp() - oldHp;
         }
         
         // Rimuovi la pozione dall'inventario
         gameDescription.getInventory().remove(potion);
         
-        return player.heal(healAmount) + "\nHai usato " + potion.getName() + "!";
+        // Aggiorna database se disponibile
+        if (gameDescription instanceof TBMGame) {
+            TBMGame game = (TBMGame) gameDescription;
+            game.updateCharacterState(player);
+        }
+        
+        StringBuilder result = new StringBuilder();
+        result.append("Hai usato ").append(potionName).append("!");
+        if (healAmount > 0) {
+            result.append("\nRecuperati ").append(healAmount).append(" HP!");
+            result.append("\nHP attuali: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
+        } else {
+            result.append("\nSei già al massimo della salute!");
+        }
+        
+        return result.toString();
     }
     
     /**
@@ -282,10 +417,27 @@ public class CombatSystem {
      */
     private String processEnemyAction(GameCharacter enemy) {
         // I nemici attaccano sempre il giocatore
-        int damage = enemy.getBaseDamage() + GameUtils.randomBetween(-2, 2);
-        String attackResult = player.takeDamage(damage);
+        int damage = enemy.getAttack() + random.nextInt(3) - 1; // Variazione -1 a +1
+        int actualDamage = Math.max(1, damage - player.getDefense());
         
-        return enemy.getName() + " ti attacca!\n" + attackResult;
+        int oldHp = player.getCurrentHp();
+        player.setCurrentHp(Math.max(0, player.getCurrentHp() - actualDamage));
+        
+        // Aggiorna database se disponibile
+        if (gameDescription instanceof TBMGame) {
+            TBMGame game = (TBMGame) gameDescription;
+            game.updateCharacterState(player);
+        }
+        
+        StringBuilder result = new StringBuilder();
+        result.append("").append(enemy.getName()).append(" ti attacca!");
+        result.append("\nSubisci ").append(actualDamage).append(" danni!");
+        
+        if (player.getCurrentHp() <= 0) {
+            result.append("\nSei stato gravemente ferito!");
+        }
+        
+        return result.toString();
     }
     
     /**
@@ -297,14 +449,6 @@ public class CombatSystem {
     }
     
     /**
-     * Termina forzatamente il combattimento
-     */
-    public void endCombat() {
-        inCombat = false;
-        enemies.clear();
-    }
-    
-    /**
      * Restituisce il giocatore
      * @return personaggio giocatore
      */
@@ -313,10 +457,10 @@ public class CombatSystem {
     }
     
     /**
-     * Restituisce la lista dei nemici
+     * Restituisce la lista dei nemici attuali
      * @return lista nemici
      */
-    public List<GameCharacter> getEnemies() {
-        return enemies;
+    public List<GameCharacter> getCurrentEnemies() {
+        return currentEnemies;
     }
 }
