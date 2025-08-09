@@ -20,6 +20,8 @@ import com.mycompany.theblackmountain.type.Weapon;
 import com.mycompany.theblackmountain.type.WeaponType;
 import com.mycompany.theblackmountain.type.CharacterType;
 import com.mycompany.theblackmountain.impl.TBMGame;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Classe per caricare i dati dal database nel gioco.
@@ -289,7 +291,7 @@ public class GameLoader {
             WeaponType weaponType = WeaponType.valueOf(rs.getString("WEAPON_TYPE"));
             int attackBonus = rs.getInt("ATTACK_BONUS");
             int criticalChance = rs.getInt("CRITICAL_CHANCE");
-            int criticalMultiplier = rs.getInt ("CRITICAL_MULTIPLIER");
+            int criticalMultiplier = rs.getInt("CRITICAL_MULTIPLIER");
 
             obj = new Weapon(id, name, description, attackBonus, weaponType,
                     criticalChance, criticalMultiplier);
@@ -338,7 +340,7 @@ public class GameLoader {
 
             // Aggiorna posizione del giocatore
             if (game.getCurrentRoom() != null) {
-                String sql = "UPDATE CHARACTERS SET ROOM_ID = ? WHERE ID = 1 AND CHARACTER_TYPE = 'PLAYER'";
+                String sql = "UPDATE CHARACTERS SET ROOM_ID = ? WHERE ID = 0 AND CHARACTER_TYPE = 'PLAYER'";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setInt(1, game.getCurrentRoom().getId());
                     stmt.executeUpdate();
@@ -347,7 +349,7 @@ public class GameLoader {
 
             // Aggiorna HP del giocatore se disponibile
             if (game.getPlayer() != null) {
-                String sql = "UPDATE CHARACTERS SET CURRENT_HP = ?, IS_ALIVE = ? WHERE ID = 1 AND CHARACTER_TYPE = 'PLAYER'";
+                String sql = "UPDATE CHARACTERS SET CURRENT_HP = ?, IS_ALIVE = ? WHERE ID = 0 AND CHARACTER_TYPE = 'PLAYER'";
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setInt(1, game.getPlayer().getCurrentHp());
                     stmt.setBoolean(2, game.getPlayer().isAlive());
@@ -376,6 +378,146 @@ public class GameLoader {
 
         } catch (SQLException e) {
             System.err.println("❌ Errore nell'aggiornamento oggetto " + obj.getName() + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Apre una cassa e sposta i suoi oggetti dal database alla stanza
+     *
+     * @param chestId ID della cassa
+     * @param room stanza dove si trova la cassa
+     * @return lista degli oggetti trovati
+     */
+    public List<GameObjects> openChest(int chestId, Room room) {
+        List<GameObjects> foundObjects = new ArrayList<>();
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+
+            // Query per ottenere gli oggetti che dovrebbero essere nella cassa
+            String sql = getChestContentQuery(chestId);
+            if (sql == null) {
+                return foundObjects; // Cassa vuota
+            }
+
+            try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+
+                while (rs.next()) {
+                    GameObjects obj = createObjectFromResultSet(rs);
+                    if (obj != null) {
+                        foundObjects.add(obj);
+                        room.getObjects().add(obj);
+
+                        // Aggiungi l'oggetto alla tabella ROOM_OBJECTS se non c'è già
+                        addObjectToRoom(conn, room.getId(), obj.getId());
+                    }
+                }
+
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Errore nell'apertura cassa " + chestId + ": " + e.getMessage());
+        }
+
+        return foundObjects;
+    }
+
+    /**
+     * Restituisce la query SQL per il contenuto di una cassa specifica
+     *
+     * @param chestId ID della cassa
+     * @return query SQL o null se la cassa è vuota
+     */
+    private String getChestContentQuery(int chestId) {
+        switch (chestId) {
+            case 100: // Cassa nell'Ingresso
+                return """
+                SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
+                       w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
+                FROM OBJECTS o
+                LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
+                WHERE o.ID IN (1, 2)
+                """; // chiave ingresso, pozione cura
+
+            case 101: // Cassa nel Dormitorio
+                return """
+                SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
+                       w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
+                FROM OBJECTS o
+                LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
+                WHERE o.ID IN (5, 6)
+                """; // pozione cura totale, bastone
+
+            case 102: // Cassa nella Sala Guardie
+                return """
+                SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
+                       w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
+                FROM OBJECTS o
+                LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
+                WHERE o.ID IN (8, 9)
+                """; // libro incantesimo fuoco, veleno
+
+            case 103: // Cassa nella Stanza delle Torture
+                return """
+                SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
+                       w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
+                FROM OBJECTS o
+                LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
+                WHERE o.ID IN (10)
+                """; // chiave cella principessa
+
+            default:
+                return null; // Cassa vuota o sconosciuta
+        }
+    }
+
+    /**
+     * Aggiunge un oggetto a una stanza nel database (se non c'è già)
+     *
+     * @param conn connessione al database
+     * @param roomId ID della stanza
+     * @param objectId ID dell'oggetto
+     */
+    private void addObjectToRoom(Connection conn, int roomId, int objectId) {
+        try {
+            // Controlla se l'oggetto è già nella stanza
+            String checkSql = "SELECT COUNT(*) FROM ROOM_OBJECTS WHERE ROOM_ID = ? AND OBJECT_ID = ?";
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                checkStmt.setInt(1, roomId);
+                checkStmt.setInt(2, objectId);
+
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) == 0) {
+                        // L'oggetto non c'è, aggiungilo
+                        String insertSql = "INSERT INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES (?, ?)";
+                        try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                            insertStmt.setInt(1, roomId);
+                            insertStmt.setInt(2, objectId);
+                            insertStmt.executeUpdate();
+                        }
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("⚠️ Errore nell'aggiunta oggetto alla stanza: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Segna una cassa come aperta nel database
+     *
+     * @param chestId ID della cassa
+     */
+    public void markChestAsOpened(int chestId) {
+        String sql = "UPDATE OBJECTS SET IS_OPEN = TRUE WHERE ID = ?";
+
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD); PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, chestId);
+            stmt.executeUpdate();
+
+        } catch (SQLException e) {
+            System.err.println("❌ Errore nel segnare cassa come aperta: " + e.getMessage());
         }
     }
 

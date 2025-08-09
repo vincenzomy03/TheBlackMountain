@@ -121,6 +121,8 @@ public class TBMGame extends GameDescription implements GameObservable {
         System.out.println("✅ Stato del gioco verificato");
     }
 
+    // MODIFICA al metodo nextMove in TBMGame.java
+// Sostituisci il metodo esistente con questa versione
     @Override
     public void nextMove(ParserOutput p, PrintStream out) {
         if (p == null || p.getCommand() == null) {
@@ -132,9 +134,9 @@ public class TBMGame extends GameDescription implements GameObservable {
             // Salva l'ultimo comando per gli observer
             this.lastParserOutput = p;
 
-            // ===== MODIFICA PRINCIPALE =====
             // Raccogli i risultati degli observer
             StringBuilder result = new StringBuilder();
+            boolean commandHandled = false;
 
             for (GameObserver observer : observers) {
                 try {
@@ -144,6 +146,7 @@ public class TBMGame extends GameDescription implements GameObservable {
                         if (!observerResult.endsWith("\n")) {
                             result.append("\n");
                         }
+                        commandHandled = true;
                     }
                 } catch (Exception e) {
                     System.err.println("⚠️ Errore in observer " + observer.getClass().getSimpleName() + ": " + e.getMessage());
@@ -151,14 +154,16 @@ public class TBMGame extends GameDescription implements GameObservable {
                 }
             }
 
-            // Stampa il risultato raccolto
+            // IMPORTANTE: Se abbiamo un risultato, stampiamolo
             if (result.length() > 0) {
-                out.print(result.toString());
-            } else {
+                String output = result.toString();
+                out.print(output);
+                out.flush(); // Assicurati che l'output venga inviato
+            } else if (!commandHandled) {
                 // Messaggio di fallback se nessun observer ha risposto
                 out.println("Comando non riconosciuto o non applicabile qui.");
+                out.flush();
             }
-            // ===============================
 
             // Salvataggio automatico
             if (autoSaveEnabled) {
@@ -167,7 +172,9 @@ public class TBMGame extends GameDescription implements GameObservable {
 
         } catch (Exception e) {
             System.err.println("⚠️ Errore nell'elaborazione comando: " + e.getMessage());
+            e.printStackTrace();
             out.println("Si è verificato un errore nell'elaborazione del comando.");
+            out.flush();
         }
     }
 
@@ -203,54 +210,54 @@ public class TBMGame extends GameDescription implements GameObservable {
         Command nord = new Command(CommandType.NORD, "nord");
         nord.setAlias(new String[]{"n", "N", "Nord", "NORD"});
         getCommands().add(nord);
-        
+
         Command iventory = new Command(CommandType.INVENTORY, "inventario");
         iventory.setAlias(new String[]{"inv"});
         getCommands().add(iventory);
-        
+
         Command sud = new Command(CommandType.SOUTH, "sud");
         sud.setAlias(new String[]{"s", "S", "Sud", "SUD"});
         getCommands().add(sud);
-        
+
         Command est = new Command(CommandType.EAST, "est");
         est.setAlias(new String[]{"e", "E", "Est", "EST"});
         getCommands().add(est);
-        
+
         Command ovest = new Command(CommandType.WEST, "ovest");
         ovest.setAlias(new String[]{"o", "O", "Ovest", "OVEST"});
         getCommands().add(ovest);
-        
+
         Command end = new Command(CommandType.END, "end");
         end.setAlias(new String[]{"end", "fine", "esci", "muori", "ammazzati", "ucciditi", "suicidati", "exit", "basta"});
         getCommands().add(end);
-        
+
         Command look = new Command(CommandType.LOOK_AT, "osserva");
         look.setAlias(new String[]{"guarda", "vedi", "trova", "cerca", "descrivi"});
         getCommands().add(look);
-        
+
         Command pickup = new Command(CommandType.PICK_UP, "raccogli");
         pickup.setAlias(new String[]{"prendi"});
         getCommands().add(pickup);
-        
+
         Command open = new Command(CommandType.OPEN, "apri");
         open.setAlias(new String[]{});
         getCommands().add(open);
-        
+
         Command push = new Command(CommandType.PUSH, "premi");
         push.setAlias(new String[]{"spingi", "attiva"});
         getCommands().add(push);
-        
+
         Command use = new Command(CommandType.USE, "usa");
         use.setAlias(new String[]{"utilizza", "combina"});
         getCommands().add(use);
-        
+
         // Comando per iniziare il combattimento
-        Command fight = new Command(CommandType.USE, "combatti");
+        Command fight = new Command(CommandType.FIGHT, "combatti");
         fight.setAlias(new String[]{"combattimento", "inizia combattimento", "battaglia"});
         getCommands().add(fight);
-        
+
         // Comando per attaccare
-        Command attack = new Command(CommandType.USE, "attacca");
+        Command attack = new Command(CommandType.ATTACK, "attacca");
         attack.setAlias(new String[]{"attacco", "colpisci", "fight"});
         getCommands().add(attack);
 

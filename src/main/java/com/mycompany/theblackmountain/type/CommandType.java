@@ -98,6 +98,16 @@ public enum CommandType {
     /**
      *
      */
-    TURN_OFF
+    TURN_OFF,
+    
+    /**
+     *
+     */
+    ATTACK,
+    
+    /**
+     *
+     */
+    FIGHT
 }
 

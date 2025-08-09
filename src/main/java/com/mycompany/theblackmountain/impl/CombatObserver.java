@@ -11,7 +11,7 @@ import com.mycompany.theblackmountain.parser.ParserOutput;
 import com.mycompany.theblackmountain.type.CommandType;
 
 /**
- * Observer che gestisce i comandi di combattimento
+ * Observer che gestisce tutti i comandi di combattimento
  * @author vince
  */
 public class CombatObserver extends GameObserver {
@@ -19,90 +19,108 @@ public class CombatObserver extends GameObserver {
     private CombatSystem combatSystem;
     
     public CombatObserver() {
-        // Il combat system verrà inizializzato quando necessario
+        // Costruttore vuoto, il combatSystem viene impostato dopo
     }
     
+    /**
+     * Imposta il sistema di combattimento
+     * @param combatSystem
+     */
     public void setCombatSystem(CombatSystem combatSystem) {
         this.combatSystem = combatSystem;
     }
 
     @Override
     public String update(GameDescription description, ParserOutput parserOutput) {
-        // Inizializza il combat system se non è stato fatto
         if (combatSystem == null) {
-            combatSystem = new CombatSystem(description);
+            return ""; // Non possiamo gestire comandi di combattimento senza il sistema
         }
         
-        // Se non siamo in combattimento, non fare nulla
-        if (!combatSystem.isInCombat()) {
-            return "";
-        }
+        StringBuilder msg = new StringBuilder();
+        CommandType commandType = parserOutput.getCommand().getType();
+        String commandName = parserOutput.getCommand().getName().toLowerCase();
         
-        // Gestisci comandi di combattimento
-        if (parserOutput.getCommand() != null) {
-            String commandName = parserOutput.getCommand().getName().toLowerCase();
-            CommandType commandType = parserOutput.getCommand().getType();
+        // Gestione comando COMBATTI/FIGHT
+        if (commandType == CommandType.FIGHT || 
+            commandName.contains("combatti") || 
+            commandName.contains("battaglia") || 
+            commandName.contains("combattimento")) {
             
-            // Comando "attacca"
-            if (commandName.equals("attacca") || commandName.equals("attack") || 
-                commandName.equals("attacco") || commandName.equals("colpisci")) {
-                return combatSystem.processCombatAction(parserOutput);
+            // Verifica se ci sono nemici vivi nella stanza
+            boolean hasEnemies = description.getCurrentRoom().getEnemies().stream()
+                    .anyMatch(enemy -> enemy.isAlive());
+            
+            if (!hasEnemies) {
+                msg.append("Non ci sono nemici da combattere in questa stanza.");
+            } else if (combatSystem.isInCombat()) {
+                msg.append("Sei già in combattimento! Usa 'attacca' per combattere.");
+            } else {
+                // Inizia il combattimento
+                String combatStart = combatSystem.startCombat();
+                if (!combatStart.isEmpty()) {
+                    msg.append(combatStart);
+                } else {
+                    msg.append("Il combattimento è iniziato!");
+                }
             }
+        }
+        
+        // Gestione comando ATTACCA/ATTACK
+        else if (commandType == CommandType.ATTACK || 
+                 commandName.contains("attacca") || 
+                 commandName.contains("attacco") || 
+                 commandName.contains("colpisci")) {
             
-            // Comandi "usa [oggetto]"
+            if (!combatSystem.isInCombat()) {
+                // Se non siamo in combattimento, il giocatore deve prima iniziarlo
+                msg.append("Non sei in combattimento! Usa prima 'combatti' per iniziare la battaglia.");
+            } else {
+                // Siamo già in combattimento, processa l'attacco
+                msg.append(combatSystem.processCombatAction(parserOutput));
+            }
+        }
+        
+        // Gestione altri comandi durante il combattimento
+        else if (combatSystem.isInCombat()) {
+            // Durante il combattimento, alcuni comandi sono permessi, altri no
             if (commandType == CommandType.USE) {
-                // Controlla se sta usando una pozione di cura
-                if (parserOutput.getInvObject() != null) {
-                    int objId = parserOutput.getInvObject().getId();
-                    
-                    // Pozioni di cura
-                    if (objId == 2 || objId == 5) { 
-                        return combatSystem.processCombatAction(parserOutput);
-                    }
-                    
-                    // Armi (spada, arco magico, bastone)
-                    if (objId == 12 || objId == 7 || objId == 6) { 
-                        return combatSystem.processCombatAction(parserOutput);
-                    }
-                }
-                
-                // Gestione comandi testuali per cura
-                if (commandName.contains("cura") || commandName.contains("heal") ||
-                    commandName.equals("usa cura")) {
-                    return combatSystem.processCombatAction(parserOutput);
-                }
-                
-                // Gestione comandi testuali per armi
-                if (commandName.contains("spada") || commandName.contains("arco") || 
-                    commandName.contains("arma") || commandName.contains("bastone")) {
-                    return combatSystem.processCombatAction(parserOutput);
-                }
-                
-                // Se è un comando USE ma non riconosciuto, prova comunque il combattimento
-                return combatSystem.processCombatAction(parserOutput);
+                // Durante il combattimento, l'uso di oggetti viene gestito dal CombatSystem
+                msg.append(combatSystem.processCombatAction(parserOutput));
+            } else if (commandType == CommandType.INVENTORY) {
+                // Permetti di controllare l'inventario durante il combattimento
+                // Questo viene gestito dall'observer OpenInventory.java
+                return "";
+            } else if (commandType == CommandType.LOOK_AT) {
+                // Permetti di guardare durante il combattimento
+                // Questo viene gestito dall'observer LookAt.java
+                return "";
+            } else if (isMovementCommand(commandType)) {
+                // Il movimento è bloccato durante il combattimento (gestito in Move.java)
+                return "";
+            } else if (commandType == CommandType.OPEN || commandType == CommandType.PICK_UP) {
+                // Blocca apertura oggetti e raccolta durante il combattimento
+                msg.append("Non puoi fare questo durante il combattimento! Concentrati sulla battaglia!");
             }
-            
-            // Se siamo in combattimento ma il comando non è valido per il combattimento
-            // Lascia che altri observer gestiscano comandi come "inventario", "osserva", etc.
-            if (commandType == CommandType.INVENTORY || commandType == CommandType.LOOK_AT) {
-                return ""; // Permetti questi comandi anche in combattimento
-            }
-            
-            // Blocca movimenti in combattimento
-            if (commandType == CommandType.NORD || commandType == CommandType.SOUTH || 
-                commandType == CommandType.EAST || commandType == CommandType.WEST) {
-                return "Non puoi muoverti durante un combattimento! Devi prima sconfiggere i nemici.";
-            }
-            
-            // Per altri comandi durante il combattimento, non gestire (lascia agli altri observer)
-            return "";
         }
         
-        return "";
+        // Se non è un comando di combattimento e non siamo in combattimento, lascia passare
+        return msg.toString();
     }
     
     /**
-     * Restituisce il combat system per accesso esterno
+     * Verifica se un comando è di movimento
+     * @param commandType
+     * @return true se è un comando di movimento
+     */
+    private boolean isMovementCommand(CommandType commandType) {
+        return commandType == CommandType.NORD || 
+               commandType == CommandType.SOUTH || 
+               commandType == CommandType.EAST || 
+               commandType == CommandType.WEST;
+    }
+    
+    /**
+     * Restituisce il sistema di combattimento per accesso esterno
      * @return CombatSystem
      */
     public CombatSystem getCombatSystem() {
