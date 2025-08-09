@@ -113,7 +113,11 @@ public enum CommandType {
     /**
      * 
      */
-    CREATE
+    CREATE,
     
+    /**
+     * 
+     */
+    HELP
 }
 

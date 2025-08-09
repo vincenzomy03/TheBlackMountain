@@ -244,7 +244,8 @@ public class UIComponents {
         LOOK("magnifier", "Osserva", "", BUTTON_SIZE),
         SOUND_ON("volume_on", "Disattiva Audio", "", SMALL_BUTTON_SIZE),
         SOUND_OFF("volume_off", "Attiva Audio", "", SMALL_BUTTON_SIZE),
-        COMMANDS("commands", "Altri Comandi", "", COMMANDS_SIZE); // NUOVO: pulsante comandi
+        COMMANDS("commands", "Altri Comandi", "", COMMANDS_SIZE), 
+        HELP("help", "In caso di bisogno", "", COMMANDS_SIZE);
         
         private final String imageName;
         private final String tooltip;

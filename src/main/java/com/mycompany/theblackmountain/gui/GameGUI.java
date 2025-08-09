@@ -35,6 +35,7 @@ public class GameGUI extends JFrame {
     private JButton lookButton, inventoryButton, saveButton, soundToggleButton;
     private JButton useAttackButton, useSwordButton, useBowButton, usePotionButton;
     private JButton commandsButton;
+    private JButton helpButton;
     private UIComponents.MapPanel mapPanel;
     private UIComponents.BackgroundPanel backgroundPanel;
 
@@ -177,6 +178,9 @@ public class GameGUI extends JFrame {
         commandsButton = UIComponents.createActionButton(
                 UIComponents.ActionType.COMMANDS, e -> openCommandsDialog()
         );
+        helpButton = UIComponents.createActionButton(
+                UIComponents.ActionType.HELP, e -> helpGame()
+        );
 
         // Aggiungi pulsanti centrati
         actionButtonsPanel.add(createCenteredComponent(saveButton));
@@ -193,16 +197,18 @@ public class GameGUI extends JFrame {
         actionButtonsPanel.add(createCenteredComponent(usePotionButton));
 
         // === Frecce direzionali ===
-        JPanel directionPanel = new JPanel(new GridLayout(3, 3, 2, 2));
+        JPanel directionPanel = new JPanel(new GridLayout(3, 3, 5, 5));
         directionPanel.setOpaque(false);
         directionPanel.setPreferredSize(new Dimension(150, 150));
 
         // Layout 3x3 per i pulsanti di direzione
+        // Riga 1 (Nord al centro)
         directionPanel.add(new JLabel()); // vuoto
         northButton = UIComponents.createDirectionButton("nord", e -> moveDirection("nord"));
         directionPanel.add(northButton);
         directionPanel.add(new JLabel()); // vuoto
 
+        // Riga 2 (Ovest - Osserva - Est)
         westButton = UIComponents.createDirectionButton("ovest", e -> moveDirection("ovest"));
         directionPanel.add(westButton);
 
@@ -215,9 +221,20 @@ public class GameGUI extends JFrame {
         eastButton = UIComponents.createDirectionButton("est", e -> moveDirection("est"));
         directionPanel.add(eastButton);
 
-        directionPanel.add(new JLabel()); // vuoto
+        // Riga 3 (Help - Sud - Comandi)
+        helpButton = UIComponents.createActionButton(
+                UIComponents.ActionType.HELP,
+                e -> helpGame()
+        );
+        directionPanel.add(helpButton);
+
         southButton = UIComponents.createDirectionButton("sud", e -> moveDirection("sud"));
         directionPanel.add(southButton);
+
+        commandsButton = UIComponents.createActionButton(
+                UIComponents.ActionType.COMMANDS,
+                e -> openCommandsDialog()
+        );
         directionPanel.add(commandsButton);
 
         // Contenitore per direzioni centrato in basso
@@ -339,7 +356,7 @@ public class GameGUI extends JFrame {
     }
 
     /**
-     * NUOVO: Apre la finestra dei comandi aggiuntivi
+     * Apre la finestra dei comandi aggiuntivi
      */
     private void openCommandsDialog() {
         CommandsDialog dialog = new CommandsDialog(this, command -> {
@@ -471,6 +488,78 @@ public class GameGUI extends JFrame {
 
     }
 
+    /**
+     * Mostra la finestra di aiuto con la lista dei comandi organizzata per
+     * schede
+     */
+    private void helpGame() {
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setPreferredSize(new Dimension(500, 400));
+
+        // --- MOVIMENTO ---
+        JTextArea movimentoArea = createHelpTextArea(
+                "=== COMANDI DI MOVIMENTO ===\n\n"
+                + "nord  - Spostati verso nord\n"
+                + "sud   - Spostati verso sud\n"
+                + "est   - Spostati verso est\n"
+                + "ovest - Spostati verso ovest\n\n"
+                + "Suggerimento: puoi usare anche le frecce direzionali sullo schermo."
+        );
+
+        tabbedPane.addTab("Movimento", new JScrollPane(movimentoArea));
+
+        // --- INTERAZIONE ---
+        JTextArea interazioneArea = createHelpTextArea(
+                "=== COMANDI DI INTERAZIONE ===\n\n"
+                + "osserva     - Descrive la stanza e gli oggetti presenti\n"
+                + "inventario  - Mostra gli oggetti in tuo possesso\n"
+                + "apri cassa  - Tenta di aprire una cassa nella stanza (se presente)\n"
+        );
+        tabbedPane.addTab("Interazione", new JScrollPane(interazioneArea));
+
+        // --- COMBATTIMENTO ---
+        JTextArea combattimentoArea = createHelpTextArea(
+                "=== COMANDI DI COMBATTIMENTO ===\n\n"
+                + "attacca              - Attacca un nemico presente nella stanza\n"
+                + "usa spada            - Attacca usando la spada\n"
+                + "usa arco             - Attacca usando l'arco (se lo possiedi)\n"
+                + "usa pozione di cura  - Recupera punti vita usando una pozione"
+        );
+        tabbedPane.addTab("Combattimento", new JScrollPane(combattimentoArea));
+
+        // --- ALTRO ---
+        JTextArea altroArea = createHelpTextArea(
+                "=== ALTRI COMANDI ===\n\n"
+                + "salva    - Salva la partita corrente\n"
+                + "comandi  - Apre il menu dei comandi aggiuntivi\n"
+                + "help     - Mostra questa finestra di aiuto\n"
+        );
+        tabbedPane.addTab("Altro", new JScrollPane(altroArea));
+
+        // Mostra dialog con le schede
+        JOptionPane.showMessageDialog(
+                this,
+                tabbedPane,
+                "Guida ai Comandi",
+                JOptionPane.INFORMATION_MESSAGE
+        );
+    }
+
+    /**
+     * Crea un'area di testo formattata per la finestra di aiuto
+     */
+    private JTextArea createHelpTextArea(String text) {
+        JTextArea textArea = new JTextArea(text);
+        textArea.setEditable(false);
+        textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        textArea.setBackground(new Color(50, 50, 50));
+        textArea.setForeground(Color.WHITE);
+        textArea.setCaretPosition(0);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        return textArea;
+    }
+
     private void appendToOutput(String text) {
         SwingUtilities.invokeLater(() -> {
             outputArea.append(text + "\n");
@@ -514,8 +603,7 @@ public class GameGUI extends JFrame {
     }
 
     /**
-     * NUOVO: Metodo per ricaricare specificamente i pulsanti azione Utile
-     * quando cambi le immagini durante lo sviluppo
+     * Metodo per ricaricare specificamente i pulsanti azione
      */
     public void reloadActionButtons() {
         UIImageManager.getInstance().clearCache();

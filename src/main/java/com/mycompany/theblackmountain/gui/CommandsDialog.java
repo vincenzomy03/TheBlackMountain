@@ -19,10 +19,7 @@ public class CommandsDialog extends JDialog {
     private Consumer<String> commandCallback;
     private JButton openChestButton;
     private JButton combatButton;
-
-    // Bottoni da implementare : aiuto
-    private JButton futureCommand2Button;
-    private JButton futureCommand3Button;
+    
 
     public CommandsDialog(JFrame parent, Consumer<String> commandCallback) {
         super(parent, "Comandi Aggiuntivi", true);
@@ -54,7 +51,7 @@ public class CommandsDialog extends JDialog {
 
         // Pannello inferiore con pulsante chiudi
         JPanel bottomPanel = createBottomPanel();
-        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+        mainPanel.add(bottomPanel, BorderLayout.CENTER);
 
         add(mainPanel);
     }

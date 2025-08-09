@@ -83,9 +83,15 @@ public class CombatObserver extends GameObserver {
                 String combatResult = combatSystem.processCombatAction(parserOutput);
                 msg.append(combatResult);
 
-                // *** NUOVO: Controlla se il combattimento è finito ***
+                // Controlla esplicitamente se il combattimento è finito dopo l'azione
                 if (!combatSystem.isInCombat()) {
-                    msg.append("\nCombattimento terminato!");
+                    msg.append("\n\n🎉 Combattimento terminato! Tutti i nemici sono stati sconfitti.");
+                    msg.append("\n💡 Puoi ora muoverti liberamente o esplorare la stanza.");
+
+                    // Se ci sono altre stanze con nemici, informa il giocatore
+                    if (hasOtherRoomsWithEnemies(description)) {
+                        msg.append("\n⚔️ Ricorda: dovrai usare 'combatti' se incontri altri nemici.");
+                    }
                 }
             }
         } // Gestione altri comandi durante il combattimento
@@ -93,7 +99,13 @@ public class CombatObserver extends GameObserver {
             // Durante il combattimento, alcuni comandi sono permessi, altri no
             if (commandType == CommandType.USE) {
                 // Durante il combattimento, l'uso di oggetti viene gestito dal CombatSystem
-                msg.append(combatSystem.processCombatAction(parserOutput));
+                String useResult = combatSystem.processCombatAction(parserOutput);
+                msg.append(useResult);
+
+                // Controlla anche qui se il combattimento è finito
+                if (!combatSystem.isInCombat()) {
+                    msg.append("\n\n🎉 Combattimento terminato!");
+                }
             } else if (commandType == CommandType.INVENTORY) {
                 // Permetti di controllare l'inventario durante il combattimento
                 // Questo viene gestito dall'observer OpenInventory.java
@@ -126,6 +138,18 @@ public class CombatObserver extends GameObserver {
                 || commandType == CommandType.SOUTH
                 || commandType == CommandType.EAST
                 || commandType == CommandType.WEST;
+    }
+
+    /**
+     * Controlla se ci sono altre stanze con nemici vivi
+     *
+     * @param description stato del gioco
+     * @return true se ci sono altri nemici nel gioco
+     */
+    private boolean hasOtherRoomsWithEnemies(GameDescription description) {
+        return description.getRooms().stream()
+                .filter(room -> room.getId() != description.getCurrentRoom().getId())
+                .anyMatch(room -> room.getEnemies().stream().anyMatch(enemy -> enemy.isAlive()));
     }
 
     /**

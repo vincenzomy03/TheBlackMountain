@@ -50,7 +50,7 @@ public class GameLoader {
      */
     public void loadGame() throws SQLException {
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            System.out.println("📋 Caricamento dati dal database...");
+            System.out.println("Caricamento dati dal database...");
 
             // 1. Carica tutte le stanze
             loadRooms(conn);
@@ -70,7 +70,64 @@ public class GameLoader {
             // 6. Imposta la stanza corrente del giocatore
             setPlayerCurrentRoom(conn);
 
-            System.out.println("✅ Tutti i dati caricati con successo!");
+            // 7. Reset delle casse prima di caricare
+            resetAllChests();
+
+            // 8. Sincronizza stati oggetti 
+            syncObjectStatesFromDatabase();
+
+            System.out.println("Tutti i dati caricati con successo!");
+        }
+    }
+
+    public boolean isChestOpenInDatabase(int chestId) {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+            String sql = "SELECT IS_OPEN FROM OBJECTS WHERE ID = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setInt(1, chestId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getBoolean("IS_OPEN");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Errore controllo stato cassa: " + e.getMessage());
+        }
+        return false; // Default: assume chiusa
+    }
+
+    public void syncObjectStatesFromDatabase() {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+
+            String sql = "SELECT ID, IS_OPEN, IS_PUSHED FROM OBJECTS WHERE ID >= 100 AND ID <= 103";
+
+            try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+
+                while (rs.next()) {
+                    int objectId = rs.getInt("ID");
+                    boolean isOpenDB = rs.getBoolean("IS_OPEN");
+                    boolean isPushedDB = rs.getBoolean("IS_PUSHED");
+
+                    // Trova l'oggetto in memoria e sincronizza
+                    for (Room room : roomMap.values()) {
+                        for (GameObjects obj : room.getObjects()) {
+                            if (obj.getId() == objectId) {
+                                if (obj.isOpen() != isOpenDB) {
+                                    System.out.println("🔄 Sync cassa " + objectId + ": " + obj.isOpen() + " -> " + isOpenDB);
+                                    obj.setOpen(isOpenDB);
+                                }
+                                if (obj.isPush() != isPushedDB) {
+                                    obj.setPush(isPushedDB);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Errore sincronizzazione stati oggetti: " + e.getMessage());
         }
     }
 
@@ -97,7 +154,7 @@ public class GameLoader {
             }
         }
 
-        System.out.println("🏰 Caricate " + roomMap.size() + " stanze");
+        System.out.println("Caricate " + roomMap.size() + " stanze");
     }
 
     /**
@@ -169,59 +226,60 @@ public class GameLoader {
                 }
             }
 
-            System.out.println("📦 Caricati " + objectCount + " oggetti nelle stanze");
+            System.out.println("Caricati " + objectCount + " oggetti nelle stanze");
         }
     }
 
     /**
- * Carica i personaggi dal database - MODIFICATA per non ricaricare nemici morti
- */
-private void loadCharacters(Connection conn) throws SQLException {
-    String sql = "SELECT * FROM CHARACTERS ORDER BY ID";
+     * Carica i personaggi dal database - MODIFICATA per non ricaricare nemici
+     * morti
+     */
+    private void loadCharacters(Connection conn) throws SQLException {
+        String sql = "SELECT * FROM CHARACTERS ORDER BY ID";
 
-    try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
 
-        while (rs.next()) {
-            GameCharacter character = new GameCharacter(
-                    rs.getInt("ID"),
-                    rs.getString("NAME"),
-                    rs.getString("DESCRIPTION"),
-                    rs.getInt("MAX_HP"),
-                    rs.getInt("ATTACK"),
-                    rs.getInt("DEFENSE"),
-                    CharacterType.valueOf(rs.getString("CHARACTER_TYPE"))
-            );
+            while (rs.next()) {
+                GameCharacter character = new GameCharacter(
+                        rs.getInt("ID"),
+                        rs.getString("NAME"),
+                        rs.getString("DESCRIPTION"),
+                        rs.getInt("MAX_HP"),
+                        rs.getInt("ATTACK"),
+                        rs.getInt("DEFENSE"),
+                        CharacterType.valueOf(rs.getString("CHARACTER_TYPE"))
+                );
 
-            character.setCurrentHp(rs.getInt("CURRENT_HP"));
+                character.setCurrentHp(rs.getInt("CURRENT_HP"));
 
-            // Se non è vivo, imposta HP a 0
-            boolean isAlive = rs.getBoolean("IS_ALIVE");
-            if (!isAlive) {
-                character.setCurrentHp(0);
-            }
+                // Se non è vivo, imposta HP a 0
+                boolean isAlive = rs.getBoolean("IS_ALIVE");
+                if (!isAlive) {
+                    character.setCurrentHp(0);
+                }
 
-            // Aggiungi alla lista appropriata
-            CharacterType type = character.getType();
-            if (type == CharacterType.PLAYER) {
-                game.setPlayer(character);
-            } else if (character.getType() == CharacterType.GOBLIN
-                    || character.getType() == CharacterType.GIANT_RAT
-                    || character.getType() == CharacterType.DEMON_DOG) {
-                
-                // *** NUOVO: Solo aggiungi nemici se sono vivi ***
-                if (isAlive && character.getCurrentHp() > 0) {
-                    int roomId = rs.getInt("ROOM_ID");
-                    Room room = roomMap.get(roomId);
-                    if (room != null) {
-                        room.getEnemies().add(character);
+                // Aggiungi alla lista appropriata
+                CharacterType type = character.getType();
+                if (type == CharacterType.PLAYER) {
+                    game.setPlayer(character);
+                } else if (character.getType() == CharacterType.GOBLIN
+                        || character.getType() == CharacterType.GIANT_RAT
+                        || character.getType() == CharacterType.DEMON_DOG) {
+
+                    // *** NUOVO: Solo aggiungi nemici se sono vivi ***
+                    if (isAlive && character.getCurrentHp() > 0) {
+                        int roomId = rs.getInt("ROOM_ID");
+                        Room room = roomMap.get(roomId);
+                        if (room != null) {
+                            room.getEnemies().add(character);
+                        }
                     }
                 }
             }
         }
-    }
 
-    System.out.println("👤 Personaggi caricati");
-}
+        System.out.println("Personaggi caricati");
+    }
 
     /**
      * Carica l'inventario del giocatore.
@@ -266,12 +324,12 @@ private void loadCharacters(Connection conn) throws SQLException {
 
                 if (currentRoom != null) {
                     game.setCurrentRoom(currentRoom);
-                    System.out.println("📍 Giocatore posizionato in: " + currentRoom.getName());
+                    System.out.println("Giocatore posizionato in: " + currentRoom.getName());
                 } else {
                     // Fallback alla prima stanza
                     if (!game.getRooms().isEmpty()) {
                         game.setCurrentRoom(game.getRooms().get(0));
-                        System.out.println("⚠️ Stanza non trovata, posizionato nella prima stanza");
+                        System.out.println("Stanza non trovata, posizionato nella prima stanza");
                     }
                 }
             }
@@ -361,7 +419,7 @@ private void loadCharacters(Connection conn) throws SQLException {
             }
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nel salvataggio dello stato del giocatore: " + e.getMessage());
+            System.err.println("Errore nel salvataggio dello stato del giocatore: " + e.getMessage());
         }
     }
 
@@ -380,7 +438,7 @@ private void loadCharacters(Connection conn) throws SQLException {
             stmt.executeUpdate();
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nell'aggiornamento oggetto " + obj.getName() + ": " + e.getMessage());
+            System.err.println("Errore nell'aggiornamento oggetto " + obj.getName() + ": " + e.getMessage());
         }
     }
 
@@ -418,7 +476,7 @@ private void loadCharacters(Connection conn) throws SQLException {
             }
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nell'apertura cassa " + chestId + ": " + e.getMessage());
+            System.err.println("Errore nell'apertura cassa " + chestId + ": " + e.getMessage());
         }
 
         return foundObjects;
@@ -520,7 +578,7 @@ private void loadCharacters(Connection conn) throws SQLException {
             stmt.executeUpdate();
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nel segnare cassa come aperta: " + e.getMessage());
+            System.err.println("Errore nel segnare cassa come aperta: " + e.getMessage());
         }
     }
 
@@ -563,7 +621,7 @@ private void loadCharacters(Connection conn) throws SQLException {
             }
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nello spostamento oggetto in stanza: " + e.getMessage());
+            System.err.println("Errore nello spostamento oggetto in stanza: " + e.getMessage());
         }
     }
 
@@ -610,7 +668,7 @@ private void loadCharacters(Connection conn) throws SQLException {
             }
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nello spostamento oggetto nell'inventario: " + e.getMessage());
+            System.err.println("Errore nello spostamento oggetto nell'inventario: " + e.getMessage());
         }
     }
 
@@ -659,7 +717,7 @@ private void loadCharacters(Connection conn) throws SQLException {
             }
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nella rimozione dell'oggetto: " + e.getMessage());
+            System.err.println("Errore nella rimozione dell'oggetto: " + e.getMessage());
         }
     }
 
@@ -678,7 +736,42 @@ private void loadCharacters(Connection conn) throws SQLException {
             stmt.executeUpdate();
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nell'aggiornamento personaggio " + character.getName() + ": " + e.getMessage());
+            System.err.println("Errore nell'aggiornamento personaggio " + character.getName() + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Resetta tutte le casse a chiuse e rimuove il loro contenuto dalle stanze
+     * Chiamato ogni volta che si inizia una nuova partita
+     */
+    public void resetAllChests() {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+
+            System.out.println("Reset di tutte le casse...");
+
+            // 1. Chiudi tutte le casse
+            String resetChestsSql = "UPDATE OBJECTS SET IS_OPEN = FALSE WHERE ID >= 100 AND ID <= 103";
+            try (PreparedStatement stmt = conn.prepareStatement(resetChestsSql)) {
+                int updated = stmt.executeUpdate();
+                System.out.println(updated + " casse chiuse");
+            }
+
+            // 2. Rimuovi il contenuto delle casse dalle stanze
+            // (Solo oggetti che dovrebbero essere dentro le casse quando chiuse)
+            String removeContentSql = """
+            DELETE FROM ROOM_OBJECTS 
+            WHERE OBJECT_ID IN (1, 5, 6, 8, 9, 10)
+        """;
+
+            try (PreparedStatement stmt = conn.prepareStatement(removeContentSql)) {
+                int removed = stmt.executeUpdate();
+                System.out.println("Rimossi " + removed + " oggetti delle casse dalle stanze");
+            }
+
+            System.out.println("Reset casse completato!");
+
+        } catch (SQLException e) {
+            System.err.println("Errore nel reset delle casse: " + e.getMessage());
         }
     }
 
@@ -707,7 +800,7 @@ private void loadCharacters(Connection conn) throws SQLException {
             System.out.println("============================\n");
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nel recupero statistiche: " + e.getMessage());
+            System.err.println("Errore nel recupero statistiche: " + e.getMessage());
         }
     }
 
@@ -752,19 +845,19 @@ private void loadCharacters(Connection conn) throws SQLException {
             try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(orphanSql)) {
 
                 while (rs.next()) {
-                    System.err.println("⚠️ Oggetto orfano trovato: " + rs.getInt(1) + " - " + rs.getString(2));
+                    System.err.println("Oggetto orfano trovato: " + rs.getInt(1) + " - " + rs.getString(2));
                     allGood = false;
                 }
             }
 
             if (allGood) {
-                System.out.println("✅ Integrità database verificata");
+                System.out.println("Integrità database verificata");
             }
 
             return allGood;
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nella verifica integrità: " + e.getMessage());
+            System.err.println("Errore nella verifica integrità: " + e.getMessage());
             return false;
         }
     }

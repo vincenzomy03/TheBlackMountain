@@ -268,7 +268,7 @@ public class TBMGame extends GameDescription implements GameObservable {
                     String resetEnemiesSql = "UPDATE CHARACTERS SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE WHERE CHARACTER_TYPE != 'PLAYER'";
                     try (var stmt = conn.prepareStatement(resetEnemiesSql)) {
                         int updated = stmt.executeUpdate();
-                        System.out.println("✅ " + updated + " nemici ripristinati nel database");
+                        System.out.println(updated + " nemici ripristinati nel database");
                     }
 
                     // Ricarica i nemici nelle stanze
@@ -280,7 +280,7 @@ public class TBMGame extends GameDescription implements GameObservable {
                     reloadCharactersFromDatabase();
                     
                 } catch (SQLException e) {
-                    System.err.println("❌ Errore nel reset nemici: " + e.getMessage());
+                    System.err.println("Errore nel reset nemici: " + e.getMessage());
                     e.printStackTrace();
                 }
             }
@@ -288,13 +288,13 @@ public class TBMGame extends GameDescription implements GameObservable {
             // Termina eventuali combattimenti in corso
             if (combatSystem != null && combatSystem.isInCombat()) {
                 combatSystem.endCombat();
-                System.out.println("✅ Combattimento in corso terminato");
+                System.out.println("Combattimento in corso terminato");
             }
 
-            System.out.println("🎮 Gioco pronto per una nuova avventura!");
+            System.out.println("Gioco pronto per una nuova avventura!");
 
         } catch (Exception e) {
-            System.err.println("❌ Errore nel reset del gioco: " + e.getMessage());
+            System.err.println("Errore nel reset del gioco: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -371,9 +371,9 @@ public class TBMGame extends GameDescription implements GameObservable {
                 }
             }
             
-            System.out.println("✅ Nemici di default creati");
+            System.out.println("Nemici di default creati");
         } catch (Exception e) {
-            System.err.println("❌ Errore nella creazione nemici: " + e.getMessage());
+            System.err.println("Errore nella creazione nemici: " + e.getMessage());
         }
     }
 
