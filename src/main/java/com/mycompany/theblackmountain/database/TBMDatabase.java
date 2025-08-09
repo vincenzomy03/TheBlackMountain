@@ -43,7 +43,7 @@ public class TBMDatabase {
             return;
         }
         
-        System.out.println("🔧 Inizializzazione database...");
+        System.out.println("Inizializzazione database...");
         
         // Testa la connessione
         if (!testConnection()) {
@@ -54,7 +54,7 @@ public class TBMDatabase {
         initializer.initDatabase();
         
         initialized = true;
-        System.out.println("✅ Database inizializzato con successo!");
+        System.out.println("Database inizializzato con successo!");
     }
 
     /**
@@ -75,22 +75,9 @@ public class TBMDatabase {
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
             return conn.isValid(5); // timeout 5 secondi
         } catch (SQLException e) {
-            System.err.println("❌ Test connessione fallito: " + e.getMessage());
+            System.err.println("Test connessione fallito: " + e.getMessage());
             return false;
         }
-    }
-
-    /**
-     * Resetta completamente il database.
-     */
-    public void resetDatabase() throws SQLException {
-        if (!initialized) {
-            initialize();
-        }
-        
-        System.out.println("🔄 Reset completo del database...");
-        initializer.resetDatabase();
-        System.out.println("✅ Database resettato e reinizializzato");
     }
 
     /**
@@ -103,9 +90,9 @@ public class TBMDatabase {
         
         try (Connection conn = getConnection()) {
             conn.createStatement().execute("SHUTDOWN");
-            System.out.println("🔒 Database chiuso correttamente");
+            System.out.println("Database chiuso correttamente");
         } catch (SQLException e) {
-            System.err.println("⚠️ Errore nella chiusura del database: " + e.getMessage());
+            System.err.println("Errore nella chiusura del database: " + e.getMessage());
         } finally {
             initialized = false;
         }

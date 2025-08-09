@@ -108,6 +108,12 @@ public enum CommandType {
     /**
      *
      */
-    FIGHT
+    FIGHT,
+    
+    /**
+     * 
+     */
+    CREATE
+    
 }
 

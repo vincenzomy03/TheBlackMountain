@@ -343,38 +343,4 @@ public class InitDatabase {
             return false;
         }
     }
-
-    /**
-     * Metodo per resettare il database (utile per sviluppo)
-     */
-    public void resetDatabase() {
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD); Statement stm = conn.createStatement()) {
-
-            System.out.println("🔄 Reset database in corso...");
-
-            // Disabilita vincoli temporaneamente
-            stm.execute("SET REFERENTIAL_INTEGRITY FALSE");
-
-            // Elimina tutti i dati
-            stm.execute("DELETE FROM INVENTORY");
-            stm.execute("DELETE FROM ROOM_OBJECTS");
-            stm.execute("DELETE FROM WEAPONS");
-            stm.execute("DELETE FROM CHARACTERS");
-            stm.execute("DELETE FROM OBJECTS");
-            stm.execute("DELETE FROM ROOM_CONNECTIONS");
-            stm.execute("DELETE FROM ROOMS");
-
-            // Riabilita vincoli
-            stm.execute("SET REFERENTIAL_INTEGRITY TRUE");
-
-            System.out.println("✅ Database resettato, reinizializzazione...");
-
-            // Reinizializza con dati freschi
-            initDatabase();
-
-        } catch (SQLException e) {
-            System.err.println("❌ Errore nel reset del database: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
 }

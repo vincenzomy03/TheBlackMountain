@@ -25,14 +25,13 @@ public class TBMGame extends GameDescription implements GameObservable {
     private CombatSystem combatSystem;
     private GameCharacter player;
     private final List<GameObserver> observers = new ArrayList<>();
-    private boolean autoSaveEnabled = true;
 
     // Campo per memorizzare l'ultimo ParserOutput
     private ParserOutput lastParserOutput;
 
     @Override
     public void init() throws Exception {
-        System.out.println("🚀 Inizializzazione The Black Mountain...");
+        System.out.println("Inizializzazione The Black Mountain...");
 
         try {
             initializeDatabase();
@@ -41,38 +40,38 @@ public class TBMGame extends GameDescription implements GameObservable {
             initializeCombatSystem();
             initializeObservers();
             verifyGameState();
-            System.out.println("✅ The Black Mountain inizializzato con successo!");
+            System.out.println("The Black Mountain inizializzato con successo!");
         } catch (Exception e) {
-            System.err.println("❌ Errore nell'inizializzazione del gioco: " + e.getMessage());
+            System.err.println("Errore nell'inizializzazione del gioco: " + e.getMessage());
             throw e;
         }
     }
 
     private void initializeDatabase() throws SQLException {
-        System.out.println("🔧 Inizializzazione database...");
+        System.out.println("Inizializzazione database...");
         database = TBMDatabase.getInstance();
         database.initialize();
         if (!database.isHealthy()) {
             throw new SQLException("Database non funzionante dopo l'inizializzazione");
         }
-        System.out.println("✅ Database inizializzato e testato");
+        System.out.println("Database inizializzato e testato");
     }
 
     private void loadGameData() throws SQLException {
-        System.out.println("📋 Caricamento dati di gioco...");
+        System.out.println("Caricamento dati di gioco...");
         gameLoader = new GameLoader(this);
         gameLoader.loadGame();
         gameLoader.printDatabaseStats();
         gameLoader.verifyDatabaseIntegrity();
-        System.out.println("✅ Dati di gioco caricati");
+        System.out.println("Dati di gioco caricati");
     }
 
     private void initializeCombatSystem() {
         if (player != null) {
             combatSystem = new CombatSystem(this);
-            System.out.println("⚔️ Sistema di combattimento inizializzato");
+            System.out.println("Sistema di combattimento inizializzato");
         } else {
-            System.err.println("⚠️ Impossibile inizializzare il combattimento: giocatore non trovato");
+            System.err.println("Impossibile inizializzare il combattimento: giocatore non trovato");
         }
     }
 
@@ -94,9 +93,9 @@ public class TBMGame extends GameDescription implements GameObservable {
             this.attach(new Open());
             this.attach(new Use());
 
-            System.out.println("👀 Observer inizializzati (" + observers.size() + " attivi)");
+            System.out.println("Observer inizializzati (" + observers.size() + " attivi)");
         } catch (Exception e) {
-            System.err.println("⚠️ Alcuni observer non disponibili: " + e.getMessage());
+            System.err.println("Alcuni observer non disponibili: " + e.getMessage());
         }
     }
 
@@ -118,11 +117,10 @@ public class TBMGame extends GameDescription implements GameObservable {
         if (!errors.isEmpty()) {
             throw new Exception("Problemi nella verifica dello stato: " + String.join(", ", errors));
         }
-        System.out.println("✅ Stato del gioco verificato");
+        System.out.println("Stato del gioco verificato");
     }
 
-    // MODIFICA al metodo nextMove in TBMGame.java
-// Sostituisci il metodo esistente con questa versione
+    
     @Override
     public void nextMove(ParserOutput p, PrintStream out) {
         if (p == null || p.getCommand() == null) {
@@ -154,20 +152,15 @@ public class TBMGame extends GameDescription implements GameObservable {
                 }
             }
 
-            // IMPORTANTE: Se abbiamo un risultato, stampiamolo
+            // Se abbiamo un risultato viene stampato
             if (result.length() > 0) {
                 String output = result.toString();
                 out.print(output);
-                out.flush(); // Assicurati che l'output venga inviato
+                out.flush();
             } else if (!commandHandled) {
                 // Messaggio di fallback se nessun observer ha risposto
                 out.println("Comando non riconosciuto o non applicabile qui.");
                 out.flush();
-            }
-
-            // Salvataggio automatico
-            if (autoSaveEnabled) {
-                saveGameState();
             }
 
         } catch (Exception e) {
@@ -178,33 +171,8 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
     }
 
-    public void saveGameState() {
-        if (gameLoader == null) {
-            System.err.println("⚠️ GameLoader non inizializzato, impossibile salvare");
-            return;
-        }
-        try {
-            System.out.println("💾 Salvataggio stato gioco...");
-            gameLoader.savePlayerState();
-            for (Room room : getRooms()) {
-                for (GameObjects obj : room.getObjects()) {
-                    gameLoader.updateObjectState(obj);
-                }
-            }
-            for (GameObjects obj : getInventory()) {
-                gameLoader.updateObjectState(obj);
-            }
-            if (player != null) {
-                gameLoader.updateCharacterState(player);
-            }
-            System.out.println("✅ Stato gioco salvato");
-        } catch (Exception e) {
-            System.err.println("❌ Errore nel salvataggio: " + e.getMessage());
-        }
-    }
-
     private void initializeCommands() {
-        System.out.println("🎮 Inizializzazione comandi...");
+        System.out.println("Inizializzazione comandi...");
 
         //Commands
         Command nord = new Command(CommandType.NORD, "nord");
@@ -226,10 +194,6 @@ public class TBMGame extends GameDescription implements GameObservable {
         Command ovest = new Command(CommandType.WEST, "ovest");
         ovest.setAlias(new String[]{"o", "O", "Ovest", "OVEST"});
         getCommands().add(ovest);
-
-        Command end = new Command(CommandType.END, "end");
-        end.setAlias(new String[]{"end", "fine", "esci", "muori", "ammazzati", "ucciditi", "suicidati", "exit", "basta"});
-        getCommands().add(end);
 
         Command look = new Command(CommandType.LOOK_AT, "osserva");
         look.setAlias(new String[]{"guarda", "vedi", "trova", "cerca", "descrivi"});
@@ -260,8 +224,13 @@ public class TBMGame extends GameDescription implements GameObservable {
         Command attack = new Command(CommandType.ATTACK, "attacca");
         attack.setAlias(new String[]{"attacco", "colpisci", "fight"});
         getCommands().add(attack);
+        
+        // Comando per creare arco
+        Command attack = new Command(CommandType.CREATE, "crea");
+        attack.setAlias(new String[]{"crea", "costruisci", "build", "create"});
+        getCommands().add(create);
 
-        System.out.println("✅ Inizializzati " + getCommands().size() + " comandi");
+        System.out.println("Inizializzati " + getCommands().size() + " comandi");
     }
 
     public void dropObject(GameObjects obj) {
@@ -271,7 +240,7 @@ public class TBMGame extends GameDescription implements GameObservable {
         getInventory().remove(obj);
         getCurrentRoom().getObjects().add(obj);
         gameLoader.moveObjectToRoom(obj, getCurrentRoom());
-        System.out.println("📦 Oggetto " + obj.getName() + " lasciato in " + getCurrentRoom().getName());
+        System.out.println("Oggetto " + obj.getName() + " lasciato in " + getCurrentRoom().getName());
     }
 
     public boolean pickupObject(GameObjects obj) {
@@ -284,7 +253,7 @@ public class TBMGame extends GameDescription implements GameObservable {
         getCurrentRoom().getObjects().remove(obj);
         getInventory().add(obj);
         gameLoader.moveObjectToInventory(obj, 1);
-        System.out.println("🎒 Oggetto " + obj.getName() + " aggiunto all'inventario");
+        System.out.println("Oggetto " + obj.getName() + " aggiunto all'inventario");
         return true;
     }
 
@@ -297,7 +266,7 @@ public class TBMGame extends GameDescription implements GameObservable {
             room.getObjects().remove(obj);
         }
         gameLoader.removeObject(obj);
-        System.out.println("🗑️ Oggetto " + obj.getName() + " rimosso dal gioco");
+        System.out.println("Oggetto " + obj.getName() + " rimosso dal gioco");
     }
 
     public void updateObjectState(GameObjects obj) {
@@ -312,27 +281,18 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
     }
 
-    public void resetGame() throws Exception {
-        System.out.println("🔄 Reset completo del gioco...");
-        if (database != null) {
-            database.resetDatabase();
-        }
-        loadGameData();
-        System.out.println("✅ Gioco resettato");
-    }
-
     public void cleanup() {
         try {
-            System.out.println("🧹 Cleanup del gioco...");
+            System.out.println("Cleanup del gioco...");
             if (autoSaveEnabled) {
                 saveGameState();
             }
             if (database != null) {
                 database.shutdown();
             }
-            System.out.println("✅ Cleanup completato");
+            System.out.println("Cleanup completato");
         } catch (Exception e) {
-            System.err.println("⚠️ Errore durante cleanup: " + e.getMessage());
+            System.err.println("Errore durante cleanup: " + e.getMessage());
         }
     }
 
@@ -361,7 +321,7 @@ public class TBMGame extends GameDescription implements GameObservable {
             try {
                 observer.update(this, lastParserOutput);
             } catch (Exception e) {
-                System.err.println("⚠️ Errore in observer " + observer.getClass().getSimpleName() + ": " + e.getMessage());
+                System.err.println("Errore in observer " + observer.getClass().getSimpleName() + ": " + e.getMessage());
             }
         }
     }
@@ -387,15 +347,6 @@ public class TBMGame extends GameDescription implements GameObservable {
 
     public GameLoader getGameLoader() {
         return gameLoader;
-    }
-
-    public boolean isAutoSaveEnabled() {
-        return autoSaveEnabled;
-    }
-
-    public void setAutoSaveEnabled(boolean autoSaveEnabled) {
-        this.autoSaveEnabled = autoSaveEnabled;
-        System.out.println("💾 Auto-save " + (autoSaveEnabled ? "abilitato" : "disabilitato"));
     }
 
     public void printDatabaseInfo() {
