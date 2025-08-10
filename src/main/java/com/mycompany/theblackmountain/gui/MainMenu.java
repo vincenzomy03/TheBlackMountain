@@ -314,14 +314,14 @@ public class MainMenu extends JFrame {
         }
     }
 
-    // ===== METODO MODIFICATO PER USARE LA LOADING SCREEN =====
+    // Sostituisci solo questi metodi nella tua classe MainMenu esistente:
     private void startNewGame() {
-        // Mostra la schermata di caricamento
-        LoadingScreen.showLoadingScreen(this, () -> {
-            // Questo codice viene eseguito quando il caricamento è completato
+        // Usa il nuovo sistema di caricamento reale
+        LoadingScreen.showRealLoadingScreen(this, null, (game, totalPlayTime) -> {
+            // Questo callback viene eseguito quando il caricamento è completato
             SwingUtilities.invokeLater(() -> {
                 try {
-                    GameGUI gameGUI = new GameGUI();
+                    GameGUI gameGUI = new GameGUI(game, totalPlayTime);
                     gameGUI.setVisible(true);
                     this.dispose();
                 } catch (Exception e) {
@@ -339,7 +339,6 @@ public class MainMenu extends JFrame {
         fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
                 "File di salvataggio TBM", "dat"));
 
-        // Personalizza il dialog
         fileChooser.setDialogTitle("Carica Partita Salvata");
         fileChooser.setApproveButtonText("Carica");
 
@@ -348,10 +347,21 @@ public class MainMenu extends JFrame {
             try {
                 String saveData = SaveManager.loadGame(fileChooser.getSelectedFile());
 
-                // Non fermare la musica
-                GameGUI gameGUI = new GameGUI(saveData);
-                gameGUI.setVisible(true);
-                this.dispose();
+                // Usa il caricamento reale anche per i salvataggi
+                LoadingScreen.showRealLoadingScreen(this, saveData, (game, totalPlayTime) -> {
+                    SwingUtilities.invokeLater(() -> {
+                        try {
+                            GameGUI gameGUI = new GameGUI(game, totalPlayTime);
+                            gameGUI.setVisible(true);
+                            this.dispose();
+                        } catch (Exception e) {
+                            JOptionPane.showMessageDialog(this,
+                                    "Errore nel caricamento del gioco: " + e.getMessage(),
+                                    "Errore", JOptionPane.ERROR_MESSAGE);
+                            e.printStackTrace();
+                        }
+                    });
+                });
 
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this,

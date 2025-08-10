@@ -73,6 +73,46 @@ public class GameGUI extends JFrame {
         initializeGame(saveData);
     }
 
+    /**
+     * Costruttore che accetta un gioco già caricato
+     * @param loadedGame gioco già inizializzato e configurato
+     * @param totalPlayTime tempo di gioco totale
+     */
+    public GameGUI(TBMGame loadedGame, long totalPlayTime) throws Exception {
+        this.game = loadedGame;
+        this.totalPlayTime = totalPlayTime;
+        this.gameStartTime = System.currentTimeMillis();
+        this.parser = new Parser(new HashSet<>());
+
+        setupUI();
+        initializeGameWithLoadedData();
+    }
+
+    /**
+     * Inizializza l'interfaccia con un gioco già caricato
+     */
+    private void initializeGameWithLoadedData() {
+        appendToOutput("=== GIOCO CARICATO ===");
+        appendToOutput("Benvenuto di nuovo, avventuriero!");
+
+        if (totalPlayTime > 0) {
+            long seconds = totalPlayTime / 1000;
+            long minutes = seconds / 60;
+            long hours = minutes / 60;
+            String formattedTime = String.format("%02d:%02d:%02d", hours % 24, minutes % 60, seconds % 60);
+            appendToOutput("Tempo di gioco: " + formattedTime);
+        }
+
+        appendToOutput("======================\n");
+
+        // Mostra la stanza corrente
+        appendToOutput(game.getCurrentRoom().getName());
+        appendToOutput("================================================");
+        appendToOutput(game.getCurrentRoom().getDescription());
+
+        updateUI();
+    }
+
     private void setupUI() {
         setTitle("The Black Mountain");
         setSize(1900, 900);

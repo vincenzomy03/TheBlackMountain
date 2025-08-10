@@ -2,14 +2,19 @@ package com.mycompany.theblackmountain.gui;
 
 import com.mycompany.theblackmountain.gui.utils.UIComponents;
 import com.mycompany.theblackmountain.gui.utils.UIImageManager;
+import com.mycompany.theblackmountain.impl.TBMGame;
+import com.mycompany.theblackmountain.save.SaveManager;
+import com.mycompany.theblackmountain.parser.Parser;
+import com.mycompany.theblackmountain.thread.MusicManager;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.HashSet;
 
 /**
- * Schermata di caricamento per il gioco
+ * Schermata di caricamento reale per il gioco
  * @author vince
  */
 public class LoadingScreen extends JDialog {
@@ -18,22 +23,22 @@ public class LoadingScreen extends JDialog {
     private JLabel loadingLabel;
     private JLabel statusLabel;
     private Timer animationTimer;
-    private Timer progressTimer;
-    private int progress = 0;
     private int animationFrame = 0;
-    private String[] loadingTexts = {
-        "Inizializzazione della fortezza...",
-        "Caricamento delle stanze...",
-        "Evocazione dei nemici...",
-        "Preparazione degli oggetti...",
-        "Attivazione degli incantesimi...",
-        "Finalizzazione dell'avventura..."
-    };
     
-    public LoadingScreen(JFrame parent) {
+    // Callback per quando il caricamento è completato
+    private LoadingCompleteCallback onComplete;
+    
+    // Dati per il gioco
+    private String saveData;
+    private TBMGame loadedGame;
+    private long totalPlayTime;
+    
+    public LoadingScreen(JFrame parent, String saveData, LoadingCompleteCallback onComplete) {
         super(parent, "Caricamento", true);
+        this.saveData = saveData;
+        this.onComplete = onComplete;
         setupUI();
-        startLoadingAnimation();
+        startRealLoading();
     }
     
     private void setupUI() {
@@ -65,7 +70,7 @@ public class LoadingScreen extends JDialog {
         centerPanel.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
         
         // Etichetta con animazione
-        loadingLabel = new JLabel("Preparazione dell'avventura", JLabel.CENTER);
+        loadingLabel = new JLabel("Inizializzazione", JLabel.CENTER);
         loadingLabel.setFont(new Font("SansSerif", Font.PLAIN, 16));
         loadingLabel.setForeground(UIComponents.TEXT_COLOR);
         loadingLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -81,7 +86,7 @@ public class LoadingScreen extends JDialog {
         progressBar.setMaximumSize(new Dimension(400, 25));
         
         // Status label
-        statusLabel = new JLabel("Inizializzazione...", JLabel.CENTER);
+        statusLabel = new JLabel("Preparazione in corso...", JLabel.CENTER);
         statusLabel.setFont(new Font("SansSerif", Font.ITALIC, 12));
         statusLabel.setForeground(new Color(160, 160, 160));
         statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -93,81 +98,205 @@ public class LoadingScreen extends JDialog {
         centerPanel.add(statusLabel);
         
         mainPanel.add(centerPanel, BorderLayout.CENTER);
-        
-        // === FOOTER ===
-        JPanel footerPanel = new JPanel();
-        footerPanel.setOpaque(false);
-        footerPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 20, 20));
-        
-        JLabel footerLabel = new JLabel("Caricamento in corso, attendere prego...", JLabel.CENTER);
-        footerLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        footerLabel.setForeground(new Color(120, 120, 120));
-        footerPanel.add(footerLabel);
-        
-        mainPanel.add(footerPanel, BorderLayout.SOUTH);
-        
-        add(mainPanel);
+     
     }
     
     /**
-     * Avvia l'animazione di caricamento
+     * Avvia il caricamento reale del gioco
      */
-    private void startLoadingAnimation() {
+    private void startRealLoading() {
         // Timer per l'animazione del testo
         animationTimer = new Timer(500, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 animationFrame = (animationFrame + 1) % 4;
+                String currentText = statusLabel.getText();
+                if (currentText.contains("...")) {
+                    currentText = currentText.substring(0, currentText.indexOf("..."));
+                }
                 String dots = ".".repeat(animationFrame);
-                loadingLabel.setText("Preparazione dell'avventura" + dots);
+                statusLabel.setText(currentText + dots);
             }
         });
         animationTimer.start();
         
-        // Timer per la progress bar
-        progressTimer = new Timer(200, new ActionListener() {
-            private int step = 0;
+        // Avvia il caricamento reale in background
+        SwingWorker<TBMGame, LoadingStep> gameLoader = new SwingWorker<TBMGame, LoadingStep>() {
+            @Override
+            protected TBMGame doInBackground() throws Exception {
+                // Fase 1: Inizializzazione sistema di gioco
+                publish(new LoadingStep(10, "Inizializzazione del sistema", "Avvio dei componenti base"));
+                Thread.sleep(300); // Piccolo delay per mostrare il progresso
+                
+                TBMGame game = new TBMGame();
+                
+                // Fase 2: Caricamento delle stanze
+                publish(new LoadingStep(25, "Caricamento mondo di gioco", "Costruzione delle stanze"));
+                game.init();
+                Thread.sleep(400);
+                
+                // Fase 3: Inizializzazione parser
+                publish(new LoadingStep(40, "Configurazione parser", "Preparazione comandi"));
+                Parser parser = new Parser(new HashSet<>());
+                Thread.sleep(300);
+                
+                // Fase 4: Caricamento immagini UI
+                publish(new LoadingStep(55, "Caricamento risorse grafiche", "Pre-caricamento immagini"));
+                preloadImages();
+                Thread.sleep(500);
+                
+                // Fase 5: Applicazione dati di salvataggio (se presenti)
+                if (saveData != null) {
+                    publish(new LoadingStep(70, "Ripristino salvataggio", "Applicazione dati salvati"));
+                    applySaveData(game);
+                    Thread.sleep(400);
+                } else {
+                    publish(new LoadingStep(70, "Configurazione nuova partita", "Impostazione stato iniziale"));
+                    Thread.sleep(300);
+                }
+                
+                // Fase 6: Inizializzazione audio
+                publish(new LoadingStep(85, "Inizializzazione sistema audio", "Caricamento effetti sonori"));
+                initializeAudioSystem();
+                Thread.sleep(300);
+                
+                // Fase 7: Finalizzazione
+                publish(new LoadingStep(100, "Finalizzazione", "Completamento caricamento"));
+                Thread.sleep(200);
+                
+                return game;
+            }
             
             @Override
-            public void actionPerformed(ActionEvent e) {
-                step++;
-                
-                // Progressione non lineare per sembrare più realistica
-                if (step < 5) {
-                    progress += 8; // Veloce all'inizio
-                } else if (step < 15) {
-                    progress += 4; // Rallenta
-                } else if (step < 20) {
-                    progress += 6; // Riaccellera
-                } else {
-                    progress += 2; // Finale lento
-                }
-                
-                progress = Math.min(progress, 100);
-                progressBar.setValue(progress);
-                progressBar.setString(progress + "%");
-                
-                // Cambia il testo di stato
-                if (step < loadingTexts.length) {
-                    statusLabel.setText(loadingTexts[Math.min(step, loadingTexts.length - 1)]);
-                }
-                
-                // Quando arriva a 100%, ferma e chiudi
-                if (progress >= 100) {
-                    progressTimer.stop();
-                    animationTimer.stop();
-                    
-                    // Pausa breve prima di chiudere
-                    Timer closeTimer = new Timer(800, evt -> {
-                        dispose();
-                        ((Timer)evt.getSource()).stop();
+            protected void process(java.util.List<LoadingStep> chunks) {
+                for (LoadingStep step : chunks) {
+                    SwingUtilities.invokeLater(() -> {
+                        progressBar.setValue(step.getProgress());
+                        progressBar.setString(step.getProgress() + "%");
+                        loadingLabel.setText(step.getMainText());
+                        statusLabel.setText(step.getDetailText());
                     });
-                    closeTimer.setRepeats(false);
-                    closeTimer.start();
                 }
             }
-        });
-        progressTimer.start();
+            
+            @Override
+            protected void done() {
+                animationTimer.stop();
+                
+                try {
+                    loadedGame = get();
+                    
+                    // Pausa breve per mostrare il completamento
+                    Timer completeTimer = new Timer(500, e -> {
+                        dispose();
+                        if (onComplete != null) {
+                            onComplete.onLoadingComplete(loadedGame, totalPlayTime);
+                        }
+                        ((Timer)e.getSource()).stop();
+                    });
+                    completeTimer.setRepeats(false);
+                    completeTimer.start();
+                    
+                } catch (Exception e) {
+                    // Gestione errori
+                    animationTimer.stop();
+                    JOptionPane.showMessageDialog(LoadingScreen.this, 
+                        "Errore durante il caricamento: " + e.getMessage(),
+                        "Errore", 
+                        JOptionPane.ERROR_MESSAGE);
+                    dispose();
+                    e.printStackTrace();
+                }
+            }
+        };
+        
+        gameLoader.execute();
+    }
+    
+    /**
+     * Pre-carica le immagini più importanti per evitare ritardi durante il gioco
+     */
+    private void preloadImages() {
+        UIImageManager imageManager = UIImageManager.getInstance();
+        
+        // Pre-carica immagini di sfondo
+        imageManager.loadImage(UIImageManager.BACKGROUNDS_PATH + "game_background.png");
+        
+        // Pre-carica icone dei pulsanti più usati
+        String[] commonButtons = {
+            "inventory", "use_attack", "use_sword", "use_bow", "use_potion",
+            "arrow_up", "arrow_down", "arrow_left", "arrow_right",
+            "magnifier", "save", "volume_on", "volume_off", "commands", "help"
+        };
+        
+        for (String buttonName : commonButtons) {
+            imageManager.loadButtonImages(buttonName, 50, 50);
+        }
+        
+        // Pre-carica alcune mappe comuni (se esistono)
+        String[] commonRooms = {
+            "ingresso", "corridoio", "sala principale", "cucina", "armeria"
+        };
+        
+        for (String room : commonRooms) {
+            imageManager.loadRoomMap(room, 200, 200);
+        }
+    }
+    
+    /**
+     * Applica i dati di salvataggio al gioco
+     */
+    private void applySaveData(TBMGame game) throws Exception {
+        if (saveData != null) {
+            SaveManager.applyLoadedData(game, saveData, game.getCombatSystem());
+            
+            // Estrai il tempo di gioco salvato
+            for (String line : saveData.split("\n")) {
+                if (line.startsWith("play.time=")) {
+                    try {
+                        totalPlayTime = Long.parseLong(line.substring("play.time=".length()));
+                    } catch (NumberFormatException e) {
+                        totalPlayTime = 0;
+                    }
+                    break;
+                }
+            }
+        } else {
+            totalPlayTime = 0;
+        }
+    }
+    
+    /**
+     * Inizializza il sistema audio
+     */
+    private void initializeAudioSystem() {
+        MusicManager.getInstance();     
+    }
+    
+    /**
+     * Classe per rappresentare un passo del caricamento
+     */
+    private static class LoadingStep {
+        private final int progress;
+        private final String mainText;
+        private final String detailText;
+        
+        public LoadingStep(int progress, String mainText, String detailText) {
+            this.progress = progress;
+            this.mainText = mainText;
+            this.detailText = detailText;
+        }
+        
+        public int getProgress() { return progress; }
+        public String getMainText() { return mainText; }
+        public String getDetailText() { return detailText; }
+    }
+    
+    /**
+     * Interfaccia per il callback di completamento
+     */
+    public interface LoadingCompleteCallback {
+        void onLoadingComplete(TBMGame game, long totalPlayTime);
     }
     
     /**
@@ -206,34 +335,11 @@ public class LoadingScreen extends JDialog {
     }
     
     /**
-     * Mostra la schermata di caricamento
-     * @param parent finestra genitore
-     * @param onComplete azione da eseguire al completamento
+     * Mostra la schermata di caricamento reale
      */
-    public static void showLoadingScreen(JFrame parent, Runnable onComplete) {
+    public static void showRealLoadingScreen(JFrame parent, String saveData, LoadingCompleteCallback onComplete) {
         SwingUtilities.invokeLater(() -> {
-            LoadingScreen loadingScreen = new LoadingScreen(parent);
-            
-            // Avvia il caricamento del gioco in background
-            SwingWorker<Void, Void> gameLoader = new SwingWorker<Void, Void>() {
-                @Override
-                protected Void doInBackground() throws Exception {
-                    // Simula il tempo di caricamento reale
-                    // In realtà qui potresti fare il caricamento effettivo
-                    Thread.sleep(4000); // 4 secondi di caricamento
-                    return null;
-                }
-                
-                @Override
-                protected void done() {
-                    // Quando il caricamento è completato
-                    if (onComplete != null) {
-                        onComplete.run();
-                    }
-                }
-            };
-            
-            gameLoader.execute();
+            LoadingScreen loadingScreen = new LoadingScreen(parent, saveData, onComplete);
             loadingScreen.setVisible(true);
         });
     }
