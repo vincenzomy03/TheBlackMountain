@@ -83,7 +83,7 @@ public class MainMenu extends JFrame {
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(50, 0, 50, 0));
 
-        Dimension buttonSize = new Dimension(300, 80); // Pulsanti più grandi per le immagini
+        Dimension buttonSize = new Dimension(300, 80);
         int spacing = 25;
 
         // NUOVA PARTITA - usando UIComponents per supportare immagini future
@@ -314,17 +314,24 @@ public class MainMenu extends JFrame {
         }
     }
 
+    // ===== METODO MODIFICATO PER USARE LA LOADING SCREEN =====
     private void startNewGame() {
-        try {
-            GameGUI gameGUI = new GameGUI();
-            gameGUI.setVisible(true);
-            this.dispose();
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                    "Errore nell'avvio del gioco: " + e.getMessage(),
-                    "Errore", JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        }
+        // Mostra la schermata di caricamento
+        LoadingScreen.showLoadingScreen(this, () -> {
+            // Questo codice viene eseguito quando il caricamento è completato
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    GameGUI gameGUI = new GameGUI();
+                    gameGUI.setVisible(true);
+                    this.dispose();
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(this,
+                            "Errore nell'avvio del gioco: " + e.getMessage(),
+                            "Errore", JOptionPane.ERROR_MESSAGE);
+                    e.printStackTrace();
+                }
+            });
+        });
     }
 
     private void loadGame() {

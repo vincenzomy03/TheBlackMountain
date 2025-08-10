@@ -79,6 +79,9 @@ public class GameGUI extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
+        // Imposta icona della finestra
+        setWindowIcon();
+
         // Carica font personalizzato
         Font gameFont = loadCustomFont(16f);
 
@@ -89,7 +92,7 @@ public class GameGUI extends JFrame {
         );
         add(backgroundPanel);
 
-        // === CENTRO: Output + Mappa ===
+        // === CENTRO: Output + Input (verticale) ===
         JPanel centerPanel = UIComponents.createThemedPanel(
                 new Color(0, 0, 0, 100), // Trasparente per mostrare lo sfondo
                 new BorderLayout()
@@ -98,7 +101,7 @@ public class GameGUI extends JFrame {
         // Area di output
         outputArea = UIComponents.createOutputArea(gameFont);
         JScrollPane scrollPane = new JScrollPane(outputArea);
-        scrollPane.setPreferredSize(new Dimension(1200, 600));
+        scrollPane.setPreferredSize(new Dimension(1200, 500)); // Ridotta l'altezza per fare spazio all'input
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
         scrollPane.setBorder(BorderFactory.createTitledBorder(
@@ -108,23 +111,12 @@ public class GameGUI extends JFrame {
         ));
         centerPanel.add(scrollPane, BorderLayout.CENTER);
 
-        // Pannello mappa
-        mapPanel = UIComponents.createMapPanel(800, 600);
-        mapPanel.setBorder(BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(UIComponents.TEXT_COLOR, 1),
-                "Mappa",
-                0, 0, gameFont, UIComponents.TEXT_COLOR
-        ));
-        centerPanel.add(mapPanel, BorderLayout.EAST);
-
-        backgroundPanel.add(centerPanel, BorderLayout.CENTER);
-
-        // === SUD: Solo Input (senza pulsanti) ===
-        JPanel bottomPanel = UIComponents.createThemedPanel(
+        // === Pannello Input nella parte centrale-sud ===
+        JPanel inputPanel = UIComponents.createThemedPanel(
                 new Color(40, 40, 50, 200), // Semi-trasparente
                 new BorderLayout()
         );
-        bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         JLabel commandLabel = new JLabel(" Comando: ");
         commandLabel.setForeground(UIComponents.TEXT_COLOR);
@@ -132,10 +124,22 @@ public class GameGUI extends JFrame {
 
         inputField = UIComponents.createInputField(gameFont, this::processInput);
 
-        bottomPanel.add(commandLabel, BorderLayout.WEST);
-        bottomPanel.add(inputField, BorderLayout.CENTER);
+        inputPanel.add(commandLabel, BorderLayout.WEST);
+        inputPanel.add(inputField, BorderLayout.CENTER);
+        
+        // Aggiungi l'input panel al centro-sud
+        centerPanel.add(inputPanel, BorderLayout.SOUTH);
 
-        backgroundPanel.add(bottomPanel, BorderLayout.SOUTH);
+        backgroundPanel.add(centerPanel, BorderLayout.CENTER);
+
+        // === EST: Mappa che occupa tutta l'altezza ===
+        mapPanel = UIComponents.createMapPanel(800, 800);
+        mapPanel.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(UIComponents.TEXT_COLOR, 1),
+                "Mappa",
+                0, 0, gameFont, UIComponents.TEXT_COLOR
+        ));
+        backgroundPanel.add(mapPanel, BorderLayout.EAST);
 
         // === OVEST: Pulsanti azione centrati + Frecce direzionali ===
         JPanel westPanel = new JPanel();
@@ -261,6 +265,20 @@ public class GameGUI extends JFrame {
         });
 
         setVisible(true);
+    }
+
+    /**
+     * Imposta l'icona della finestra
+     */
+    private void setWindowIcon() {
+        UIImageManager imageManager = UIImageManager.getInstance();
+        ImageIcon icon = imageManager.loadImage(UIImageManager.ICONS_PATH + "game_icon.png");
+
+        if (icon != null) {
+            setIconImage(icon.getImage());
+        } else {
+            System.err.println("⚠️ Icona finestra non trovata");
+        }
     }
 
     /**

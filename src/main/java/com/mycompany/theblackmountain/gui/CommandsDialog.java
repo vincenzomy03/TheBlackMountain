@@ -19,7 +19,6 @@ public class CommandsDialog extends JDialog {
     private Consumer<String> commandCallback;
     private JButton openChestButton;
     private JButton combatButton;
-    
 
     public CommandsDialog(JFrame parent, Consumer<String> commandCallback) {
         super(parent, "Comandi Aggiuntivi", true);
@@ -51,7 +50,7 @@ public class CommandsDialog extends JDialog {
 
         // Pannello inferiore con pulsante chiudi
         JPanel bottomPanel = createBottomPanel();
-        mainPanel.add(bottomPanel, BorderLayout.CENTER);
+        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
         add(mainPanel);
     }
@@ -60,24 +59,26 @@ public class CommandsDialog extends JDialog {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
         int spacing = 15;
 
         // Pulsante "Apri Cassa"
         openChestButton = createCommandButton(
                 "open_chest",
-                "Apri Cassa",
+                "",
                 "Tenta di aprire una cassa nella stanza",
-                e -> executeCommand("apri cassa")
+                e -> executeCommand("apri cassa"),
+                new Dimension(180, 45)
         );
 
         // Pulsanti placeholder per futuri comandi
         combatButton = createCommandButton(
                 "combat",
-                "Combatti",
+                "",
                 "Avvia il combattimento",
-                e -> executeCommand("combatti")
+                e -> executeCommand("combatti"),
+                new Dimension(180, 45)
         );
 
         // Aggiungi pulsanti al pannello
@@ -89,13 +90,13 @@ public class CommandsDialog extends JDialog {
         return panel;
     }
 
-    private JButton createCommandButton(String imageName, String text, String tooltip, ActionListener action) {
+    private JButton createCommandButton(String imageName, String text, String tooltip, ActionListener action, Dimension size) {
         JButton button = UIComponents.createImageButton(
                 imageName,
                 tooltip,
                 text,
                 action,
-                new Dimension(250, 40)
+                size
         );
 
         // Stile personalizzato per i pulsanti comando
@@ -104,8 +105,8 @@ public class CommandsDialog extends JDialog {
                 BorderFactory.createLineBorder(UIComponents.ACCENT_COLOR, 1),
                 BorderFactory.createEmptyBorder(8, 15, 8, 15)
         ));
-        button.setOpaque(true);
-        button.setContentAreaFilled(true);
+        button.setOpaque(false);
+        button.setContentAreaFilled(false);
 
         // Effetto hover personalizzato per i pulsanti di comando
         button.addMouseListener(new java.awt.event.MouseAdapter() {
