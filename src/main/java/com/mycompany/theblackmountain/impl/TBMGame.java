@@ -275,10 +275,10 @@ public class TBMGame extends GameDescription implements GameObservable {
                     for (Room room : getRooms()) {
                         room.getEnemies().clear();
                     }
-                    
+
                     // Ricarica caratteri dal database (metodo privato chiamato attraverso GameLoader)
                     reloadCharactersFromDatabase();
-                    
+
                 } catch (SQLException e) {
                     System.err.println("Errore nel reset nemici: " + e.getMessage());
                     e.printStackTrace();
@@ -306,17 +306,17 @@ public class TBMGame extends GameDescription implements GameObservable {
         try {
             // Creare un nuovo GameLoader temporaneo per ricaricare solo i caratteri
             GameLoader tempLoader = new GameLoader(this);
-            
+
             // Chiama il metodo pubblico loadGame che ricaricherà tutti i dati
             // Ma dato che abbiamo già le stanze, ricaricherà solo i personaggi
             try (Connection conn = database.getConnection()) {
                 // Usa reflection per chiamare il metodo privato loadCharacters
                 // In alternativa, potresti rendere loadCharacters pubblico in GameLoader
-                java.lang.reflect.Method loadCharactersMethod = 
-                    GameLoader.class.getDeclaredMethod("loadCharacters", Connection.class);
+                java.lang.reflect.Method loadCharactersMethod
+                        = GameLoader.class.getDeclaredMethod("loadCharacters", Connection.class);
                 loadCharactersMethod.setAccessible(true);
                 loadCharactersMethod.invoke(gameLoader, conn);
-                
+
                 System.out.println("✅ Personaggi ricaricati dalle stanze");
             }
         } catch (Exception e) {
@@ -326,51 +326,109 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
     }
 
+    // Sostituisci i metodi game over in TBMGame.java con questi versioni con debug:
+
+/**
+ * Controlla se il giocatore è morto
+ * @return true se il giocatore è morto (HP <= 0)
+ */
+public boolean isGameOver() {
+    if (player == null) {
+        System.out.println("🐛 DEBUG: Player è null!");
+        return false;
+    }
+    
+    int currentHp = player.getCurrentHp();
+    int maxHp = player.getMaxHp();
+    
+    System.out.println("🐛 DEBUG Game Over Check:");
+    System.out.println("  - Player: " + player.getName());
+    System.out.println("  - Current HP: " + currentHp);
+    System.out.println("  - Max HP: " + maxHp);
+    System.out.println("  - Is Dead: " + (currentHp <= 0));
+    
+    return currentHp <= 0;
+}
+
+/**
+ * Restituisce un messaggio di game over basato sullo stato del giocatore
+ * @return messaggio di morte
+ */
+public String getGameOverMessage() {
+    if (player == null) {
+        return "Errore di sistema";
+    }
+    
+    if (player.getCurrentHp() <= 0) {
+        return "La tua forza vitale si è esaurita...";
+    }
+    
+    return "Game Over";
+}
+
+/**
+ * Debug: Stampa lo stato completo del giocatore
+ */
+public void debugPlayerState() {
+    System.out.println(" === STATO GIOCATORE ===");
+    if (player == null) {
+        System.out.println("PLAYER È NULL!");
+        return;
+    }
+    
+    System.out.println("Nome: " + player.getName());
+    System.out.println("HP Correnti: " + player.getCurrentHp());
+    System.out.println("HP Massimi: " + player.getMaxHp());
+    System.out.println("Attacco: " + player.getAttack());
+    System.out.println("Difesa: " + player.getDefense());
+    System.out.println("È vivo: " + player.isAlive());
+    System.out.println("========================");
+}
     /**
      * Crea manualmente i nemici nelle stanze come fallback
      */
     private void createDefaultEnemiesInRooms() {
         try {
-            System.out.println("🔄 Creazione nemici di default...");
-            
+            System.out.println("Creazione nemici di default...");
+
             for (Room room : getRooms()) {
                 room.getEnemies().clear();
-                
+
                 switch (room.getId()) {
                     case 0: // Ingresso - Goblin
-                        room.getEnemies().add(new GameCharacter(1, "Goblin", 
-                            "Una creatura malvagia dalla pelle verde scuro.", 40, 12, 3, 
-                            com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
+                        room.getEnemies().add(new GameCharacter(1, "Goblin",
+                                "Una creatura malvagia dalla pelle verde scuro.", 40, 12, 3,
+                                com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
                         break;
                     case 1: // Stanza del Topo
-                        room.getEnemies().add(new GameCharacter(2, "Topo Gigante", 
-                            "Un enorme roditore con denti giallastri.", 25, 8, 2, 
-                            com.mycompany.theblackmountain.type.CharacterType.GIANT_RAT));
+                        room.getEnemies().add(new GameCharacter(2, "Topo Gigante",
+                                "Un enorme roditore con denti giallastri.", 25, 8, 2,
+                                com.mycompany.theblackmountain.type.CharacterType.GIANT_RAT));
                         break;
                     case 2: // Mensa - Due Goblin
-                        room.getEnemies().add(new GameCharacter(3, "Goblin Chiassoso", 
-                            "Un goblin aggressivo.", 35, 10, 3, 
-                            com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
-                        room.getEnemies().add(new GameCharacter(4, "Goblin Rissoso", 
-                            "Un altro goblin aggressivo.", 30, 9, 2, 
-                            com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
+                        room.getEnemies().add(new GameCharacter(3, "Goblin Chiassoso",
+                                "Un goblin aggressivo.", 35, 10, 3,
+                                com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
+                        room.getEnemies().add(new GameCharacter(4, "Goblin Rissoso",
+                                "Un altro goblin aggressivo.", 30, 9, 2,
+                                com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
                         break;
                     case 4: // Sala delle Guardie
-                        room.getEnemies().add(new GameCharacter(5, "Goblin Gigante", 
-                            "Un goblin enorme con clava.", 60, 16, 5, 
-                            com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
-                        room.getEnemies().add(new GameCharacter(6, "Goblin Minuto", 
-                            "Un goblin piccolo ma minaccioso.", 25, 8, 2, 
-                            com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
+                        room.getEnemies().add(new GameCharacter(5, "Goblin Gigante",
+                                "Un goblin enorme con clava.", 60, 16, 5,
+                                com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
+                        room.getEnemies().add(new GameCharacter(6, "Goblin Minuto",
+                                "Un goblin piccolo ma minaccioso.", 25, 8, 2,
+                                com.mycompany.theblackmountain.type.CharacterType.GOBLIN));
                         break;
                     case 7: // Boss - Cane Demone
-                        room.getEnemies().add(new GameCharacter(7, "Cane Demone", 
-                            "Una creatura infernale.", 120, 25, 8, 
-                            com.mycompany.theblackmountain.type.CharacterType.DEMON_DOG));
+                        room.getEnemies().add(new GameCharacter(7, "Cane Demone",
+                                "Una creatura infernale.", 120, 25, 8,
+                                com.mycompany.theblackmountain.type.CharacterType.DEMON_DOG));
                         break;
                 }
             }
-            
+
             System.out.println("Nemici di default creati");
         } catch (Exception e) {
             System.err.println("Errore nella creazione nemici: " + e.getMessage());

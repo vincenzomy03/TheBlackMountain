@@ -75,6 +75,7 @@ public class GameGUI extends JFrame {
 
     /**
      * Costruttore che accetta un gioco già caricato
+     *
      * @param loadedGame gioco già inizializzato e configurato
      * @param totalPlayTime tempo di gioco totale
      */
@@ -86,31 +87,6 @@ public class GameGUI extends JFrame {
 
         setupUI();
         initializeGameWithLoadedData();
-    }
-
-    /**
-     * Inizializza l'interfaccia con un gioco già caricato
-     */
-    private void initializeGameWithLoadedData() {
-        appendToOutput("=== GIOCO CARICATO ===");
-        appendToOutput("Benvenuto di nuovo, avventuriero!");
-
-        if (totalPlayTime > 0) {
-            long seconds = totalPlayTime / 1000;
-            long minutes = seconds / 60;
-            long hours = minutes / 60;
-            String formattedTime = String.format("%02d:%02d:%02d", hours % 24, minutes % 60, seconds % 60);
-            appendToOutput("Tempo di gioco: " + formattedTime);
-        }
-
-        appendToOutput("======================\n");
-
-        // Mostra la stanza corrente
-        appendToOutput(game.getCurrentRoom().getName());
-        appendToOutput("================================================");
-        appendToOutput(game.getCurrentRoom().getDescription());
-
-        updateUI();
     }
 
     private void setupUI() {
@@ -166,7 +142,7 @@ public class GameGUI extends JFrame {
 
         inputPanel.add(commandLabel, BorderLayout.WEST);
         inputPanel.add(inputField, BorderLayout.CENTER);
-        
+
         // Aggiungi l'input panel al centro-sud
         centerPanel.add(inputPanel, BorderLayout.SOUTH);
 
@@ -331,6 +307,8 @@ public class GameGUI extends JFrame {
         return wrapper;
     }
 
+    // Aggiungi anche questo debug nei metodi di inizializzazione di GameGUI:
+// Modifica initializeGame per aggiungere debug:
     private void initializeGame(String saveData) {
         if (saveData == null) {
             appendToOutput("=== BENVENUTO IN THE BLACK MOUNTAIN ===");
@@ -352,6 +330,37 @@ public class GameGUI extends JFrame {
         appendToOutput("================================================");
         appendToOutput(game.getCurrentRoom().getDescription());
 
+        // *** DEBUG: Stato iniziale del giocatore ***
+        System.out.println("🔍 STATO INIZIALE DEL GIOCATORE:");
+        game.debugPlayerState();
+
+        updateUI();
+    }
+
+// E anche in initializeGameWithLoadedData:
+    private void initializeGameWithLoadedData() {
+        appendToOutput("=== GIOCO CARICATO ===");
+        appendToOutput("Benvenuto di nuovo, avventuriero!");
+
+        if (totalPlayTime > 0) {
+            long seconds = totalPlayTime / 1000;
+            long minutes = seconds / 60;
+            long hours = minutes / 60;
+            String formattedTime = String.format("%02d:%02d:%02d", hours % 24, minutes % 60, seconds % 60);
+            appendToOutput("Tempo di gioco: " + formattedTime);
+        }
+
+        appendToOutput("======================\n");
+
+        // Mostra la stanza corrente
+        appendToOutput(game.getCurrentRoom().getName());
+        appendToOutput("================================================");
+        appendToOutput(game.getCurrentRoom().getDescription());
+
+        // *** DEBUG: Stato del giocatore caricato ***
+        System.out.println("🔍 STATO DEL GIOCATORE CARICATO:");
+        game.debugPlayerState();
+
         updateUI();
     }
 
@@ -363,11 +372,14 @@ public class GameGUI extends JFrame {
 
         appendToOutput("\n> " + command);
 
+        // *** DEBUG: Stato PRIMA del comando ***
+        System.out.println("🔍 PRIMA del comando '" + command + "':");
+        game.debugPlayerState();
+
         ParserOutput output = parser.parse(command, game.getCommands(),
                 game.getCurrentRoom().getObjects(), game.getInventory());
 
         // ===== FIX PRINCIPALE =====
-        // Crea un StringWriter per catturare l'output
         StringWriter stringWriter = new StringWriter();
         PrintStream out = new PrintStream(new OutputStream() {
             public void write(int b) {
@@ -399,9 +411,29 @@ public class GameGUI extends JFrame {
         }
         // ==========================
 
+        // *** DEBUG: Stato DOPO il comando ***
+        System.out.println("🔍 DOPO il comando '" + command + "':");
+        game.debugPlayerState();
+
         updateUI();
         inputField.setText("");
         inputField.requestFocus();
+
+        // *** CONTROLLO GAME OVER ***
+        System.out.println("🔍 Controllo Game Over...");
+        checkAndHandleGameOver();
+    }
+
+// E modifica anche il metodo checkAndHandleGameOver per aggiungere più debug:
+    private void checkAndHandleGameOver() {
+        System.out.println("🔍 checkAndHandleGameOver() chiamato");
+
+        if (game.isGameOver()) {
+            System.out.println("💀 Game Over rilevato!");
+            handleGameOver();
+        } else {
+            System.out.println("✅ Giocatore ancora vivo");
+        }
     }
 
     private void performAction(String action) {
@@ -557,11 +589,11 @@ public class GameGUI extends JFrame {
         // --- MOVIMENTO ---
         JTextArea movimentoArea = createHelpTextArea(
                 "=== COMANDI DI MOVIMENTO ===\n\n"
-                + "nord  - Spostati verso nord\n"
-                + "sud   - Spostati verso sud\n"
-                + "est   - Spostati verso est\n"
-                + "ovest - Spostati verso ovest\n\n"
-                + "Suggerimento: puoi usare anche le frecce direzionali sullo schermo."
+                + "  nord  - Spostati verso nord\n"
+                + "  sud   - Spostati verso sud\n"
+                + "  est   - Spostati verso est\n"
+                + "  ovest - Spostati verso ovest\n\n"
+                + "  Suggerimento: puoi usare anche le frecce direzionali sullo schermo."
         );
 
         tabbedPane.addTab("Movimento", new JScrollPane(movimentoArea));
@@ -569,28 +601,28 @@ public class GameGUI extends JFrame {
         // --- INTERAZIONE ---
         JTextArea interazioneArea = createHelpTextArea(
                 "=== COMANDI DI INTERAZIONE ===\n\n"
-                + "osserva     - Descrive la stanza e gli oggetti presenti\n"
-                + "inventario  - Mostra gli oggetti in tuo possesso\n"
-                + "apri cassa  - Tenta di aprire una cassa nella stanza (se presente)\n"
+                + "  osserva     - Descrive la stanza e gli oggetti presenti\n"
+                + "  inventario  - Mostra gli oggetti in tuo possesso\n"
+                + "  apri cassa  - Tenta di aprire una cassa nella stanza (se presente)\n"
         );
         tabbedPane.addTab("Interazione", new JScrollPane(interazioneArea));
 
         // --- COMBATTIMENTO ---
         JTextArea combattimentoArea = createHelpTextArea(
                 "=== COMANDI DI COMBATTIMENTO ===\n\n"
-                + "attacca              - Attacca un nemico presente nella stanza\n"
-                + "usa spada            - Attacca usando la spada\n"
-                + "usa arco             - Attacca usando l'arco (se lo possiedi)\n"
-                + "usa pozione di cura  - Recupera punti vita usando una pozione"
+                + "  attacca              - Attacca un nemico presente nella stanza\n"
+                + "  usa spada            - Attacca usando la spada\n"
+                + "  usa arco             - Attacca usando l'arco (se lo possiedi)\n"
+                + "  usa pozione di cura  - Recupera punti vita usando una pozione"
         );
         tabbedPane.addTab("Combattimento", new JScrollPane(combattimentoArea));
 
         // --- ALTRO ---
         JTextArea altroArea = createHelpTextArea(
                 "=== ALTRI COMANDI ===\n\n"
-                + "salva    - Salva la partita corrente\n"
-                + "comandi  - Apre il menu dei comandi aggiuntivi\n"
-                + "help     - Mostra questa finestra di aiuto\n"
+                + "  salva    - Salva la partita corrente\n"
+                + "  comandi  - Apre il menu dei comandi aggiuntivi\n"
+                + "  help     - Mostra questa finestra di aiuto\n"
         );
         tabbedPane.addTab("Altro", new JScrollPane(altroArea));
 
@@ -638,6 +670,76 @@ public class GameGUI extends JFrame {
             System.err.println("Errore caricamento font: " + e.getMessage());
             return new Font("SansSerif", Font.PLAIN, (int) size);
         }
+    }
+
+    /**
+     * Gestisce il game over mostrando il dialog e gestendo la risposta
+     */
+    private void handleGameOver() {
+        SwingUtilities.invokeLater(() -> {
+            // Mostra il dialog e ottieni la scelta
+            boolean wantsRestart = GameOverDialog.showGameOverDialog(this);
+
+            if (wantsRestart) {
+                // Ricomincia il gioco
+                restartGame();
+            } else {
+                // Esci dal gioco
+                exitGame();
+            }
+        });
+    }
+
+    /**
+     * Ricomincia il gioco da capo
+     */
+    private void restartGame() {
+        try {
+            // Reset del gioco usando il metodo esistente
+            game.resetForNewGame();
+
+            // Reset del tempo di gioco
+            totalPlayTime = 0;
+            gameStartTime = System.currentTimeMillis();
+
+            // Pulisci l'output e mostra il messaggio di inizio
+            outputArea.setText("");
+            appendToOutput("=== NUOVA PARTITA ===");
+            appendToOutput("Benvenuto di nuovo, avventuriero!");
+            appendToOutput("La tua nuova avventura inizia ora...");
+            appendToOutput("======================\n");
+
+            // Mostra la stanza corrente
+            appendToOutput(game.getCurrentRoom().getName());
+            appendToOutput("================================================");
+            appendToOutput(game.getCurrentRoom().getDescription());
+
+            // Aggiorna l'interfaccia
+            updateUI();
+            inputField.setText("");
+            inputField.requestFocus();
+
+            System.out.println("🔄 Gioco riavviato con successo");
+
+        } catch (Exception e) {
+            System.err.println("❌ Errore nel riavvio: " + e.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Errore nel riavvio del gioco.",
+                    "Errore",
+                    JOptionPane.ERROR_MESSAGE);
+            exitGame();
+        }
+    }
+
+    /**
+     * Esce dal gioco
+     */
+    private void exitGame() {
+        if (game != null) {
+            game.cleanup();
+        }
+        MusicManager.getInstance().stopMusic();
+        System.exit(0);
     }
 
     /**
