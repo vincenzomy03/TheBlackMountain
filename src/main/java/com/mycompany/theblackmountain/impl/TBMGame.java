@@ -36,6 +36,7 @@ public class TBMGame extends GameDescription implements GameObservable {
 
         try {
             initializeDatabase();
+            forceCompleteReset();
             loadGameData();
             initializeCommands();
             initializeCombatSystem();
@@ -75,6 +76,79 @@ public class TBMGame extends GameDescription implements GameObservable {
             System.out.println("Sistema di combattimento inizializzato");
         } else {
             System.err.println("Impossibile inizializzare il combattimento: giocatore non trovato");
+        }
+    }
+
+    /**
+     * Reset forzato completo del database per evitare stati inconsistenti
+     */
+    private void forceCompleteReset() {
+        System.out.println("🔄 Reset forzato del database per stato pulito...");
+
+        try (Connection conn = database.getConnection()) {
+
+            // 1. Reset COMPLETO del giocatore
+            String resetPlayerSql = """
+            UPDATE CHARACTERS 
+            SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE, ROOM_ID = 0 
+            WHERE CHARACTER_TYPE = 'PLAYER' AND ID = 0
+        """;
+            try (var stmt = conn.prepareStatement(resetPlayerSql)) {
+                stmt.executeUpdate();
+                System.out.println("✅ Player stato ripristinato");
+            }
+
+            // 2. Reset inventario a quello iniziale
+            String clearInventorySql = "DELETE FROM INVENTORY WHERE CHARACTER_ID = 0";
+            try (var stmt = conn.prepareStatement(clearInventorySql)) {
+                stmt.executeUpdate();
+            }
+
+            String restoreInventorySql = """
+            INSERT INTO INVENTORY (CHARACTER_ID, OBJECT_ID) 
+            SELECT 0, 2 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 2)
+            UNION ALL
+            SELECT 0, 12 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 12)
+        """;
+            try (var stmt = conn.prepareStatement(restoreInventorySql)) {
+                stmt.executeUpdate();
+                System.out.println("✅ Inventario iniziale ripristinato");
+            }
+
+            // 3. Reset tutti i nemici a vivi
+            String resetEnemiesSql = """
+            UPDATE CHARACTERS 
+            SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE 
+            WHERE CHARACTER_TYPE != 'PLAYER'
+        """;
+            try (var stmt = conn.prepareStatement(resetEnemiesSql)) {
+                int updated = stmt.executeUpdate();
+                System.out.println("✅ " + updated + " nemici ripristinati");
+            }
+
+            // 4. Reset tutte le casse a chiuse
+            String resetChestsSql = "UPDATE OBJECTS SET IS_OPEN = FALSE WHERE ID >= 100 AND ID <= 103";
+            try (var stmt = conn.prepareStatement(resetChestsSql)) {
+                stmt.executeUpdate();
+                System.out.println(" Casse chiuse");
+            }
+
+            // 5. Rimuovi contenuti casse dalle stanze
+            String removeChestContentsSql = """
+            DELETE FROM ROOM_OBJECTS 
+            WHERE OBJECT_ID IN (1, 5, 6, 8, 9, 10)
+        """;
+            try (var stmt = conn.prepareStatement(removeChestContentsSql)) {
+                stmt.executeUpdate();
+                System.out.println(" Contenuti casse rimossi dalle stanze");
+            }
+
+            System.out.println(" Reset forzato completato!");
+
+        } catch (SQLException e) {
+            System.err.println("️ Errore nel reset forzato: " + e.getMessage());
+            // Non lanciare eccezione, continua con il caricamento normale
+            e.printStackTrace();
         }
     }
 
@@ -244,13 +318,13 @@ public class TBMGame extends GameDescription implements GameObservable {
     }
 
     /**
-     * Reset del gioco per una nuova partita
+     * Reset del gioco per una nuova partita - CORRETTO
      */
     public void resetForNewGame() {
         try {
-            System.out.println(" Resetting gioco per nuova partita...");
+            System.out.println("🔄 Resetting gioco per nuova partita...");
 
-            // Reset posizione giocatore all'ingresso
+            // 1. Reset posizione giocatore all'ingresso
             Room entrance = null;
             for (Room room : getRooms()) {
                 if (room.getId() == 0) {
@@ -261,51 +335,150 @@ public class TBMGame extends GameDescription implements GameObservable {
 
             if (entrance != null) {
                 setCurrentRoom(entrance);
-                System.out.println("Giocatore riposizionato all'ingresso");
+                System.out.println("✅ Giocatore riposizionato all'ingresso");
             }
 
-            // Reset HP giocatore
-            if (player != null) {
-                player.setCurrentHp(player.getMaxHp());
-                updateCharacterState(player);
-                System.out.println("HP giocatore ripristinati: " + player.getCurrentHp());
-            }
-
-            // Reset stato nemici - li rimette tutti vivi
-            if (gameLoader != null && database != null) {
+            // 2. Reset COMPLETO del giocatore nel database
+            if (database != null) {
                 try (Connection conn = database.getConnection()) {
+                    // Reset HP e posizione giocatore
+                    String resetPlayerSql = "UPDATE CHARACTERS SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE, ROOM_ID = 0 WHERE CHARACTER_TYPE = 'PLAYER' AND ID = 0";
+                    try (var stmt = conn.prepareStatement(resetPlayerSql)) {
+                        stmt.executeUpdate();
+                        System.out.println("✅ Player HP ripristinato nel database");
+                    }
+
+                    // 3. Reset COMPLETO inventario - svuota tutto
+                    String clearInventorySql = "DELETE FROM INVENTORY WHERE CHARACTER_ID = 0";
+                    try (var stmt = conn.prepareStatement(clearInventorySql)) {
+                        stmt.executeUpdate();
+                        System.out.println("✅ Inventario svuotato nel database");
+                    }
+
+                    // 4. Ripristina inventario iniziale (pozione + spada)
+                    String restoreInventorySql = "INSERT INTO INVENTORY (CHARACTER_ID, OBJECT_ID) VALUES (0, 2), (0, 12)";
+                    try (var stmt = conn.prepareStatement(restoreInventorySql)) {
+                        stmt.executeUpdate();
+                        System.out.println(" Inventario iniziale ripristinato nel database");
+                    }
+
+                    // 5. Reset stato nemici - li rimette tutti vivi
                     String resetEnemiesSql = "UPDATE CHARACTERS SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE WHERE CHARACTER_TYPE != 'PLAYER'";
                     try (var stmt = conn.prepareStatement(resetEnemiesSql)) {
                         int updated = stmt.executeUpdate();
                         System.out.println(updated + " nemici ripristinati nel database");
                     }
 
-                    // Ricarica i nemici nelle stanze
-                    for (Room room : getRooms()) {
-                        room.getEnemies().clear();
-                    }
-
-                    // Ricarica caratteri dal database (metodo privato chiamato attraverso GameLoader)
-                    reloadCharactersFromDatabase();
-
                 } catch (SQLException e) {
-                    System.err.println("Errore nel reset nemici: " + e.getMessage());
+                    System.err.println(" Errore nel reset database: " + e.getMessage());
                     e.printStackTrace();
                 }
             }
 
-            // Termina eventuali combattimenti in corso
-            if (combatSystem != null && combatSystem.isInCombat()) {
-                combatSystem.endCombat();
-                System.out.println("Combattimento in corso terminato");
+            // 6. Reset HP giocatore in memoria
+            if (player != null) {
+                player.setCurrentHp(player.getMaxHp());
+                System.out.println("✅ HP giocatore ripristinati in memoria: " + player.getCurrentHp() + "/" + player.getMaxHp());
             }
 
-            System.out.println("Gioco pronto per una nuova avventura!");
+            // 7. Reset inventario in memoria - svuota e ripristina quello iniziale
+            getInventory().clear();
+
+            // Ricarica oggetti iniziali dall'inventory
+            if (gameLoader != null) {
+                try (Connection conn = database.getConnection()) {
+                    String loadInventorySql = """
+                    SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
+                           w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
+                    FROM INVENTORY i
+                    JOIN OBJECTS o ON i.OBJECT_ID = o.ID
+                    LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
+                    WHERE i.CHARACTER_ID = 0
+                    ORDER BY o.ID
+                """;
+
+                    try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(loadInventorySql)) {
+                        while (rs.next()) {
+                            // Usa il metodo createObjectFromResultSet di GameLoader
+                            GameObjects obj = createObjectFromResultSet(rs);
+                            if (obj != null) {
+                                getInventory().add(obj);
+                            }
+                        }
+                        System.out.println("✅ Inventario ricaricato: " + getInventory().size() + " oggetti");
+                    }
+
+                } catch (SQLException e) {
+                    System.err.println("⚠️ Errore ricaricamento inventario, uso fallback");
+                    // Fallback: crea oggetti manualmente
+                    createDefaultInventory();
+                }
+            }
+
+            // 8. Reset casse nel database (chiudi tutte e rimuovi contenuti dalle stanze)
+            if (gameLoader != null) {
+                gameLoader.resetAllChests();
+                System.out.println(" Casse resettate");
+            }
+
+            // 9. Ricarica nemici nelle stanze
+            for (Room room : getRooms()) {
+                room.getEnemies().clear();
+            }
+            reloadCharactersFromDatabase();
+
+            // 10. Termina eventuali combattimenti in corso
+            if (combatSystem != null && combatSystem.isInCombat()) {
+                combatSystem.endCombat();
+                System.out.println(" Combattimento in corso terminato");
+            }
+
+            System.out.println(" Gioco pronto per una nuova avventura!");
 
         } catch (Exception e) {
-            System.err.println("Errore nel reset del gioco: " + e.getMessage());
+            System.err.println(" Errore nel reset del gioco: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Crea oggetti iniziali di default come fallback
+     */
+    private void createDefaultInventory() {
+        getInventory().clear();
+
+        // Pozione di cura (ID 2)
+        GameObjects potion = new GameObjects(2, "pozione di cura", "Una fiala dal liquido rosso, emana un lieve calore.");
+        potion.setPickupable(true);
+        getInventory().add(potion);
+
+        // Spada (ID 12)
+        com.mycompany.theblackmountain.type.Weapon sword = new com.mycompany.theblackmountain.type.Weapon(
+                12, "spada", "Una spada d'acciaio ben bilanciata. Arma affidabile per il combattimento.",
+                8, com.mycompany.theblackmountain.type.WeaponType.SWORD, 10, 2
+        );
+        sword.setPickupable(true);
+        getInventory().add(sword);
+
+        System.out.println(" Inventario di default creato: " + getInventory().size() + " oggetti");
+    }
+
+    /**
+     * Metodo helper per createObjectFromResultSet (reso pubblico)
+     */
+    private GameObjects createObjectFromResultSet(java.sql.ResultSet rs) throws SQLException {
+        // Questo metodo esiste già in GameLoader, lo richiamiamo
+        if (gameLoader != null) {
+            try {
+                java.lang.reflect.Method method = GameLoader.class.getDeclaredMethod("createObjectFromResultSet", java.sql.ResultSet.class);
+                method.setAccessible(true);
+                return (GameObjects) method.invoke(gameLoader, rs);
+            } catch (Exception e) {
+                System.err.println("⚠️ Errore reflection: " + e.getMessage());
+                return null;
+            }
+        }
+        return null;
     }
 
     /**
@@ -361,6 +534,7 @@ public class TBMGame extends GameDescription implements GameObservable {
 
     /**
      * Restituisce un messaggio di game over basato sullo stato del giocatore
+     *
      * @return messaggio di morte
      */
     public String getGameOverMessage() {

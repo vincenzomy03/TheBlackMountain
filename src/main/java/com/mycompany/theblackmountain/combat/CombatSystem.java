@@ -78,7 +78,7 @@ public class CombatSystem {
         currentTurn = 0;
 
         StringBuilder msg = new StringBuilder();
-        msg.append("\n⚔️ === COMBATTIMENTO ===\n");
+        msg.append("\n️ === COMBATTIMENTO ===\n");
 
         if (currentEnemies.size() == 1) {
             GameCharacter enemy = currentEnemies.get(0);
@@ -95,7 +95,7 @@ public class CombatSystem {
         }
 
         msg.append(" I tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp()).append("\n");
-        msg.append("🗡️ Scrivi 'attacca' per combattere, 'usa [oggetto]' per usare un oggetto!\n");
+        msg.append("🗡️ Scrivi 'usa [oggetto]' per usare un oggetto!\n");
         msg.append("=========================");
 
         return msg.toString();
