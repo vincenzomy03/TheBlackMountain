@@ -71,6 +71,7 @@ public class TBMGame extends GameDescription implements GameObservable {
     private void initializeCombatSystem() {
         if (player != null) {
             combatSystem = new CombatSystem(this);
+            combatSystem.setPlayer(player);
             System.out.println("Sistema di combattimento inizializzato");
         } else {
             System.err.println("Impossibile inizializzare il combattimento: giocatore non trovato");
@@ -162,10 +163,18 @@ public class TBMGame extends GameDescription implements GameObservable {
                 // Messaggio di fallback se nessun observer ha risposto
                 out.println("Comando non riconosciuto o non applicabile qui.");
                 out.flush();
+
+                if (isGameOver()) {
+                    out.println(getGameOverMessage());
+                    out.flush();
+                    // Eventualmente ferma il gioco
+                    System.out.println("DEBUG: GAME OVER rilevato dopo comando: " + p.getCommand().getName());
+                }
+
             }
 
         } catch (Exception e) {
-            System.err.println("⚠️ Errore nell'elaborazione comando: " + e.getMessage());
+            System.err.println("️ Errore nell'elaborazione comando: " + e.getMessage());
             e.printStackTrace();
             out.println("Si è verificato un errore nell'elaborazione del comando.");
             out.flush();
@@ -239,7 +248,7 @@ public class TBMGame extends GameDescription implements GameObservable {
      */
     public void resetForNewGame() {
         try {
-            System.out.println("🔄 Resetting gioco per nuova partita...");
+            System.out.println(" Resetting gioco per nuova partita...");
 
             // Reset posizione giocatore all'ingresso
             Room entrance = null;
@@ -252,14 +261,14 @@ public class TBMGame extends GameDescription implements GameObservable {
 
             if (entrance != null) {
                 setCurrentRoom(entrance);
-                System.out.println("✅ Giocatore riposizionato all'ingresso");
+                System.out.println("Giocatore riposizionato all'ingresso");
             }
 
             // Reset HP giocatore
             if (player != null) {
                 player.setCurrentHp(player.getMaxHp());
                 updateCharacterState(player);
-                System.out.println("✅ HP giocatore ripristinati: " + player.getCurrentHp());
+                System.out.println("HP giocatore ripristinati: " + player.getCurrentHp());
             }
 
             // Reset stato nemici - li rimette tutti vivi
@@ -327,63 +336,64 @@ public class TBMGame extends GameDescription implements GameObservable {
     }
 
     // Sostituisci i metodi game over in TBMGame.java con questi versioni con debug:
+    /**
+     * Controlla se il giocatore è morto
+     *
+     * @return true se il giocatore è morto (HP <= 0)
+     */
+    public boolean isGameOver() {
+        if (player == null) {
+            System.out.println("DEBUG: Player è null!");
+            return false;
+        }
 
-/**
- * Controlla se il giocatore è morto
- * @return true se il giocatore è morto (HP <= 0)
- */
-public boolean isGameOver() {
-    if (player == null) {
-        System.out.println("🐛 DEBUG: Player è null!");
-        return false;
-    }
-    
-    int currentHp = player.getCurrentHp();
-    int maxHp = player.getMaxHp();
-    
-    System.out.println("🐛 DEBUG Game Over Check:");
-    System.out.println("  - Player: " + player.getName());
-    System.out.println("  - Current HP: " + currentHp);
-    System.out.println("  - Max HP: " + maxHp);
-    System.out.println("  - Is Dead: " + (currentHp <= 0));
-    
-    return currentHp <= 0;
-}
+        int currentHp = player.getCurrentHp();
+        int maxHp = player.getMaxHp();
 
-/**
- * Restituisce un messaggio di game over basato sullo stato del giocatore
- * @return messaggio di morte
- */
-public String getGameOverMessage() {
-    if (player == null) {
-        return "Errore di sistema";
-    }
-    
-    if (player.getCurrentHp() <= 0) {
-        return "La tua forza vitale si è esaurita...";
-    }
-    
-    return "Game Over";
-}
+        System.out.println("DEBUG Game Over Check:");
+        System.out.println("  - Player: " + player.getName());
+        System.out.println("  - Current HP: " + currentHp);
+        System.out.println("  - Max HP: " + maxHp);
+        System.out.println("  - Is Dead: " + (currentHp <= 0));
 
-/**
- * Debug: Stampa lo stato completo del giocatore
- */
-public void debugPlayerState() {
-    System.out.println(" === STATO GIOCATORE ===");
-    if (player == null) {
-        System.out.println("PLAYER È NULL!");
-        return;
+        return currentHp <= 0;
     }
-    
-    System.out.println("Nome: " + player.getName());
-    System.out.println("HP Correnti: " + player.getCurrentHp());
-    System.out.println("HP Massimi: " + player.getMaxHp());
-    System.out.println("Attacco: " + player.getAttack());
-    System.out.println("Difesa: " + player.getDefense());
-    System.out.println("È vivo: " + player.isAlive());
-    System.out.println("========================");
-}
+
+    /**
+     * Restituisce un messaggio di game over basato sullo stato del giocatore
+     * @return messaggio di morte
+     */
+    public String getGameOverMessage() {
+        if (player == null) {
+            return "Errore di sistema";
+        }
+
+        if (player.getCurrentHp() <= 0) {
+            return "La tua forza vitale si è esaurita...";
+        }
+
+        return "Game Over";
+    }
+
+    /**
+     * Debug: Stampa lo stato completo del giocatore
+     */
+    public void debugPlayerState() {
+        System.out.println(" === STATO GIOCATORE ===");
+        if (player == null) {
+            System.out.println("PLAYER È NULL!");
+            return;
+        }
+
+        System.out.println("Nome: " + player.getName());
+        System.out.println("HP Correnti: " + player.getCurrentHp());
+        System.out.println("HP Massimi: " + player.getMaxHp());
+        System.out.println("Attacco: " + player.getAttack());
+        System.out.println("Difesa: " + player.getDefense());
+        System.out.println("È vivo: " + player.isAlive());
+        System.out.println("========================");
+    }
+
     /**
      * Crea manualmente i nemici nelle stanze come fallback
      */

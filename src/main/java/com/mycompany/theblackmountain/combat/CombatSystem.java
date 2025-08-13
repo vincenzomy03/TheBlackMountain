@@ -144,7 +144,7 @@ public class CombatSystem {
         // Se non ci sono più nemici vivi, termina il combattimento
         if (currentEnemies.isEmpty()) {
             endCombat();
-            System.out.println("🎉 Combattimento terminato - tutti i nemici sconfitti");
+            System.out.println("Combattimento terminato - tutti i nemici sconfitti");
             return true;
         }
 
@@ -174,8 +174,8 @@ public class CombatSystem {
         // *** CONTROLLO IMMEDIATO FINE COMBATTIMENTO ***
         if (currentEnemies.isEmpty()) {
             endCombat();
-            result.append("\n\n🎉 Vittoria! Hai sconfitto tutti i nemici!");
-            result.append("\n💡 Usa 'combatti' se vuoi iniziare un nuovo combattimento con altri nemici.");
+            result.append("\n\n Vittoria! Hai sconfitto tutti i nemici!");
+            result.append("\n Usa 'combatti' se vuoi iniziare un nuovo combattimento con altri nemici.");
             return result.toString();
         }
 
@@ -194,13 +194,6 @@ public class CombatSystem {
         if (!player.isAlive()) {
             endCombat();
             result.append("\n\n Sei stato sconfitto! Game Over!");
-            // Reset HP giocatore per permettere di riprovare
-            if (gameDescription instanceof TBMGame) {
-                TBMGame game = (TBMGame) gameDescription;
-                player.setCurrentHp(player.getMaxHp());
-                game.updateCharacterState(player);
-                result.append("\n Ma la magia della montagna ti riporta in vita...");
-            }
         }
 
         // Mostra stato attuale solo se il combattimento continua
@@ -209,11 +202,11 @@ public class CombatSystem {
             result.append("\n️ I tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
             for (GameCharacter enemy : currentEnemies) {
                 if (enemy.isAlive()) {
-                    result.append("\n🎯 ").append(enemy.getName()).append(": ")
+                    result.append("\n").append(enemy.getName()).append(": ")
                             .append(enemy.getCurrentHp()).append("/").append(enemy.getMaxHp()).append(" HP");
                 }
             }
-            result.append("\n⚔️ Usa 'attacca' per il prossimo turno!");
+            result.append("\n Usa 'attacca' per il prossimo turno!");
         }
 
         currentTurn++;
@@ -462,6 +455,10 @@ public class CombatSystem {
      */
     public boolean isInCombat() {
         return inCombat;
+    }
+
+    public void setPlayer(GameCharacter player) {
+        this.player = player;
     }
 
     /**

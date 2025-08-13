@@ -85,12 +85,12 @@ public class CombatObserver extends GameObserver {
 
                 // Controlla esplicitamente se il combattimento è finito dopo l'azione
                 if (!combatSystem.isInCombat()) {
-                    msg.append("\n\n🎉 Combattimento terminato! Tutti i nemici sono stati sconfitti.");
-                    msg.append("\n💡 Puoi ora muoverti liberamente o esplorare la stanza.");
+                    msg.append("\n\n Combattimento terminato! Tutti i nemici sono stati sconfitti.");
+                    msg.append("\n Puoi ora muoverti liberamente o esplorare la stanza.");
 
                     // Se ci sono altre stanze con nemici, informa il giocatore
                     if (hasOtherRoomsWithEnemies(description)) {
-                        msg.append("\n⚔️ Ricorda: dovrai usare 'combatti' se incontri altri nemici.");
+                        msg.append("\n Ricorda: dovrai usare 'combatti' se incontri altri nemici.");
                     }
                 }
             }
@@ -104,7 +104,7 @@ public class CombatObserver extends GameObserver {
 
                 // Controlla anche qui se il combattimento è finito
                 if (!combatSystem.isInCombat()) {
-                    msg.append("\n\n🎉 Combattimento terminato!");
+                    msg.append("\n\n Combattimento terminato!");
                 }
             } else if (commandType == CommandType.INVENTORY) {
                 // Permetti di controllare l'inventario durante il combattimento

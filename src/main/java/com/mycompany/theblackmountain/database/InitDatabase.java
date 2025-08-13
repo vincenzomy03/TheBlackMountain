@@ -218,9 +218,9 @@ public class InitDatabase {
                         + "(5, 'pozione cura totale', 'Una pozione brillante di colore dorato. Ti riempie di energia solo a guardarla.', 'pozione totale,cura totale', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
                         + "(6, 'bastone', 'Un robusto bastone di legno. Può essere combinato con altri oggetti.', 'staff,stick', FALSE, TRUE, FALSE, FALSE, FALSE, 'WEAPON'), "
                         + "(7, 'arco magico', 'Un arco leggero ma potente, creato con energia arcana e materiali raccolti nella fortezza.', 'arco,bow', FALSE, TRUE, FALSE, FALSE, FALSE, 'WEAPON'), "
-                        + "(8, 'libro incantesimo del fuoco', 'Un grimorio antico, le sue pagine brillano di energia arcana. Contiene l''Incantesimo del Fuoco.', 'libro,grimorio,fuoco', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
+                        + "(8, 'libro incantesimo del fuoco', 'Un grimorio antico, le sue pagine brillano di energia arcana. Contiene l''Incantesimo del Fuoco.', 'libro, grimorio, fuoco', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
                         + "(9, 'veleno', 'Una boccetta scura. Può essere applicata su armi per aumentare il danno.', 'poison,boccetta', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
-                        + "(10, 'chiave cella principessa', 'Una chiave dorata e decorata, diversa da tutte le altre. Probabilmente apre la cella della principessa.', 'chiave principessa,chiave dorata', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
+                        + "(10, 'chiave cella principessa', 'Una chiave dorata e decorata, diversa da tutte le altre. Probabilmente apre la cella della principessa.', 'chiave principessa, chiave dorata', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
                         + "(11, 'chiave del collo del boss', 'Una chiave pesante, con pendaglio di ferro annerito. Cade dal collo del demone canino quando lo sconfiggi.', 'chiave boss,chiave finale', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
                         + "(12, 'spada', 'Una spada d''acciaio ben bilanciata. Arma affidabile per il combattimento.', 'sword,lama', FALSE, TRUE, FALSE, FALSE, FALSE, 'WEAPON'), "
                         + "(100, 'cassa', 'Una vecchia cassa di legno, chiusa ma non bloccata.', 'baule,contenitore,scrigno', TRUE, FALSE, FALSE, FALSE, FALSE, 'CONTAINER'), "
@@ -297,13 +297,13 @@ public class InitDatabase {
 
             if (count == 0) {
                 stm = conn.createStatement();
-                // Posizionamento secondo data.sql
                 stm.execute("INSERT INTO ROOM_OBJECTS VALUES "
                         + "(0, 100), " // Cassa nell'Ingresso
                         + "(1, 4), " // Stringhe ragnatela nella Stanza del Topo
                         + "(3, 101), " // Cassa nel Dormitorio
                         + "(4, 102), " // Cassa nella Sala delle Guardie
-                        + "(6, 103);"); // Cassa nella Stanza delle Torture
+                        + "(6, 103)," // Cassa nella Stanza delle Torture
+                        + "(11, 7); "); // Chiave boss nella stanza del boss
                 stm.close();
             }
 
