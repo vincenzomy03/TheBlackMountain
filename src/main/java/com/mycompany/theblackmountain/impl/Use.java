@@ -11,6 +11,8 @@ import com.mycompany.theblackmountain.parser.ParserOutput;
 import com.mycompany.theblackmountain.type.CommandType;
 import com.mycompany.theblackmountain.type.GameCharacter;
 import com.mycompany.theblackmountain.type.GameObjects;
+import com.mycompany.theblackmountain.type.Weapon;
+import com.mycompany.theblackmountain.type.WeaponType;
 
 /**
  * Observer per gestire i comandi USE e CREATE
@@ -49,7 +51,9 @@ public class Use extends GameObserver {
         StringBuilder msg = new StringBuilder();
         String commandText = parserOutput.getCommand().getName().toLowerCase();
 
-        if (commandText.contains("arco")) {
+        System.out.println("🔍 DEBUG CREATE: comando = '" + commandText + "'");
+
+        if (commandText.contains("arco") || commandText.equals("crea")) {
             if (description.getCurrentRoom().getId() != 5) {
                 msg.append("Puoi creare l'arco magico solo nella Sala degli Incantesimi.");
                 return msg.toString();
@@ -90,7 +94,10 @@ public class Use extends GameObserver {
                 msg.append("📦 Per creare un arco magico ti servono:");
                 msg.append("\n  • Bastone").append(bastone == null ? " ❌" : " ✅");
                 msg.append("\n  • Stringhe di ragnatela").append(stringhe == null ? " ❌" : " ✅");
+                msg.append("\n💡 Vai nella Sala degli Incantesimi per combinare i materiali!");
             }
+        } else {
+            msg.append("Non capisco cosa vuoi creare. Prova 'crea arco' se hai i materiali giusti.");
         }
 
         return msg.toString();
@@ -103,6 +110,13 @@ public class Use extends GameObserver {
         StringBuilder msg = new StringBuilder();
         String commandText = parserOutput.getCommand().getName().toLowerCase();
         boolean commandHandled = false;
+
+        System.out.println("🔍 DEBUG USE: comando = '" + commandText + "'");
+
+        // *** GESTIONE SPECIALE PER IL VELENO ***
+        if (commandText.contains("veleno")) {
+            return handlePoisonUsage(description);
+        }
 
         // *** POZIONI DI CURA ***
         if (commandText.contains("pozione") || commandText.contains("cura")) {
@@ -122,6 +136,9 @@ public class Use extends GameObserver {
                     
                 case 5: // Pozione totale
                     return useHealingPotion(description, invObj, -1); // -1 = cura completa
+                    
+                case 9: // Veleno
+                    return handlePoisonUsage(description);
                     
                 case 1: // Chiave ingresso
                     if (description.getCurrentRoom().getId() == 0) {
@@ -146,11 +163,6 @@ public class Use extends GameObserver {
                     
                 case 8: // Libro incantesimo fuoco
                     return useFireSpellBook(description);
-                    
-                case 9: // Veleno
-                    msg.append("Il veleno potrebbe essere utile su un'arma, ma è troppo pericoloso usarlo direttamente.");
-                    commandHandled = true;
-                    break;
                     
                 default:
                     // Per armi e oggetti speciali, lasciali passare al CombatSystem se siamo in combattimento
@@ -212,6 +224,82 @@ public class Use extends GameObserver {
             }
         }
 
+        return msg.toString();
+    }
+
+    /**
+     * Gestisce l'uso del veleno sulle armi
+     */
+    private String handlePoisonUsage(GameDescription description) {
+        StringBuilder msg = new StringBuilder();
+        
+        GameObjects poison = GameUtils.getObjectFromInventory(description.getInventory(), 9);
+        if (poison == null) {
+            return "Non hai veleno nell'inventario!";
+        }
+
+        // Cerca armi nell'inventario (priorità: spada > arco > bastone)
+        Weapon weaponToPoison = null;
+        String weaponName = "";
+        
+        // Controlla spada
+        GameObjects sword = GameUtils.getObjectFromInventory(description.getInventory(), 12);
+        if (sword instanceof Weapon) {
+            weaponToPoison = (Weapon) sword;
+            weaponName = "spada";
+        }
+        
+        // Se non c'è spada, controlla arco magico
+        if (weaponToPoison == null) {
+            GameObjects bow = GameUtils.getObjectFromInventory(description.getInventory(), 7);
+            if (bow instanceof Weapon) {
+                weaponToPoison = (Weapon) bow;
+                weaponName = "arco magico";
+            }
+        }
+        
+        // Se non c'è arco, controlla bastone
+        if (weaponToPoison == null) {
+            GameObjects staff = GameUtils.getObjectFromInventory(description.getInventory(), 6);
+            if (staff instanceof Weapon) {
+                weaponToPoison = (Weapon) staff;
+                weaponName = "bastone";
+            }
+        }
+        
+        if (weaponToPoison == null) {
+            msg.append("Non hai armi nell'inventario da avvelenare!");
+            msg.append("\n💡 Il veleno può essere applicato su: spada, arco magico, o bastone.");
+            return msg.toString();
+        }
+        
+        // Controlla se l'arma è già avvelenata
+        if (weaponToPoison.isPoisoned()) {
+            msg.append("La tua ").append(weaponName).append(" è già avvelenata!");
+            return msg.toString();
+        }
+        
+        // Applica il veleno usando il metodo della classe Weapon
+        weaponToPoison.applyPoison(5); // 5 danni veleno aggiuntivi
+        
+        msg.append("🧪 Applichi il veleno sulla tua ").append(weaponName).append("!");
+        msg.append("\n💀 L'arma ora infliggerà +5 danni da veleno!");
+        msg.append("\n⚔️ Statistiche aggiornate: ").append(weaponToPoison.getWeaponStats());
+        
+        // Rimuovi il veleno dall'inventario
+        description.getInventory().remove(poison);
+        
+        // Aggiorna il database se disponibile
+        if (description instanceof TBMGame) {
+            TBMGame game = (TBMGame) description;
+            if (game.getGameLoader() != null) {
+                game.updateObjectState(weaponToPoison);
+                game.getGameLoader().removeObject(poison);
+            }
+        }
+        
+        msg.append("\n✅ Veleno applicato! La fiala è ora vuota.");
+        
         return msg.toString();
     }
 
@@ -394,11 +482,17 @@ public class Use extends GameObserver {
     }
 
     /**
-     * Crea un arco magico con le proprietà corrette
+     * Crea un arco magico con le proprietà corrette usando la classe Weapon
      */
     private GameObjects createMagicBow() {
-        GameObjects magicBow = new GameObjects(7, "arco magico",
-                "Un arco etereo creato combinando materiali magici nell'altare degli incantesimi.");
+        Weapon magicBow = new Weapon(7, "arco magico",
+                "Un arco etereo creato combinando materiali magici nell'altare degli incantesimi. " +
+                "Emana una leggera aura bluastra e vibra di potere arcano.",
+                12, // Attack bonus
+                WeaponType.BOW, 
+                15, // Critical chance (15%)
+                2   // Critical multiplier (x2)
+        );
         magicBow.setPickupable(true);
         return magicBow;
     }

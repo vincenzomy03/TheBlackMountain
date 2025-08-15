@@ -48,14 +48,19 @@ public class Move extends GameObserver {
                 || commandType == CommandType.EAST
                 || commandType == CommandType.WEST);
 
-        // Se siamo in combattimento e il comando è di movimento, blocca
-        if (combatSystem.isInCombat() && isMovementCommand) {
-            return "Non puoi muoverti durante un combattimento! Devi prima sconfiggere i nemici.";
-        }
-
         // Se non è un comando di movimento, non gestire
         if (!isMovementCommand) {
             return "";
+        }
+
+        // CORREZIONE: Controllo più rigoroso per bloccare movimento con nemici vivi
+        if (hasLivingEnemies(description)) {
+            return "⚔️ Non puoi lasciare questa stanza! Ci sono ancora nemici da sconfiggere.\n💡 Usa il comando 'combatti' per iniziare la battaglia.";
+        }
+
+        // Se siamo in combattimento e il comando è di movimento, blocca
+        if (combatSystem.isInCombat() && isMovementCommand) {
+            return "Non puoi muoverti durante un combattimento! Devi prima sconfiggere i nemici.";
         }
 
         String direction = "";
@@ -130,12 +135,33 @@ public class Move extends GameObserver {
                 return "";
         }
 
-        // Informa il giocatore se ci sono nemici nella stanza
-        if (!direction.isEmpty() && hasLivingEnemies(description)) {
-            result += getEnemyWarning(description);
+        // CORREZIONE: Aggiungi messaggio di successo per evitare "comando non riconosciuto"
+        if (!direction.isEmpty()) {
+            // Descrivi la nuova stanza
+            result += "Ti dirigi a " + getDirectionName(direction) + ".\n\n";
+            result += "📍 " + description.getCurrentRoom().getName() + "\n";
+            result += description.getCurrentRoom().getDescription();
+            
+            // Informa il giocatore se ci sono nemici nella nuova stanza
+            if (hasLivingEnemies(description)) {
+                result += "\n" + getEnemyWarning(description);
+            }
         }
 
         return result;
+    }
+
+    /**
+     * Converte la direzione in inglese al nome italiano
+     */
+    private String getDirectionName(String direction) {
+        switch (direction.toLowerCase()) {
+            case "north": return "nord";
+            case "south": return "sud";
+            case "east": return "est";
+            case "west": return "ovest";
+            default: return direction;
+        }
     }
 
     /**

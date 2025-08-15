@@ -283,7 +283,7 @@ public class CombatSystem {
     }
 
     /**
-     * Attacca un nemico
+     * Attacca un nemico - VERSIONE AGGIORNATA PER CLASSE WEAPON
      *
      * @param weapon arma da usare (null per attacco a mani nude)
      * @return risultato dell'attacco
@@ -297,38 +297,68 @@ public class CombatSystem {
         GameCharacter target = currentEnemies.get(0);
 
         int baseDamage = player.getAttack();
-        int weaponDamage = 0;
+        int totalDamage = baseDamage;
         String weaponInfo = "a mani nude";
         boolean isCritical = false;
 
         if (weapon != null) {
             weaponInfo = "con " + weapon.getName();
 
-            // Calcola danni arma in base all'ID
-            switch (weapon.getId()) {
-                case 12: // Spada
-                    weaponDamage = 8 + random.nextInt(4); // 8-11 danni
-                    isCritical = random.nextInt(100) < 10; // 10% critico
-                    break;
-                case 7: // Arco magico
-                    weaponDamage = 12 + random.nextInt(6); // 12-17 danni
-                    isCritical = random.nextInt(100) < 15; // 15% critico
-                    break;
-                case 6: // Bastone
-                    weaponDamage = 5 + random.nextInt(3); // 5-7 danni
-                    isCritical = random.nextInt(100) < 5; // 5% critico
-                    break;
-                default:
-                    weaponDamage = 2 + random.nextInt(3); // 2-4 danni
-                    break;
+            // Se è un'arma della classe Weapon, usa i suoi metodi
+            if (weapon instanceof Weapon) {
+                Weapon weaponObj = (Weapon) weapon;
+
+                // Calcola il danno usando il metodo della classe Weapon
+                totalDamage = weaponObj.calculateDamage(baseDamage);
+
+                // Controlla se è un colpo critico
+                isCritical = weaponObj.isCriticalHit();
+
+                if (isCritical) {
+                    totalDamage = baseDamage * weaponObj.getCriticalMultiplier() + weaponObj.getAttackBonus();
+                    if (weaponObj.isPoisoned()) {
+                        totalDamage += weaponObj.getPoisonDamage();
+                    }
+                    weaponInfo += " (COLPO CRITICO!)";
+                }
+
+                // Aggiunge informazioni sul veleno se presente
+                if (weaponObj.isPoisoned() && !isCritical) {
+                    weaponInfo += " (Veleno!)";
+                }
+
+            } else {
+                // Fallback per oggetti che non sono della classe Weapon
+                int weaponDamage = 0;
+
+                switch (weapon.getId()) {
+                    case 12: // Spada
+                        weaponDamage = 8 + random.nextInt(4); // 8-11 danni
+                        isCritical = random.nextInt(100) < 10; // 10% critico
+                        break;
+                    case 7: // Arco magico
+                        weaponDamage = 12 + random.nextInt(6); // 12-17 danni
+                        isCritical = random.nextInt(100) < 15; // 15% critico
+                        break;
+                    case 6: // Bastone
+                        weaponDamage = 5 + random.nextInt(3); // 5-7 danni
+                        isCritical = random.nextInt(100) < 5; // 5% critico
+                        break;
+                    default:
+                        weaponDamage = 2 + random.nextInt(3); // 2-4 danni
+                        break;
+                }
+
+                totalDamage = baseDamage + weaponDamage + random.nextInt(3);
+
+                if (isCritical) {
+                    totalDamage *= 2;
+                    weaponInfo += " (COLPO CRITICO!)";
+                }
             }
-        }
-
-        int totalDamage = baseDamage + weaponDamage + random.nextInt(3); // Variazione casuale 0-2
-
-        if (isCritical) {
-            totalDamage *= 2;
-            weaponInfo += " (COLPO CRITICO!)";
+        } else {
+            // Attacco a mani nude con piccola variazione
+            totalDamage += random.nextInt(3);
         }
 
         // Applica danni considerando la difesa del nemico
@@ -336,14 +366,22 @@ public class CombatSystem {
         target.setCurrentHp(Math.max(0, target.getCurrentHp() - actualDamage));
 
         StringBuilder result = new StringBuilder();
-        result.append(" Attacchi ").append(target.getName()).append(" ").append(weaponInfo).append("!");
-        result.append("\nInflitti ").append(actualDamage).append(" danni!");
+        result.append("⚔️ Attacchi ").append(target.getName()).append(" ").append(weaponInfo).append("!");
+        result.append("\n💥 Inflitti ").append(actualDamage).append(" danni!");
+
+        // Se l'arma è avvelenata, mostra informazioni aggiuntive
+        if (weapon instanceof Weapon) {
+            Weapon weaponObj = (Weapon) weapon;
+            if (weaponObj.isPoisoned()) {
+                result.append("\n☠️ Il veleno si diffonde nel nemico!");
+            }
+        }
 
         if (target.getCurrentHp() <= 0) {
             target.setCurrentHp(0);
-            result.append("\n ").append(target.getName()).append(" è stato sconfitto!");
+            result.append("\n💀 ").append(target.getName()).append(" è stato sconfitto!");
         } else {
-            result.append("\n ").append(target.getName()).append(" HP: ")
+            result.append("\n❤️ ").append(target.getName()).append(" HP: ")
                     .append(target.getCurrentHp()).append("/").append(target.getMaxHp());
         }
 
