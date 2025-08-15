@@ -130,9 +130,7 @@ public class Move extends GameObserver {
                 return "";
         }
 
-        // RIMOSSO: L'avvio automatico del combattimento quando si entra in una stanza
-        // Ora il giocatore deve usare esplicitamente il comando "combatti"
-        // Invece, informa il giocatore se ci sono nemici nella stanza
+        // Informa il giocatore se ci sono nemici nella stanza
         if (!direction.isEmpty() && hasLivingEnemies(description)) {
             result += getEnemyWarning(description);
         }
