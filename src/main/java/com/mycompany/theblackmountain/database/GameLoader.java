@@ -52,28 +52,28 @@ public class GameLoader {
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
             System.out.println("Caricamento dati dal database...");
 
-            // 1. Carica tutte le stanze
+            // Carica tutte le stanze
             loadRooms(conn);
 
-            // 2. Imposta le connessioni tra stanze
+            // Imposta le connessioni tra stanze
             loadRoomConnections(conn);
 
-            // 3. Carica gli oggetti nelle stanze
-            loadRoomObjects(conn);
-
-            // 4. Carica i personaggi
-            loadCharacters(conn);
-
-            // 5. Carica l'inventario del giocatore
-            loadPlayerInventory(conn);
-
-            // 6. Imposta la stanza corrente del giocatore
-            setPlayerCurrentRoom(conn);
-
-            // 7. Reset delle casse prima di caricare
+            // Reset delle casse prima di caricare
             resetAllChests();
 
-            // 8. Sincronizza stati oggetti 
+            // Carica gli oggetti nelle stanze
+            loadRoomObjects(conn);
+
+            // Carica i personaggi
+            loadCharacters(conn);
+
+            // Carica l'inventario del giocatore
+            loadPlayerInventory(conn);
+
+            // Imposta la stanza corrente del giocatore
+            setPlayerCurrentRoom(conn);
+
+            // Sincronizza stati oggetti 
             syncObjectStatesFromDatabase();
 
             System.out.println("Tutti i dati caricati con successo!");
@@ -198,23 +198,30 @@ public class GameLoader {
     }
 
     /**
-     * Carica gli oggetti presenti nelle stanze.
+     * Carica gli oggetti presenti nelle stanze - VERSIONE CORRETTA CON DEBUG
      */
     private void loadRoomObjects(Connection conn) throws SQLException {
         String sql = """
-            SELECT r.ROOM_ID, o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
-                   w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
-            FROM ROOM_OBJECTS r
-            JOIN OBJECTS o ON r.OBJECT_ID = o.ID
-            LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
-            ORDER BY r.ROOM_ID, o.ID
-        """;
+        SELECT r.ROOM_ID, o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
+               w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
+        FROM ROOM_OBJECTS r
+        JOIN OBJECTS o ON r.OBJECT_ID = o.ID
+        LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
+        ORDER BY r.ROOM_ID, o.ID
+    """;
+
+        System.out.println("🔄 Caricamento oggetti dalle stanze...");
 
         try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
 
             int objectCount = 0;
             while (rs.next()) {
                 int roomId = rs.getInt("ROOM_ID");
+                int objectId = rs.getInt("ID");
+                String objectName = rs.getString("NAME");
+
+                System.out.println("📦 Caricamento oggetto ID " + objectId + " (" + objectName + ") nella stanza " + roomId);
+
                 Room room = roomMap.get(roomId);
 
                 if (room != null) {
@@ -222,11 +229,119 @@ public class GameLoader {
                     if (obj != null) {
                         room.getObjects().add(obj);
                         objectCount++;
+                        System.out.println("✅ Oggetto " + obj.getName() + " aggiunto alla stanza " + room.getName());
+                    } else {
+                        System.out.println("❌ Impossibile creare oggetto ID " + objectId);
                     }
+                } else {
+                    System.out.println("❌ Stanza " + roomId + " non trovata per oggetto " + objectId);
                 }
             }
 
-            System.out.println("Caricati " + objectCount + " oggetti nelle stanze");
+            System.out.println("📊 Totale oggetti caricati: " + objectCount);
+
+            // DEBUG: Verifica contenuto stanze
+            for (Room room : roomMap.values()) {
+                if (!room.getObjects().isEmpty()) {
+                    System.out.println("🏠 Stanza " + room.getId() + " (" + room.getName() + ") contiene " + room.getObjects().size() + " oggetti:");
+                    for (GameObjects obj : room.getObjects()) {
+                        System.out.println("  - " + obj.getName() + " (ID: " + obj.getId() + ", Apribile: " + obj.isOpenable() + ")");
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Reset di tutte le casse - VERSIONE CORRETTA CHE PRESERVA LA CASSA NELLA
+     * STANZA 0
+     */
+    public void resetAllChests() {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+
+            System.out.println("🔄 Reset di tutte le casse...");
+
+            // 1. Chiudi tutte le casse
+            String resetChestsSql = "UPDATE OBJECTS SET IS_OPEN = FALSE WHERE ID >= 100 AND ID <= 103";
+            try (PreparedStatement stmt = conn.prepareStatement(resetChestsSql)) {
+                int updated = stmt.executeUpdate();
+                System.out.println("🔒 " + updated + " casse chiuse");
+            }
+
+            // 2. Rimuovi SOLO il contenuto delle casse dalle stanze, NON le casse stesse
+            String removeContentSql = """
+            DELETE FROM ROOM_OBJECTS 
+            WHERE OBJECT_ID IN (1, 2, 5, 6, 8, 9, 10)
+        """;
+
+            try (PreparedStatement stmt = conn.prepareStatement(removeContentSql)) {
+                int removed = stmt.executeUpdate();
+                System.out.println("📤 Rimossi " + removed + " oggetti contenuti nelle casse dalle stanze");
+            }
+
+            // 3. ASSICURATI CHE LE CASSE SIANO NELLE STANZE CORRETTE
+            ensureChestsInRooms(conn);
+
+            System.out.println("✅ Reset casse completato!");
+
+        } catch (SQLException e) {
+            System.err.println("❌ Errore nel reset delle casse: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Aggiungi questo metodo nella classe GameLoader
+    private void ensureChestsInRooms(Connection conn) throws SQLException {
+        System.out.println("📦 Verifica presenza casse nelle stanze...");
+
+        // Array con le casse e le loro stanze
+        int[][] chestRoomPairs = {
+            {0, 100}, // Stanza 0, Cassa 100 (Ingresso)
+            {3, 101}, // Stanza 3, Cassa 101 (Dormitorio)
+            {4, 102}, // Stanza 4, Cassa 102 (Sala Guardie)
+            {6, 103} // Stanza 6, Cassa 103 (Torture)
+        };
+
+        String checkSql = "SELECT COUNT(*) FROM ROOM_OBJECTS WHERE ROOM_ID = ? AND OBJECT_ID = ?";
+        String insertSql = "INSERT INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES (?, ?)";
+
+        int totalInserted = 0;
+
+        for (int[] pair : chestRoomPairs) {
+            int roomId = pair[0];
+            int chestId = pair[1];
+
+            // Controlla se la cassa è già nella stanza
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                checkStmt.setInt(1, roomId);
+                checkStmt.setInt(2, chestId);
+
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) == 0) {
+                        // La cassa non c'è, inseriscila
+                        try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                            insertStmt.setInt(1, roomId);
+                            insertStmt.setInt(2, chestId);
+                            insertStmt.executeUpdate();
+                            totalInserted++;
+                            System.out.println("  ✅ Cassa " + chestId + " aggiunta alla stanza " + roomId);
+                        }
+                    } else {
+                        System.out.println("  ℹ️ Cassa " + chestId + " già presente nella stanza " + roomId);
+                    }
+                }
+            }
+        }
+
+        System.out.println("📦 Totale casse inserite: " + totalInserted);
+    }
+
+    // Aggiungi questo metodo pubblico a GameLoader
+    public void ensureChestsInRooms() {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+            ensureChestsInRooms(conn);
+        } catch (SQLException e) {
+            System.err.println("Errore nell'assicurare le casse nelle stanze: " + e.getMessage());
         }
     }
 
@@ -740,40 +855,6 @@ public class GameLoader {
         }
     }
 
-    /**
-     * Resetta tutte le casse a chiuse e rimuove il loro contenuto dalle stanze
-     * Chiamato ogni volta che si inizia una nuova partita
-     */
-    public void resetAllChests() {
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-
-            System.out.println("Reset di tutte le casse...");
-
-            // 1. Chiudi tutte le casse
-            String resetChestsSql = "UPDATE OBJECTS SET IS_OPEN = FALSE WHERE ID >= 100 AND ID <= 103";
-            try (PreparedStatement stmt = conn.prepareStatement(resetChestsSql)) {
-                int updated = stmt.executeUpdate();
-                System.out.println(updated + " casse chiuse");
-            }
-
-            // 2. Rimuovi il contenuto delle casse dalle stanze
-            // (Solo oggetti che dovrebbero essere dentro le casse quando chiuse)
-            String removeContentSql = """
-            DELETE FROM ROOM_OBJECTS 
-            WHERE OBJECT_ID IN (1, 5, 6, 8, 9, 10)
-        """;
-
-            try (PreparedStatement stmt = conn.prepareStatement(removeContentSql)) {
-                int removed = stmt.executeUpdate();
-                System.out.println("Rimossi " + removed + " oggetti delle casse dalle stanze");
-            }
-
-            System.out.println("Reset casse completato!");
-
-        } catch (SQLException e) {
-            System.err.println("Errore nel reset delle casse: " + e.getMessage());
-        }
-    }
 
     /**
      * Ottiene statistiche del database per debug.

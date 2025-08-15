@@ -275,7 +275,7 @@ public class InitDatabase {
                         + "(4, 'Goblin Rissoso', 'Un altro goblin altrettanto aggressivo.', 'GOBLIN', 30, 30, 9, 2, TRUE, 2), "
                         + "(5, 'Goblin Gigante', 'Un goblin enorme che impugna una clava insanguinata.', 'GOBLIN', 60, 60, 16, 5, TRUE, 4), "
                         + "(6, 'Goblin Minuto', 'Un goblin più piccolo ma altrettanto minaccioso.', 'GOBLIN', 25, 25, 8, 2, TRUE, 4), "
-                        + "(7, 'Cane Demone', 'Una creatura infernale con zanne fumanti e occhi di fuoco.', 'DEMON_DOG', 120, 120, 25, 8, TRUE, 7);");
+                        + "(7, 'Cane Demone', 'Una creatura infernale con zanne fumanti e occhi di fuoco.', 'DEMON_DOG', 10, 10, 25, 8, TRUE, 7);");
                 stm.close();
             }
 

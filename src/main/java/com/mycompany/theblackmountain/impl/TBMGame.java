@@ -15,6 +15,8 @@ import com.mycompany.theblackmountain.type.CommandType;
 
 import java.io.PrintStream;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,6 +68,7 @@ public class TBMGame extends GameDescription implements GameObservable {
         resetForNewGame();
         gameLoader.printDatabaseStats();
         gameLoader.verifyDatabaseIntegrity();
+        debugAfterLoad();
         System.out.println("Dati di gioco caricati");
     }
 
@@ -81,6 +84,7 @@ public class TBMGame extends GameDescription implements GameObservable {
 
     /**
      * Reset forzato completo del database per evitare stati inconsistenti
+     * VERSIONE CORRETTA CHE NON USA gameLoader (che è ancora null)
      */
     private void forceCompleteReset() {
         System.out.println("🔄 Reset forzato del database per stato pulito...");
@@ -89,10 +93,10 @@ public class TBMGame extends GameDescription implements GameObservable {
 
             // 1. Reset COMPLETO del giocatore
             String resetPlayerSql = """
-            UPDATE CHARACTERS 
-            SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE, ROOM_ID = 0 
-            WHERE CHARACTER_TYPE = 'PLAYER' AND ID = 0
-        """;
+        UPDATE CHARACTERS 
+        SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE, ROOM_ID = 0 
+        WHERE CHARACTER_TYPE = 'PLAYER' AND ID = 0
+    """;
             try (var stmt = conn.prepareStatement(resetPlayerSql)) {
                 stmt.executeUpdate();
                 System.out.println("✅ Player stato ripristinato");
@@ -105,11 +109,11 @@ public class TBMGame extends GameDescription implements GameObservable {
             }
 
             String restoreInventorySql = """
-            INSERT INTO INVENTORY (CHARACTER_ID, OBJECT_ID) 
-            SELECT 0, 2 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 2)
-            UNION ALL
-            SELECT 0, 12 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 12)
-        """;
+        INSERT INTO INVENTORY (CHARACTER_ID, OBJECT_ID) 
+        SELECT 0, 2 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 2)
+        UNION ALL
+        SELECT 0, 12 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 12)
+    """;
             try (var stmt = conn.prepareStatement(restoreInventorySql)) {
                 stmt.executeUpdate();
                 System.out.println("✅ Inventario iniziale ripristinato");
@@ -117,10 +121,10 @@ public class TBMGame extends GameDescription implements GameObservable {
 
             // 3. Reset tutti i nemici a vivi
             String resetEnemiesSql = """
-            UPDATE CHARACTERS 
-            SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE 
-            WHERE CHARACTER_TYPE != 'PLAYER'
-        """;
+        UPDATE CHARACTERS 
+        SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE 
+        WHERE CHARACTER_TYPE != 'PLAYER'
+    """;
             try (var stmt = conn.prepareStatement(resetEnemiesSql)) {
                 int updated = stmt.executeUpdate();
                 System.out.println("✅ " + updated + " nemici ripristinati");
@@ -130,26 +134,87 @@ public class TBMGame extends GameDescription implements GameObservable {
             String resetChestsSql = "UPDATE OBJECTS SET IS_OPEN = FALSE WHERE ID >= 100 AND ID <= 103";
             try (var stmt = conn.prepareStatement(resetChestsSql)) {
                 stmt.executeUpdate();
-                System.out.println(" Casse chiuse");
+                System.out.println("🔒 Casse chiuse");
             }
 
-            // 5. Rimuovi contenuti casse dalle stanze
+            // 5. Rimuovi SOLO il contenuto delle casse dalle stanze, NON le casse stesse
             String removeChestContentsSql = """
-            DELETE FROM ROOM_OBJECTS 
-            WHERE OBJECT_ID IN (1, 5, 6, 8, 9, 10)
-        """;
+        DELETE FROM ROOM_OBJECTS 
+        WHERE OBJECT_ID IN (1, 2, 5, 6, 8, 9, 10)
+    """;
             try (var stmt = conn.prepareStatement(removeChestContentsSql)) {
-                stmt.executeUpdate();
-                System.out.println(" Contenuti casse rimossi dalle stanze");
+                int removed = stmt.executeUpdate();
+                System.out.println("📤 " + removed + " contenuti casse rimossi dalle stanze");
             }
 
-            System.out.println(" Reset forzato completato!");
+            // 6. ASSICURATI CHE LE CASSE SIANO PRESENTI NELLE STANZE
+            // NON usare gameLoader qui perché è ancora null!
+            ensureChestsInRoomsStatic(conn);
+
+            // 7. DEBUG: Verifica presenza casse nel database
+            String debugSql = "SELECT ROOM_ID, OBJECT_ID FROM ROOM_OBJECTS WHERE OBJECT_ID >= 100 ORDER BY ROOM_ID";
+            try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(debugSql)) {
+                System.out.println("📋 DEBUG: Casse nel database dopo reset:");
+                while (rs.next()) {
+                    System.out.println("  - Cassa " + rs.getInt("OBJECT_ID") + " in stanza " + rs.getInt("ROOM_ID"));
+                }
+            }
+
+            System.out.println("✅ Reset forzato completato!");
 
         } catch (SQLException e) {
-            System.err.println("️ Errore nel reset forzato: " + e.getMessage());
-            // Non lanciare eccezione, continua con il caricamento normale
+            System.err.println("❌ Errore nel reset forzato: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Metodo statico per assicurarsi che le casse siano nelle stanze corrette
+     * Versione che non dipende da gameLoader
+     */
+    private static void ensureChestsInRoomsStatic(Connection conn) throws SQLException {
+        System.out.println("📦 Verifica presenza casse nelle stanze...");
+
+        // Array con le casse e le loro stanze
+        int[][] chestRoomPairs = {
+            {0, 100}, // Stanza 0, Cassa 100 (Ingresso)
+            {3, 101}, // Stanza 3, Cassa 101 (Dormitorio)
+            {4, 102}, // Stanza 4, Cassa 102 (Sala Guardie)
+            {6, 103} // Stanza 6, Cassa 103 (Torture)
+        };
+
+        String checkSql = "SELECT COUNT(*) FROM ROOM_OBJECTS WHERE ROOM_ID = ? AND OBJECT_ID = ?";
+        String insertSql = "INSERT INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES (?, ?)";
+
+        int totalInserted = 0;
+
+        for (int[] pair : chestRoomPairs) {
+            int roomId = pair[0];
+            int chestId = pair[1];
+
+            // Controlla se la cassa è già nella stanza
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                checkStmt.setInt(1, roomId);
+                checkStmt.setInt(2, chestId);
+
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) == 0) {
+                        // La cassa non c'è, inseriscila
+                        try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                            insertStmt.setInt(1, roomId);
+                            insertStmt.setInt(2, chestId);
+                            insertStmt.executeUpdate();
+                            totalInserted++;
+                            System.out.println("  ✅ Cassa " + chestId + " aggiunta alla stanza " + roomId);
+                        }
+                    } else {
+                        System.out.println("  ℹ️ Cassa " + chestId + " già presente nella stanza " + roomId);
+                    }
+                }
+            }
+        }
+
+        System.out.println("📦 Totale casse inserite: " + totalInserted);
     }
 
     private void initializeObservers() {
@@ -318,7 +383,7 @@ public class TBMGame extends GameDescription implements GameObservable {
     }
 
     /**
-     * Reset del gioco per una nuova partita - CORRETTO
+     * Reset del gioco per una nuova partita - VERSIONE CORRETTA E SICURA
      */
     public void resetForNewGame() {
         try {
@@ -359,18 +424,44 @@ public class TBMGame extends GameDescription implements GameObservable {
                     String restoreInventorySql = "INSERT INTO INVENTORY (CHARACTER_ID, OBJECT_ID) VALUES (0, 2), (0, 12)";
                     try (var stmt = conn.prepareStatement(restoreInventorySql)) {
                         stmt.executeUpdate();
-                        System.out.println(" Inventario iniziale ripristinato nel database");
+                        System.out.println("✅ Inventario iniziale ripristinato nel database");
                     }
 
                     // 5. Reset stato nemici - li rimette tutti vivi
                     String resetEnemiesSql = "UPDATE CHARACTERS SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE WHERE CHARACTER_TYPE != 'PLAYER'";
                     try (var stmt = conn.prepareStatement(resetEnemiesSql)) {
                         int updated = stmt.executeUpdate();
-                        System.out.println(updated + " nemici ripristinati nel database");
+                        System.out.println("✅ " + updated + " nemici ripristinati nel database");
+                    }
+
+                    // 8. Reset casse nel database (chiudi tutte e rimuovi contenuti dalle stanze)
+                    if (gameLoader != null) {
+                        gameLoader.resetAllChests();
+                        System.out.println("✅ Casse resettate tramite GameLoader");
+                    } else {
+                        // Fallback se gameLoader è null
+                        System.out.println("⚠️ GameLoader null, uso reset casse diretto");
+
+                        // Reset casse
+                        String resetChestsSql = "UPDATE OBJECTS SET IS_OPEN = FALSE WHERE ID >= 100 AND ID <= 103";
+                        try (var stmt = conn.prepareStatement(resetChestsSql)) {
+                            stmt.executeUpdate();
+                            System.out.println("🔒 Casse chiuse");
+                        }
+
+                        // Rimuovi contenuti casse
+                        String removeContentSql = "DELETE FROM ROOM_OBJECTS WHERE OBJECT_ID IN (1, 2, 5, 6, 8, 9, 10)";
+                        try (var stmt = conn.prepareStatement(removeContentSql)) {
+                            int removed = stmt.executeUpdate();
+                            System.out.println("📤 " + removed + " contenuti casse rimossi");
+                        }
+
+                        // Assicura presenza casse
+                        ensureChestsInRoomsStatic(conn);
                     }
 
                 } catch (SQLException e) {
-                    System.err.println(" Errore nel reset database: " + e.getMessage());
+                    System.err.println("❌ Errore nel reset database: " + e.getMessage());
                     e.printStackTrace();
                 }
             }
@@ -385,17 +476,17 @@ public class TBMGame extends GameDescription implements GameObservable {
             getInventory().clear();
 
             // Ricarica oggetti iniziali dall'inventory
-            if (gameLoader != null) {
+            if (gameLoader != null && database != null) {
                 try (Connection conn = database.getConnection()) {
                     String loadInventorySql = """
-                    SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
-                           w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
-                    FROM INVENTORY i
-                    JOIN OBJECTS o ON i.OBJECT_ID = o.ID
-                    LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
-                    WHERE i.CHARACTER_ID = 0
-                    ORDER BY o.ID
-                """;
+                SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
+                       w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
+                FROM INVENTORY i
+                JOIN OBJECTS o ON i.OBJECT_ID = o.ID
+                LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
+                WHERE i.CHARACTER_ID = 0
+                ORDER BY o.ID
+            """;
 
                     try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(loadInventorySql)) {
                         while (rs.next()) {
@@ -413,12 +504,9 @@ public class TBMGame extends GameDescription implements GameObservable {
                     // Fallback: crea oggetti manualmente
                     createDefaultInventory();
                 }
-            }
-
-            // 8. Reset casse nel database (chiudi tutte e rimuovi contenuti dalle stanze)
-            if (gameLoader != null) {
-                gameLoader.resetAllChests();
-                System.out.println(" Casse resettate");
+            } else {
+                // Fallback se gameLoader è null
+                createDefaultInventory();
             }
 
             // 9. Ricarica nemici nelle stanze
@@ -430,13 +518,13 @@ public class TBMGame extends GameDescription implements GameObservable {
             // 10. Termina eventuali combattimenti in corso
             if (combatSystem != null && combatSystem.isInCombat()) {
                 combatSystem.endCombat();
-                System.out.println(" Combattimento in corso terminato");
+                System.out.println("✅ Combattimento in corso terminato");
             }
 
-            System.out.println(" Gioco pronto per una nuova avventura!");
+            System.out.println("🎮 Gioco pronto per una nuova avventura!");
 
         } catch (Exception e) {
-            System.err.println(" Errore nel reset del gioco: " + e.getMessage());
+            System.err.println("❌ Errore nel reset del gioco: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -677,6 +765,128 @@ public class TBMGame extends GameDescription implements GameObservable {
         } catch (Exception e) {
             System.err.println("Errore durante cleanup: " + e.getMessage());
         }
+    }
+
+    /**
+     * Aggiungi questi metodi alla classe TBMGame per il debug
+     */
+    /**
+     * Debug completo dello stato del gioco dopo il caricamento
+     */
+    public void debugGameState() {
+        System.out.println("\n========== DEBUG STATO GIOCO ==========");
+
+        // 1. Stato stanze
+        System.out.println("\n🏠 STANZE CARICATE:");
+        for (Room room : getRooms()) {
+            System.out.println("Stanza " + room.getId() + ": " + room.getName());
+
+            // Oggetti nella stanza
+            if (!room.getObjects().isEmpty()) {
+                System.out.println("  📦 Oggetti (" + room.getObjects().size() + "):");
+                for (GameObjects obj : room.getObjects()) {
+                    System.out.println("    - " + obj.getName() + " (ID:" + obj.getId()
+                            + ", Apribile:" + obj.isOpenable() + ", Aperto:" + obj.isOpen() + ")");
+                }
+            } else {
+                System.out.println("  📦 Nessun oggetto");
+            }
+
+            // Nemici nella stanza
+            if (!room.getEnemies().isEmpty()) {
+                System.out.println("  👹 Nemici (" + room.getEnemies().size() + "):");
+                for (GameCharacter enemy : room.getEnemies()) {
+                    System.out.println("    - " + enemy.getName() + " (HP:" + enemy.getCurrentHp()
+                            + "/" + enemy.getMaxHp() + ", Vivo:" + enemy.isAlive() + ")");
+                }
+            } else {
+                System.out.println("  👹 Nessun nemico");
+            }
+            System.out.println();
+        }
+
+        // 2. Stato giocatore
+        System.out.println("\n🧙 GIOCATORE:");
+        if (player != null) {
+            System.out.println("  Nome: " + player.getName());
+            System.out.println("  HP: " + player.getCurrentHp() + "/" + player.getMaxHp());
+            System.out.println("  Stanza corrente: " + (getCurrentRoom() != null
+                    ? getCurrentRoom().getName() + " (ID:" + getCurrentRoom().getId() + ")" : "NESSUNA"));
+        } else {
+            System.out.println("  GIOCATORE NON TROVATO!");
+        }
+
+        // 3. Inventario
+        System.out.println("\n🎒 INVENTARIO (" + getInventory().size() + " oggetti):");
+        for (GameObjects obj : getInventory()) {
+            System.out.println("  - " + obj.getName() + " (ID:" + obj.getId() + ")");
+        }
+
+        System.out.println("\n======================================\n");
+    }
+
+    /**
+     * Debug specifico per la cassa nella stanza 0
+     */
+    public void debugRoom0Chest() {
+        System.out.println("\n========== DEBUG CASSA STANZA 0 ==========");
+
+        Room room0 = null;
+        for (Room room : getRooms()) {
+            if (room.getId() == 0) {
+                room0 = room;
+                break;
+            }
+        }
+
+        if (room0 == null) {
+            System.out.println("❌ STANZA 0 NON TROVATA!");
+            return;
+        }
+
+        System.out.println("🏠 Stanza 0: " + room0.getName());
+        System.out.println("📦 Oggetti totali: " + room0.getObjects().size());
+
+        boolean chestFound = false;
+        for (GameObjects obj : room0.getObjects()) {
+            System.out.println("  - Oggetto: " + obj.getName()
+                    + " (ID:" + obj.getId() + ", Tipo:" + obj.getClass().getSimpleName() + ")");
+
+            if (obj.getId() == 100 || obj.getName().toLowerCase().contains("cassa")) {
+                chestFound = true;
+                System.out.println("    ✅ CASSA TROVATA!");
+                System.out.println("    - Apribile: " + obj.isOpenable());
+                System.out.println("    - Aperta: " + obj.isOpen());
+                System.out.println("    - Raccoglibile: " + obj.isPickupable());
+
+                // Verifica alias
+                if (obj.getAlias() != null && !obj.getAlias().isEmpty()) {
+                    System.out.println("    - Alias: " + obj.getAlias());
+                }
+            }
+        }
+
+        if (!chestFound) {
+            System.out.println("❌ NESSUNA CASSA TROVATA NELLA STANZA 0!");
+        }
+
+        // Verifica database
+        if (gameLoader != null) {
+            System.out.println("\n🔍 Verifica database:");
+            boolean isChestOpenInDB = gameLoader.isChestOpenInDatabase(100);
+            System.out.println("  - Cassa 100 aperta nel DB: " + isChestOpenInDB);
+        }
+
+        System.out.println("==========================================\n");
+    }
+
+    /**
+     * Chiama questo metodo dopo loadGame() nel metodo init()
+     */
+    private void debugAfterLoad() {
+        System.out.println("🔍 DEBUG: Stato del gioco dopo caricamento");
+        debugGameState();
+        debugRoom0Chest();
     }
 
     public void shutdown() {

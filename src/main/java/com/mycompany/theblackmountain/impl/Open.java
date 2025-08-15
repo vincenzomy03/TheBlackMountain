@@ -37,18 +37,30 @@ public class Open extends GameObserver {
                     || (parserOutput.getObject() == null && parserOutput.getInvObject() == null);
 
             if (parserOutput.getObject() == null && parserOutput.getInvObject() == null && lookingForChest) {
-                // Cerca una cassa nella stanza corrente
-                GameObjects cassa = null;
+                // DEBUG: Stampa tutti gli oggetti nella stanza corrente
+                System.out.println("🔍 DEBUG: Ricerca cassa nella stanza " + description.getCurrentRoom().getId());
+                System.out.println("🔍 DEBUG: Oggetti nella stanza:");
                 for (GameObjects obj : description.getCurrentRoom().getObjects()) {
-                    if (obj.getName().toLowerCase().contains("cassa") && obj.isOpenable()) {
-                        cassa = obj;
-                        break;
-                    }
+                    System.out.println("  - ID: " + obj.getId() + ", Nome: '" + obj.getName() + 
+                                     "', Openable: " + obj.isOpenable() + ", Opened: " + obj.isOpen());
                 }
 
+                // Cerca una cassa nella stanza corrente - METODO MIGLIORATO
+                GameObjects cassa = findChestInRoom(description.getCurrentRoom().getObjects());
+
                 if (cassa != null) {
+                    System.out.println("✅ DEBUG: Trovata cassa con ID " + cassa.getId());
                     return openChestFromDB(description, cassa);
                 } else {
+                    System.out.println("❌ DEBUG: Nessuna cassa trovata nella stanza " + description.getCurrentRoom().getId());
+                    
+                    // DEBUG aggiuntivo: controlla se ci sono casse che dovrebbero essere qui secondo il database
+                    GameLoader gameLoader = getGameLoader(description);
+                    if (gameLoader != null) {
+                        System.out.println("🔍 DEBUG: Verifica presenza casse nel database per stanza " + description.getCurrentRoom().getId());
+                        // Potresti aggiungere qui un metodo per verificare il database se necessario
+                    }
+                    
                     msg.append("Non c'è nessuna cassa da aprire qui.");
                 }
             } else {
@@ -122,6 +134,26 @@ public class Open extends GameObserver {
     }
 
     /**
+     * Cerca casse in base a ID e nome
+     */
+    private GameObjects findChestInRoom(List<GameObjects> roomObjects) {
+        for (GameObjects obj : roomObjects) {
+            // Cerca per ID (casse hanno ID >= 100 e <= 103)
+            if (obj.getId() >= 100 && obj.getId() <= 103) {
+                System.out.println("✅ DEBUG: Trovata cassa per ID: " + obj.getId());
+                return obj;
+            }
+            
+            // Cerca per nome (come fallback)
+            if (obj.getName().toLowerCase().contains("cassa") && obj.isOpenable()) {
+                System.out.println("✅ DEBUG: Trovata cassa per nome: " + obj.getName());
+                return obj;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Apre una cassa usando il GameLoader per caricare il contenuto dal DB
      *
      * @param description
@@ -131,7 +163,7 @@ public class Open extends GameObserver {
     private String openChestFromDB(GameDescription description, GameObjects cassa) {
         StringBuilder msg = new StringBuilder();
 
-        System.out.println("🔍 Tentativo apertura cassa " + cassa.getId());
+        System.out.println("🔍 Tentativo apertura cassa " + cassa.getId() + " nella stanza " + description.getCurrentRoom().getId());
 
         if (!cassa.isOpenable()) {
             msg.append("Questa cassa non può essere aperta.");
@@ -171,7 +203,6 @@ public class Open extends GameObserver {
 
         return msg.toString();
     }
-
 
     /**
      * Ottiene il GameLoader dall'istanza del gioco
