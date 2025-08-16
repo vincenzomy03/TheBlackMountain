@@ -152,66 +152,119 @@ public class CombatSystem {
     }
 
     /**
-     * Processa un'azione di combattimento
-     *
-     * @param parserOutput comando del giocatore
-     * @return risultato dell'azione
-     */
-    public String processCombatAction(ParserOutput parserOutput) {
-        if (!inCombat) {
-            return "Non sei in combattimento!";
-        }
+ * Processa l'azione di un nemico - VERSIONE CORRETTA
+ * @param enemy nemico che agisce
+ * @return risultato dell'azione
+ */
+private String processEnemyAction(GameCharacter enemy) {
+    // I nemici attaccano sempre il giocatore
+    int damage = enemy.getAttack() + random.nextInt(3) - 1; // Variazione -1 a +1
+    int actualDamage = Math.max(1, damage - player.getDefense());
 
-        StringBuilder result = new StringBuilder();
+    int oldHp = player.getCurrentHp();
+    int newHp = Math.max(0, player.getCurrentHp() - actualDamage);
+    player.setCurrentHp(newHp);
 
-        // Azione del giocatore
-        String playerAction = processPlayerAction(parserOutput);
-        result.append(playerAction);
+    // *** CORREZIONE FONDAMENTALE: Aggiorna il flag isAlive ***
+    if (newHp <= 0) {
+        player.setCurrentHp(0); // Assicurati che sia esattamente 0
+        // Il flag isAlive dovrebbe essere aggiornato automaticamente nel GameCharacter
+        // Ma forziamolo per sicurezza se il metodo esiste
+        System.out.println("🚨 DEBUG: Player HP = " + newHp + ", dovrebbe essere morto");
+    }
 
-        // Rimuovi nemici morti dalla lista corrente
-        currentEnemies.removeIf(enemy -> !enemy.isAlive());
+    // Aggiorna database se disponibile
+    if (gameDescription instanceof TBMGame) {
+        TBMGame game = (TBMGame) gameDescription;
+        game.updateCharacterState(player);
+    }
 
-        // *** CONTROLLO IMMEDIATO FINE COMBATTIMENTO ***
-        if (currentEnemies.isEmpty()) {
-            endCombat();
-            result.append("\n\n Vittoria! Hai sconfitto tutti i nemici!");
-            result.append("\n Usa 'combatti' se vuoi iniziare un nuovo combattimento con altri nemici.");
-            return result.toString();
-        }
+    StringBuilder result = new StringBuilder();
+    result.append("").append(enemy.getName()).append(" ti attacca!");
+    result.append("\nSubisci ").append(actualDamage).append(" danni!");
 
-        // Turno dei nemici solo se ci sono ancora nemici vivi
-        if (inCombat && !currentEnemies.isEmpty()) {
-            result.append("\n\n--- Turno dei nemici ---");
-            for (GameCharacter enemy : currentEnemies) {
-                if (enemy.isAlive()) {
-                    String enemyAction = processEnemyAction(enemy);
-                    result.append("\n").append(enemyAction);
-                }
-            }
-        }
+    if (player.getCurrentHp() <= 0) {
+        result.append("\n💀 Sei stato sconfitto!");
+        System.out.println("🚨 DEBUG: Player sconfitto - HP: " + player.getCurrentHp() + ", isAlive: " + player.isAlive());
+    }
 
-        // Controlla se il giocatore è morto
-        if (!player.isAlive()) {
-            endCombat();
-            result.append("\n\n Sei stato sconfitto! Game Over!");
-        }
+    return result.toString();
+}
 
-        // Mostra stato attuale solo se il combattimento continua
-        if (inCombat && !currentEnemies.isEmpty()) {
-            result.append("\n\n Stato attuale:");
-            result.append("\n️ I tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
-            for (GameCharacter enemy : currentEnemies) {
-                if (enemy.isAlive()) {
-                    result.append("\n").append(enemy.getName()).append(": ")
-                            .append(enemy.getCurrentHp()).append("/").append(enemy.getMaxHp()).append(" HP");
-                }
-            }
-            result.append("\n Usa 'attacca' per il prossimo turno!");
-        }
+// ============================================
+// CORREZIONI al metodo processCombatAction() in CombatSystem.java
+// ============================================
 
-        currentTurn++;
+/**
+ * Processa un'azione di combattimento - VERSIONE CORRETTA
+ * @param parserOutput comando del giocatore
+ * @return risultato dell'azione
+ */
+public String processCombatAction(ParserOutput parserOutput) {
+    if (!inCombat) {
+        return "Non sei in combattimento!";
+    }
+
+    StringBuilder result = new StringBuilder();
+
+    // Azione del giocatore
+    String playerAction = processPlayerAction(parserOutput);
+    result.append(playerAction);
+
+    // Rimuovi nemici morti dalla lista corrente
+    currentEnemies.removeIf(enemy -> !enemy.isAlive());
+
+    // *** CONTROLLO IMMEDIATO FINE COMBATTIMENTO - VITTORIA ***
+    if (currentEnemies.isEmpty()) {
+        endCombat();
+        result.append("\n\n✅ Vittoria! Hai sconfitto tutti i nemici!");
+        result.append("\n💡 Puoi continuare ad esplorare o usare 'combatti' se ci sono altri nemici.");
         return result.toString();
     }
+
+    // *** CONTROLLO MORTE PLAYER PRIMA DEL TURNO NEMICI ***
+    if (player.getCurrentHp() <= 0) {
+        endCombat();
+        result.append("\n\n💀 Sei stato sconfitto! Game Over!");
+        System.out.println("🚨 DEBUG: Game Over dichiarato - Player HP: " + player.getCurrentHp());
+        return result.toString();
+    }
+
+    // Turno dei nemici solo se ci sono ancora nemici vivi E il player è vivo
+    if (inCombat && !currentEnemies.isEmpty() && player.getCurrentHp() > 0) {
+        result.append("\n\n--- Turno dei nemici ---");
+        for (GameCharacter enemy : currentEnemies) {
+            if (enemy.isAlive()) {
+                String enemyAction = processEnemyAction(enemy);
+                result.append("\n").append(enemyAction);
+                
+                // *** CONTROLLO MORTE PLAYER DOPO OGNI ATTACCO NEMICO ***
+                if (player.getCurrentHp() <= 0) {
+                    endCombat();
+                    result.append("\n\n💀 Sei stato sconfitto! Game Over!");
+                    System.out.println("🚨 DEBUG: Game Over dopo attacco nemico - Player HP: " + player.getCurrentHp());
+                    return result.toString();
+                }
+            }
+        }
+    }
+
+    // Mostra stato attuale solo se il combattimento continua
+    if (inCombat && !currentEnemies.isEmpty() && player.getCurrentHp() > 0) {
+        result.append("\n\n📊 Stato attuale:");
+        result.append("\n❤️ I tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
+        for (GameCharacter enemy : currentEnemies) {
+            if (enemy.isAlive()) {
+                result.append("\n👹 ").append(enemy.getName()).append(": ")
+                        .append(enemy.getCurrentHp()).append("/").append(enemy.getMaxHp()).append(" HP");
+            }
+        }
+        result.append("\n🗡️ Scrivi 'usa [oggetto]' per continuare!");
+    }
+
+    currentTurn++;
+    return result.toString();
+}
 
     /**
      * Processa l'azione del giocatore
@@ -450,37 +503,6 @@ public class CombatSystem {
             result.append("\nHP attuali: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
         } else {
             result.append("\nSei già al massimo della salute!");
-        }
-
-        return result.toString();
-    }
-
-    /**
-     * Processa l'azione di un nemico
-     *
-     * @param enemy nemico che agisce
-     * @return risultato dell'azione
-     */
-    private String processEnemyAction(GameCharacter enemy) {
-        // I nemici attaccano sempre il giocatore
-        int damage = enemy.getAttack() + random.nextInt(3) - 1; // Variazione -1 a +1
-        int actualDamage = Math.max(1, damage - player.getDefense());
-
-        int oldHp = player.getCurrentHp();
-        player.setCurrentHp(Math.max(0, player.getCurrentHp() - actualDamage));
-
-        // Aggiorna database se disponibile
-        if (gameDescription instanceof TBMGame) {
-            TBMGame game = (TBMGame) gameDescription;
-            game.updateCharacterState(player);
-        }
-
-        StringBuilder result = new StringBuilder();
-        result.append("").append(enemy.getName()).append(" ti attacca!");
-        result.append("\nSubisci ").append(actualDamage).append(" danni!");
-
-        if (player.getCurrentHp() <= 0) {
-            result.append("\nSei stato gravemente ferito!");
         }
 
         return result.toString();

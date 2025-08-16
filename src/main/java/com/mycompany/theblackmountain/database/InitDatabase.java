@@ -213,7 +213,6 @@ public class InitDatabase {
                 stm.execute("INSERT INTO OBJECTS VALUES "
                         + "(1, 'chiave ingresso', 'Una chiave d''ottone annerita dal tempo. Potrebbe aprire la porta principale della fortezza.', 'chiave,key', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
                         + "(2, 'pozione di cura', 'Una fiala dal liquido rosso, emana un lieve calore.', 'pozione,cura,healing', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
-                        + "(3, 'frecce', 'Un piccolo fascio di frecce con punte d''acciaio. Sembrano leggere ma letali.', 'arrow,arrows', FALSE, TRUE, FALSE, FALSE, FALSE, 'WEAPON'), "
                         + "(4, 'stringhe di ragnatela', 'Filamenti spessi e resistenti. Potrebbero servire per creare qualcosa di utile.', 'ragnatela,filo', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
                         + "(5, 'pozione cura totale', 'Una pozione brillante di colore dorato. Ti riempie di energia solo a guardarla.', 'pozione totale,cura totale', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL'), "
                         + "(6, 'bastone', 'Un robusto bastone di legno. Può essere combinato con altri oggetti.', 'staff,stick', FALSE, TRUE, FALSE, FALSE, FALSE, 'WEAPON'), "
@@ -275,7 +274,7 @@ public class InitDatabase {
                         + "(4, 'Goblin Rissoso', 'Un altro goblin altrettanto aggressivo.', 'GOBLIN', 30, 30, 9, 2, TRUE, 2), "
                         + "(5, 'Goblin Gigante', 'Un goblin enorme che impugna una clava insanguinata.', 'GOBLIN', 60, 60, 16, 5, TRUE, 4), "
                         + "(6, 'Goblin Minuto', 'Un goblin più piccolo ma altrettanto minaccioso.', 'GOBLIN', 25, 25, 8, 2, TRUE, 4), "
-                        + "(7, 'Cane Demone', 'Una creatura infernale con zanne fumanti e occhi di fuoco.', 'DEMON_DOG', 10, 10, 25, 8, TRUE, 7);");
+                        + "(7, 'Cane Demone', 'Una creatura infernale con zanne fumanti e occhi di fuoco.', 'DEMON_DOG', 150, 150, 25, 8, TRUE, 7);");
                 stm.close();
             }
 

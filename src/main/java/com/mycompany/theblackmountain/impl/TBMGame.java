@@ -302,14 +302,16 @@ public class TBMGame extends GameDescription implements GameObservable {
                 // Messaggio di fallback se nessun observer ha risposto
                 out.println("Comando non riconosciuto o non applicabile qui.");
                 out.flush();
+            }
 
-                if (isGameOver()) {
-                    out.println(getGameOverMessage());
-                    out.flush();
-                    // Eventualmente ferma il gioco
-                    System.out.println("DEBUG: GAME OVER rilevato dopo comando: " + p.getCommand().getName());
-                }
-
+            // *** CORREZIONE: Controlla il game over SOLO DOPO aver elaborato il comando ***
+            // E SOLO se il giocatore è effettivamente morto
+            if (isGameOver()) {
+                out.println("\n" + getGameOverMessage());
+                out.flush();
+                System.out.println("DEBUG: GAME OVER confermato - Player HP: "
+                        + (player != null ? player.getCurrentHp() : "null"));
+                // Qui potresti aggiungere logica per fermare il gioco o resettarlo
             }
 
         } catch (Exception e) {
@@ -317,6 +319,56 @@ public class TBMGame extends GameDescription implements GameObservable {
             e.printStackTrace();
             out.println("Si è verificato un errore nell'elaborazione del comando.");
             out.flush();
+        }
+    }
+
+// ============================================
+// 2. MIGLIORAMENTO del metodo isGameOver() in TBMGame.java
+// ============================================
+    /**
+     * Controlla se il giocatore è morto - VERSIONE CORRETTA
+     *
+     * @return true se il giocatore è morto (HP <= 0)
+     */
+    public boolean isGameOver() {
+        if (player == null) {
+            System.out.println("DEBUG: Player è null - NO GAME OVER");
+            return false;
+        }
+
+        int currentHp = player.getCurrentHp();
+        int maxHp = player.getMaxHp();
+        boolean isDead = currentHp <= 0;
+
+        System.out.println("DEBUG Game Over Check:");
+        System.out.println("  - Player: " + player.getName());
+        System.out.println("  - Current HP: " + currentHp);
+        System.out.println("  - Max HP: " + maxHp);
+        System.out.println("  - Is Alive: " + player.isAlive());
+        System.out.println("  - Should be Game Over: " + isDead);
+
+        // *** IMPORTANTE: Verifica anche il flag isAlive() ***
+        return isDead || !player.isAlive();
+    }
+
+// ============================================
+// 3. NUOVO METODO: Forza fine del game over (per debug/reset)
+// ============================================
+    /**
+     * Forza la fine del game over e ripristina il giocatore
+     */
+    public void resetGameOverState() {
+        if (player != null) {
+            // Assicurati che il player sia vivo e con HP positivi
+            if (player.getCurrentHp() <= 0) {
+                player.setCurrentHp(1); // HP minimo per evitare game over
+            }
+            player.setCurrentHp(Math.max(player.getCurrentHp(), 1));
+
+            // Aggiorna il database
+            updateCharacterState(player);
+
+            System.out.println("🔄 Game Over state resettato - Player HP: " + player.getCurrentHp());
         }
     }
 
@@ -594,30 +646,6 @@ public class TBMGame extends GameDescription implements GameObservable {
             // Fallback: ricrea manualmente i nemici nelle stanze
             createDefaultEnemiesInRooms();
         }
-    }
-
-    // Sostituisci i metodi game over in TBMGame.java con questi versioni con debug:
-    /**
-     * Controlla se il giocatore è morto
-     *
-     * @return true se il giocatore è morto (HP <= 0)
-     */
-    public boolean isGameOver() {
-        if (player == null) {
-            System.out.println("DEBUG: Player è null!");
-            return false;
-        }
-
-        int currentHp = player.getCurrentHp();
-        int maxHp = player.getMaxHp();
-
-        System.out.println("DEBUG Game Over Check:");
-        System.out.println("  - Player: " + player.getName());
-        System.out.println("  - Current HP: " + currentHp);
-        System.out.println("  - Max HP: " + maxHp);
-        System.out.println("  - Is Dead: " + (currentHp <= 0));
-
-        return currentHp <= 0;
     }
 
     /**

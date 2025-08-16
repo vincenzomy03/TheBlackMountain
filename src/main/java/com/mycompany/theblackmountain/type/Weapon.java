@@ -95,23 +95,6 @@ public class Weapon extends GameObjects {
     }
     
     /**
-     * Rimuove il veleno dall'arma
-     */
-    public void removePoison() {
-        this.isPoisoned = false;
-        this.poisonDamage = 0;
-        this.specialEffect = "";
-        // Rimuove l'effetto dalla descrizione
-        String desc = getDescription();
-        if (desc.contains("[Avvelenata")) {
-            int index = desc.indexOf(" [Avvelenata");
-            if (index > 0) {
-                setDescription(desc.substring(0, index));
-            }
-        }
-    }
-    
-    /**
      * Verifica se l'attacco è critico
      * @return true se l'attacco è critico
      */

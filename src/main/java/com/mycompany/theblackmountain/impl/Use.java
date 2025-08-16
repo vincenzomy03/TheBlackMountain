@@ -16,13 +16,14 @@ import com.mycompany.theblackmountain.type.WeaponType;
 
 /**
  * Observer per gestire i comandi USE e CREATE
+ *
  * @author vince
  */
 public class Use extends GameObserver {
 
     @Override
     public String update(GameDescription description, ParserOutput parserOutput) {
-        
+
         // Se non è un comando USE o CREATE, non faccio nulla
         if (parserOutput.getCommand().getType() != CommandType.USE
                 && parserOutput.getCommand().getType() != CommandType.CREATE) {
@@ -104,135 +105,11 @@ public class Use extends GameObserver {
     }
 
     /**
-     * Gestisce i comandi USE
-     */
-    private String handleUseCommand(GameDescription description, ParserOutput parserOutput) {
-        StringBuilder msg = new StringBuilder();
-        String commandText = parserOutput.getCommand().getName().toLowerCase();
-        boolean commandHandled = false;
-
-        System.out.println("🔍 DEBUG USE: comando = '" + commandText + "'");
-
-        // *** GESTIONE SPECIALE PER IL VELENO ***
-        if (commandText.contains("veleno")) {
-            return handlePoisonUsage(description);
-        }
-
-        // *** POZIONI DI CURA ***
-        if (commandText.contains("pozione") || commandText.contains("cura")) {
-            String result = handleHealingPotions(description, parserOutput);
-            if (!result.isEmpty()) {
-                return result;
-            }
-        }
-
-        // *** USO OGGETTO SPECIFICO DALL'INVENTARIO ***
-        if (parserOutput.getInvObject() != null) {
-            GameObjects invObj = parserOutput.getInvObject();
-            
-            switch (invObj.getId()) {
-                case 2: // Pozione normale
-                    return useHealingPotion(description, invObj, 30);
-                    
-                case 5: // Pozione totale
-                    return useHealingPotion(description, invObj, -1); // -1 = cura completa
-                    
-                case 9: // Veleno
-                    return handlePoisonUsage(description);
-                    
-                case 1: // Chiave ingresso
-                    if (description.getCurrentRoom().getId() == 0) {
-                        msg.append("Hai già usato la chiave per entrare nella fortezza!");
-                        commandHandled = true;
-                    }
-                    break;
-                    
-                case 3: // Chiave delle celle
-                    if (description.getCurrentRoom().getId() == 6) {
-                        msg.append("La chiave apre le celle delle prigioni, ma sono tutte vuote.");
-                        commandHandled = true;
-                    }
-                    break;
-                    
-                case 10: // Chiave del tesoro
-                    if (description.getCurrentRoom().getId() == 7) {
-                        msg.append("La chiave del tesoro potrebbe essere utile qui...");
-                        commandHandled = true;
-                    }
-                    break;
-                    
-                case 8: // Libro incantesimo fuoco
-                    return useFireSpellBook(description);
-                    
-                default:
-                    // Per armi e oggetti speciali, lasciali passare al CombatSystem se siamo in combattimento
-                    if (isWeapon(invObj)) {
-                        // Lascia che il CombatObserver gestisca le armi
-                        return "";
-                    }
-                    break;
-            }
-        }
-
-        // *** USO OGGETTO NELLA STANZA ***
-        if (parserOutput.getObject() != null) {
-            GameObjects roomObj = parserOutput.getObject();
-            
-            switch (roomObj.getId()) {
-                case 11: // Altare magico nella Sala degli Incantesimi
-                    if (description.getCurrentRoom().getId() == 5) {
-                        msg.append("L'altare magico emana un'energia arcana. Potresti usarlo per creare qualcosa di speciale...");
-                        msg.append("\n💡 Prova a scrivere 'crea arco' se hai i materiali giusti!");
-                        commandHandled = true;
-                    }
-                    break;
-                    
-                default:
-                    msg.append("Non puoi usare questo oggetto.");
-                    commandHandled = true;
-                    break;
-            }
-        }
-
-        // *** PARSING TESTUALE PER COMANDI SPECIFICI ***
-        if (!commandHandled) {
-            
-            // Comandi di cura
-            if (commandText.contains("cura")) {
-                return useBestHealingPotion(description);
-            }
-            
-            // Uso chiavi specifiche
-            if (commandText.contains("chiave")) {
-                return handleKeyUsage(description, commandText);
-            }
-            
-            // Uso libri/incantesimi
-            if (commandText.contains("libro") || commandText.contains("incantesimo") || commandText.contains("fuoco")) {
-                GameObjects fireBook = GameUtils.getObjectFromInventory(description.getInventory(), 8);
-                if (fireBook != null) {
-                    return useFireSpellBook(description);
-                } else {
-                    msg.append("Non hai nessun libro di incantesimi.");
-                    commandHandled = true;
-                }
-            }
-            
-            // Se non è stato gestito e non è un comando di combattimento
-            if (!commandHandled && !isCombatRelatedCommand(commandText, parserOutput)) {
-                msg.append("Non puoi utilizzare questo oggetto qui o non hai gli oggetti necessari.");
-            }
-        }
-
-        return msg.toString();
-    }
-
-    /**
      * Gestisce l'uso del veleno sulle armi
      */
     private String handlePoisonUsage(GameDescription description) {
         StringBuilder msg = new StringBuilder();
-        
+
         GameObjects poison = GameUtils.getObjectFromInventory(description.getInventory(), 9);
         if (poison == null) {
             return "Non hai veleno nell'inventario!";
@@ -241,14 +118,14 @@ public class Use extends GameObserver {
         // Cerca armi nell'inventario (priorità: spada > arco > bastone)
         Weapon weaponToPoison = null;
         String weaponName = "";
-        
+
         // Controlla spada
         GameObjects sword = GameUtils.getObjectFromInventory(description.getInventory(), 12);
         if (sword instanceof Weapon) {
             weaponToPoison = (Weapon) sword;
             weaponName = "spada";
         }
-        
+
         // Se non c'è spada, controlla arco magico
         if (weaponToPoison == null) {
             GameObjects bow = GameUtils.getObjectFromInventory(description.getInventory(), 7);
@@ -257,7 +134,7 @@ public class Use extends GameObserver {
                 weaponName = "arco magico";
             }
         }
-        
+
         // Se non c'è arco, controlla bastone
         if (weaponToPoison == null) {
             GameObjects staff = GameUtils.getObjectFromInventory(description.getInventory(), 6);
@@ -266,29 +143,29 @@ public class Use extends GameObserver {
                 weaponName = "bastone";
             }
         }
-        
+
         if (weaponToPoison == null) {
             msg.append("Non hai armi nell'inventario da avvelenare!");
             msg.append("\n💡 Il veleno può essere applicato su: spada, arco magico, o bastone.");
             return msg.toString();
         }
-        
+
         // Controlla se l'arma è già avvelenata
         if (weaponToPoison.isPoisoned()) {
             msg.append("La tua ").append(weaponName).append(" è già avvelenata!");
             return msg.toString();
         }
-        
+
         // Applica il veleno usando il metodo della classe Weapon
         weaponToPoison.applyPoison(5); // 5 danni veleno aggiuntivi
-        
+
         msg.append("🧪 Applichi il veleno sulla tua ").append(weaponName).append("!");
         msg.append("\n💀 L'arma ora infliggerà +5 danni da veleno!");
         msg.append("\n⚔️ Statistiche aggiornate: ").append(weaponToPoison.getWeaponStats());
-        
+
         // Rimuovi il veleno dall'inventario
         description.getInventory().remove(poison);
-        
+
         // Aggiorna il database se disponibile
         if (description instanceof TBMGame) {
             TBMGame game = (TBMGame) description;
@@ -297,9 +174,9 @@ public class Use extends GameObserver {
                 game.getGameLoader().removeObject(poison);
             }
         }
-        
+
         msg.append("\n✅ Veleno applicato! La fiala è ora vuota.");
-        
+
         return msg.toString();
     }
 
@@ -308,12 +185,12 @@ public class Use extends GameObserver {
      */
     private String handleHealingPotions(GameDescription description, ParserOutput parserOutput) {
         // Prima prova oggetti specifici selezionati
-        if (parserOutput.getInvObject() != null && 
-            (parserOutput.getInvObject().getId() == 2 || parserOutput.getInvObject().getId() == 5)) {
+        if (parserOutput.getInvObject() != null
+                && (parserOutput.getInvObject().getId() == 2 || parserOutput.getInvObject().getId() == 5)) {
             int healAmount = (parserOutput.getInvObject().getId() == 2) ? 30 : -1;
             return useHealingPotion(description, parserOutput.getInvObject(), healAmount);
         }
-        
+
         // Altrimenti usa la migliore disponibile
         return useBestHealingPotion(description);
     }
@@ -325,21 +202,21 @@ public class Use extends GameObserver {
         if (!(description instanceof TBMGame)) {
             return "Errore nel sistema del gioco.";
         }
-        
+
         TBMGame game = (TBMGame) description;
         GameCharacter player = game.getPlayer();
-        
+
         if (player == null) {
             return "Errore: giocatore non trovato.";
         }
-        
+
         StringBuilder msg = new StringBuilder();
-        
+
         // Calcola la cura effettiva
         int oldHp = player.getCurrentHp();
         int newHp;
         int actualHeal;
-        
+
         if (healAmount == -1) { // Cura totale
             newHp = player.getMaxHp();
             actualHeal = newHp - oldHp;
@@ -347,23 +224,23 @@ public class Use extends GameObserver {
             newHp = Math.min(player.getMaxHp(), oldHp + healAmount);
             actualHeal = newHp - oldHp;
         }
-        
+
         if (actualHeal <= 0) {
             msg.append("Sei già al massimo della salute!");
             return msg.toString();
         }
-        
+
         // Applica la cura
         player.setCurrentHp(newHp);
         description.getInventory().remove(potion);
-        
+
         // Aggiorna il database
         game.updateCharacterState(player);
-        
+
         msg.append("Hai bevuto la ").append(potion.getName()).append("!");
         msg.append("\n💚 Recuperati ").append(actualHeal).append(" HP!");
         msg.append("\n❤️ HP attuali: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
-        
+
         return msg.toString();
     }
 
@@ -387,20 +264,221 @@ public class Use extends GameObserver {
     }
 
     /**
-     * Usa il libro degli incantesimi del fuoco
+     * Usa il libro degli incantesimi del fuoco - VERSIONE AGGIORNATA CON PALLA
+     * DI FUOCO
      */
     private String useFireSpellBook(GameDescription description) {
         StringBuilder msg = new StringBuilder();
-        
-        if (description.getCurrentRoom().getId() != 5) {
-            msg.append("Puoi usare il libro degli incantesimi solo nella Sala degli Incantesimi, vicino all'altare magico.");
-        } else {
-            msg.append("🔥 Reciti l'incantesimo del fuoco dal libro antico!");
-            msg.append("\n✨ L'altare magico si illumina di una luce rossastra...");
-            msg.append("\n📚 Il libro potrebbe essere utile per potenziare armi o altri incantesimi.");
-            msg.append("\n💡 Potresti combinarlo con altri oggetti magici!");
+
+        // Controlla se ci sono nemici nella stanza
+        if (description.getCurrentRoom().getEnemies().isEmpty()) {
+            msg.append("🔥 Mormori le parole arcane del libro, ma non ci sono nemici da colpire. ");
+            msg.append("Le fiamme magiche si disperdono nell'aria senza trovare un bersaglio.");
+            return msg.toString();
         }
-        
+
+        // Cast della palla di fuoco
+        msg.append("🔥 **INCANTESIMO DEL FUOCO** 🔥\n");
+        msg.append("Leggi le antiche parole arcane dal grimorio. Una palla di fuoco si materializza nelle tue mani!\n\n");
+
+        // Danni dell'incantesimo
+        int baseDamage = 25;
+        int actualDamage = baseDamage + (int) (Math.random() * 10); // 25-35 danni
+
+        // Colpisci tutti i nemici nella stanza
+        int enemiesHit = 0;
+        int enemiesKilled = 0;
+
+        for (int i = description.getCurrentRoom().getEnemies().size() - 1; i >= 0; i--) {
+            GameCharacter enemy = description.getCurrentRoom().getEnemies().get(i);
+
+            if (enemy.isAlive()) {
+                int currentHp = enemy.getCurrentHp();
+                int newHp = Math.max(0, currentHp - actualDamage);
+                enemy.setCurrentHp(newHp);
+
+                msg.append("💥 La palla di fuoco colpisce ").append(enemy.getName())
+                        .append(" per ").append(actualDamage).append(" danni! ");
+
+                if (newHp <= 0) {
+                    enemy.setCurrentHp(0);
+                    msg.append(enemy.getName()).append(" è stato sconfitto dalle fiamme magiche!\n");
+                    enemiesKilled++;
+
+                    // Aggiorna il database se disponibile
+                    if (description instanceof TBMGame) {
+                        TBMGame game = (TBMGame) description;
+                        if (game.getGameLoader() != null) {
+                            game.updateCharacterState(enemy);
+                        }
+                    }
+                } else {
+                    msg.append(enemy.getName()).append(" ha ora ").append(newHp)
+                            .append("/").append(enemy.getMaxHp()).append(" HP.\n");
+
+                    // Aggiorna il database se disponibile
+                    if (description instanceof TBMGame) {
+                        TBMGame game = (TBMGame) description;
+                        if (game.getGameLoader() != null) {
+                            game.updateCharacterState(enemy);
+                        }
+                    }
+                }
+
+                enemiesHit++;
+            }
+        }
+
+        // Rimuovi i nemici morti dalla lista
+        description.getCurrentRoom().getEnemies().removeIf(enemy -> enemy.getCurrentHp() <= 0);
+
+        msg.append("\n🔥 L'incantesimo ha colpito ").append(enemiesHit).append(" nemici!");
+        if (enemiesKilled > 0) {
+            msg.append(" ").append(enemiesKilled).append(" sono stati sconfitti!");
+        }
+
+        // *** IMPORTANTE: Il libro si distrugge dopo l'uso ***
+        GameObjects fireBook = GameUtils.getObjectFromInventory(description.getInventory(), 8);
+        if (fireBook != null) {
+            description.getInventory().remove(fireBook);
+
+            // Rimuovi dal database se disponibile
+            if (description instanceof TBMGame) {
+                TBMGame game = (TBMGame) description;
+                if (game.getGameLoader() != null) {
+                    game.getGameLoader().removeObject(fireBook);
+                }
+            }
+
+            msg.append("\n📖 Il grimorio si dissolve in cenere dopo aver rilasciato la sua potente magia...");
+        }
+
+        return msg.toString();
+    }
+
+// ============================================
+// MODIFICA al metodo handleUseCommand() per gestire meglio il libro
+// ============================================
+    /**
+     * Gestisce i comandi USE - SEZIONE AGGIORNATA PER IL LIBRO
+     */
+    private String handleUseCommand(GameDescription description, ParserOutput parserOutput) {
+        StringBuilder msg = new StringBuilder();
+        String commandText = parserOutput.getCommand().getName().toLowerCase();
+        boolean commandHandled = false;
+
+        System.out.println("🔍 DEBUG USE: comando = '" + commandText + "'");
+
+        // *** GESTIONE LIBRO INCANTESIMO FUOCO - PRIORITÀ ALTA ***
+        if (commandText.contains("libro") || commandText.contains("grimorio") || commandText.contains("incantesimo") || commandText.contains("fuoco")) {
+            GameObjects fireBook = GameUtils.getObjectFromInventory(description.getInventory(), 8);
+            if (fireBook != null) {
+                return useFireSpellBook(description);
+            } else {
+                return "Non hai un libro di incantesimi con te.";
+            }
+        }
+
+        // *** GESTIONE SPECIALE PER IL VELENO ***
+        if (commandText.contains("veleno")) {
+            return handlePoisonUsage(description);
+        }
+
+        // *** POZIONI DI CURA ***
+        if (commandText.contains("pozione") || commandText.contains("cura")) {
+            String result = handleHealingPotions(description, parserOutput);
+            if (!result.isEmpty()) {
+                return result;
+            }
+        }
+
+        // *** USO OGGETTO SPECIFICO DALL'INVENTARIO ***
+        if (parserOutput.getInvObject() != null) {
+            GameObjects invObj = parserOutput.getInvObject();
+
+            switch (invObj.getId()) {
+                case 2: // Pozione normale
+                    return useHealingPotion(description, invObj, 30);
+
+                case 5: // Pozione totale
+                    return useHealingPotion(description, invObj, -1); // -1 = cura completa
+
+                case 8: // *** LIBRO INCANTESIMO FUOCO ***
+                    return useFireSpellBook(description);
+
+                case 9: // Veleno
+                    return handlePoisonUsage(description);
+
+                case 1: // Chiave ingresso
+                    if (description.getCurrentRoom().getId() == 0) {
+                        msg.append("Hai già usato la chiave per entrare nella fortezza!");
+                        commandHandled = true;
+                    }
+                    break;
+
+                case 3: // Chiave delle celle
+                    if (description.getCurrentRoom().getId() == 6) {
+                        msg.append("La chiave apre le celle delle prigioni, ma sono tutte vuote.");
+                        commandHandled = true;
+                    }
+                    break;
+
+                case 10: // Chiave del tesoro
+                    if (description.getCurrentRoom().getId() == 7) {
+                        msg.append("La chiave del tesoro potrebbe essere utile qui...");
+                        commandHandled = true;
+                    }
+                    break;
+
+                default:
+                    // Per armi e oggetti speciali, lasciali passare al CombatSystem se siamo in combattimento
+                    if (isWeapon(invObj)) {
+                        // Lascia che il CombatObserver gestisca le armi
+                        return "";
+                    }
+                    break;
+            }
+        }
+
+        // *** USO OGGETTO NELLA STANZA ***
+        if (parserOutput.getObject() != null) {
+            GameObjects roomObj = parserOutput.getObject();
+
+            switch (roomObj.getId()) {
+                case 11: // Altare magico nella Sala degli Incantesimi
+                    if (description.getCurrentRoom().getId() == 5) {
+                        msg.append("L'altare magico emana un'energia arcana. Potresti usarlo per creare qualcosa di speciale...");
+                        msg.append("\n💡 Prova a scrivere 'crea arco' se hai i materiali giusti!");
+                        commandHandled = true;
+                    }
+                    break;
+
+                default:
+                    msg.append("Non puoi usare questo oggetto.");
+                    commandHandled = true;
+                    break;
+            }
+        }
+
+        // *** PARSING TESTUALE PER COMANDI SPECIFICI ***
+        if (!commandHandled) {
+
+            // Comandi di cura
+            if (commandText.contains("cura")) {
+                return useBestHealingPotion(description);
+            }
+
+            // Uso chiavi specifiche
+            if (commandText.contains("chiave")) {
+                return handleKeyUsage(description, commandText);
+            }
+
+            // Se non è stato gestito e non è un comando di combattimento
+            if (!commandHandled && !isCombatRelatedCommand(commandText, parserOutput)) {
+                msg.append("Non puoi utilizzare questo oggetto qui o non hai gli oggetti necessari.");
+            }
+        }
+
         return msg.toString();
     }
 
@@ -410,7 +488,7 @@ public class Use extends GameObserver {
     private String handleKeyUsage(GameDescription description, String commandText) {
         StringBuilder msg = new StringBuilder();
         int roomId = description.getCurrentRoom().getId();
-        
+
         if (commandText.contains("ingresso")) {
             GameObjects key = GameUtils.getObjectFromInventory(description.getInventory(), 1);
             if (key != null) {
@@ -447,7 +525,7 @@ public class Use extends GameObserver {
         } else {
             msg.append("Specifica quale chiave vuoi usare: ingresso, celle, o tesoro.");
         }
-        
+
         return msg.toString();
     }
 
@@ -463,16 +541,16 @@ public class Use extends GameObserver {
      */
     private boolean isCombatRelatedCommand(String commandText, ParserOutput parserOutput) {
         // Controllo sul testo del comando
-        if (commandText.contains("spada") || commandText.contains("arco") || 
-            commandText.contains("bastone") || commandText.contains("attacca") || 
-            commandText.contains("combatti")) {
+        if (commandText.contains("spada") || commandText.contains("arco")
+                || commandText.contains("bastone") || commandText.contains("attacca")
+                || commandText.contains("combatti")) {
             return true;
         }
 
         // Controllo sull'oggetto selezionato
         if (parserOutput.getObject() != null || parserOutput.getInvObject() != null) {
-            GameObjects obj = (parserOutput.getInvObject() != null) ? 
-                             parserOutput.getInvObject() : parserOutput.getObject();
+            GameObjects obj = (parserOutput.getInvObject() != null)
+                    ? parserOutput.getInvObject() : parserOutput.getObject();
             if (isWeapon(obj)) {
                 return true;
             }
@@ -486,12 +564,12 @@ public class Use extends GameObserver {
      */
     private GameObjects createMagicBow() {
         Weapon magicBow = new Weapon(7, "arco magico",
-                "Un arco etereo creato combinando materiali magici nell'altare degli incantesimi. " +
-                "Emana una leggera aura bluastra e vibra di potere arcano.",
+                "Un arco etereo creato combinando materiali magici nell'altare degli incantesimi. "
+                + "Emana una leggera aura bluastra e vibra di potere arcano.",
                 12, // Attack bonus
-                WeaponType.BOW, 
+                WeaponType.BOW,
                 15, // Critical chance (15%)
-                2   // Critical multiplier (x2)
+                2 // Critical multiplier (x2)
         );
         magicBow.setPickupable(true);
         return magicBow;

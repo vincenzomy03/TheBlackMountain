@@ -21,24 +21,9 @@ public enum WeaponType {
     BOW("Arco", "Arma a distanza precisa e letale"),
     
     /**
-     * Bastone da combattimento
-     */
-    STAFF("Bastone", "Arma da mischia versatile"),
-    
-    /**
      * Arma magica
      */
     MAGIC("Magica", "Arma potenziata da energia arcana"),
-    
-    /**
-     * Frecce (munizioni)
-     */
-    ARROWS("Frecce", "Munizioni per archi"),
-    
-    /**
-     * Arma improvvisata
-     */
-    IMPROVISED("Improvvisata", "Oggetto usato come arma"),
     
     /**
      * Nessuna arma (combattimento a mani nude)
@@ -86,12 +71,6 @@ public enum WeaponType {
                 return 1.2; // +20% danno per archi
             case SWORD:
                 return 1.15; // +15% danno per spade
-            case STAFF:
-                return 1.1; // +10% danno per bastoni
-            case ARROWS:
-                return 1.0; // Danno normale
-            case IMPROVISED:
-                return 0.8; // -20% danno per armi improvvisate
             case UNARMED:
                 return 0.7; // -30% danno a mani nude
             default:
@@ -110,12 +89,6 @@ public enum WeaponType {
                 return 85; // Alta precisione
             case SWORD:
                 return 80; // Buona precisione
-            case STAFF:
-                return 75; // Precisione media
-            case ARROWS:
-                return 80; // Buona precisione
-            case IMPROVISED:
-                return 60; // Bassa precisione
             case UNARMED:
                 return 70; // Precisione discreta
             default:

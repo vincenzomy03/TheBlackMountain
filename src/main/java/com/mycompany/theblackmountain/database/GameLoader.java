@@ -252,10 +252,54 @@ public class GameLoader {
         }
     }
 
+    // Aggiungi questo metodo al GameLoader.java dopo resetAllChests()
     /**
-     * Reset di tutte le casse - VERSIONE CORRETTA CHE PRESERVA LA CASSA NELLA
-     * STANZA 0
+     * Ripristina gli oggetti che dovrebbero sempre essere presenti nelle stanze
+     * (non contenuti nelle casse)
      */
+    private void restoreFixedRoomObjects(Connection conn) throws SQLException {
+        System.out.println("🔧 Ripristino oggetti fissi nelle stanze...");
+
+        // Oggetti che dovrebbero sempre essere presenti in specifiche stanze
+        int[][] fixedObjectPairs = {
+            {1, 4} // Stanza 1 (Topo), Oggetto 4 (stringhe ragnatela)
+        // Aggiungi altri oggetti fissi qui se necessario
+        };
+
+        String checkSql = "SELECT COUNT(*) FROM ROOM_OBJECTS WHERE ROOM_ID = ? AND OBJECT_ID = ?";
+        String insertSql = "INSERT INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES (?, ?)";
+
+        int totalRestored = 0;
+
+        for (int[] pair : fixedObjectPairs) {
+            int roomId = pair[0];
+            int objectId = pair[1];
+
+            // Controlla se l'oggetto è già nella stanza
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+                checkStmt.setInt(1, roomId);
+                checkStmt.setInt(2, objectId);
+
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) == 0) {
+                        // L'oggetto non c'è, ripristinalo
+                        try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                            insertStmt.setInt(1, roomId);
+                            insertStmt.setInt(2, objectId);
+                            insertStmt.executeUpdate();
+                            totalRestored++;
+                            System.out.println("  ✅ Oggetto " + objectId + " ripristinato nella stanza " + roomId);
+                        }
+                    } else {
+                        System.out.println("  ℹ️ Oggetto " + objectId + " già presente nella stanza " + roomId);
+                    }
+                }
+            }
+        }
+
+        System.out.println("🔧 Totale oggetti fissi ripristinati: " + totalRestored);
+    }
+
     public void resetAllChests() {
         try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
 
@@ -268,10 +312,15 @@ public class GameLoader {
                 System.out.println("🔒 " + updated + " casse chiuse");
             }
 
-            // 2. Rimuovi SOLO il contenuto delle casse dalle stanze, NON le casse stesse
+            // 2. CORREZIONE: Rimuovi SOLO il contenuto delle casse dalle stanze quando sono aperte
+            // NON rimuovere gli oggetti durante il reset, lascia che vengano aggiunti solo quando si aprono le casse
+            // Questo preserva il sistema delle casse
             String removeContentSql = """
-            DELETE FROM ROOM_OBJECTS 
-            WHERE OBJECT_ID IN (1, 2, 5, 6, 8, 9, 10)
+        DELETE FROM ROOM_OBJECTS 
+        WHERE OBJECT_ID IN (1, 2, 5, 6, 8, 9, 10)
+        AND OBJECT_ID NOT IN (
+            SELECT OBJECT_ID FROM ROOM_OBJECTS WHERE ROOM_ID = 1 AND OBJECT_ID = 4
+        )
         """;
 
             try (PreparedStatement stmt = conn.prepareStatement(removeContentSql)) {
@@ -281,6 +330,9 @@ public class GameLoader {
 
             // 3. ASSICURATI CHE LE CASSE SIANO NELLE STANZE CORRETTE
             ensureChestsInRooms(conn);
+
+            // 4. Ripristina oggetti fissi che dovrebbero sempre essere presenti
+            restoreFixedRoomObjects(conn);
 
             System.out.println("✅ Reset casse completato!");
 
@@ -854,7 +906,6 @@ public class GameLoader {
             System.err.println("Errore nell'aggiornamento personaggio " + character.getName() + ": " + e.getMessage());
         }
     }
-
 
     /**
      * Ottiene statistiche del database per debug.
