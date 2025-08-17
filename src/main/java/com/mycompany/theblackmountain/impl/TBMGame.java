@@ -270,12 +270,60 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
 
         try {
-            // CONTROLLO GAME OVER ALL'INIZIO 
-            if (isGameOver()) {
-                out.println("\n" + getGameOverMessage());
-                out.println("\nVuoi ricominciare una nuova partita? (si/no)");
-                out.flush();
-                return; // Esce subito, non elabora altri comandi
+            // *** COMANDI DEBUG SEMPLIFICATI ***
+            String commandName = p.getCommand().getName();
+
+            if (commandName.equals("kill")) {
+                if (player != null) {
+                    int oldHp = player.getCurrentHp();
+                    player.setCurrentHp(0);
+                    updateCharacterState(player);
+                    out.println("DEBUG: HP da " + oldHp + " a " + player.getCurrentHp()
+                            + ", Alive: " + player.isAlive());
+                } else {
+                    out.println("DEBUG: Player non trovato!");
+                }
+                return;
+            }
+
+            if (commandName.equals("fullheal")) {
+                if (player != null) {
+                    int oldHp = player.getCurrentHp();
+                    player.setCurrentHp(player.getMaxHp());
+                    updateCharacterState(player);
+                    out.println("DEBUG: HP da " + oldHp + " a " + player.getCurrentHp()
+                            + "/" + player.getMaxHp() + ", Alive: " + player.isAlive());
+                } else {
+                    out.println("DEBUG: Player non trovato!");
+                }
+                return;
+            }
+
+            if (commandName.equals("lowhp")) {
+                if (player != null) {
+                    int oldHp = player.getCurrentHp();
+                    player.setCurrentHp(1);
+                    updateCharacterState(player);
+                    out.println("DEBUG: HP da " + oldHp + " a " + player.getCurrentHp()
+                            + "/" + player.getMaxHp() + ", Alive: " + player.isAlive());
+                } else {
+                    out.println("DEBUG: Player non trovato!");
+                }
+                return;
+            }
+
+            if (commandName.equals("status")) {
+                if (player != null) {
+                    out.println("=== STATO PLAYER ===");
+                    out.println("HP: " + player.getCurrentHp() + "/" + player.getMaxHp());
+                    out.println("Alive: " + player.isAlive());
+                    out.println("Attack: " + player.getAttack());
+                    out.println("Defense: " + player.getDefense());
+                    out.println("==================");
+                } else {
+                    out.println("DEBUG: Player non trovato!");
+                }
+                return;
             }
 
             // Salva l'ultimo comando per gli observer
@@ -296,7 +344,7 @@ public class TBMGame extends GameDescription implements GameObservable {
                         commandHandled = true;
                     }
                 } catch (Exception e) {
-                    System.err.println("Errore in observer " + observer.getClass().getSimpleName() + ": " + e.getMessage());
+                    System.err.println("WARNING: Errore in observer " + observer.getClass().getSimpleName() + ": " + e.getMessage());
                     e.printStackTrace();
                 }
             }
@@ -312,18 +360,16 @@ public class TBMGame extends GameDescription implements GameObservable {
                 out.flush();
             }
 
-            // CONTROLLO GAME OVER ALLA FINE
-            // Dopo aver elaborato il comando, controlla se il giocatore è morto
+            // *** CORREZIONE: Controlla il game over SOLO DOPO aver elaborato il comando ***
             if (isGameOver()) {
                 out.println("\n" + getGameOverMessage());
-                out.println("\nVuoi ricominciare una nuova partita? (si/no)");
                 out.flush();
                 System.out.println("DEBUG: GAME OVER confermato - Player HP: "
                         + (player != null ? player.getCurrentHp() : "null"));
             }
 
         } catch (Exception e) {
-            System.err.println("Errore nell'elaborazione comando: " + e.getMessage());
+            System.err.println("ERROR: Errore nell'elaborazione comando: " + e.getMessage());
             e.printStackTrace();
             out.println("Si è verificato un errore nell'elaborazione del comando.");
             out.flush();
@@ -435,12 +481,26 @@ public class TBMGame extends GameDescription implements GameObservable {
         Command create = new Command(CommandType.CREATE, "crea");
         create.setAlias(new String[]{"costruisci", "build", "create"});
         getCommands().add(create);
-        
-        // Comandi debug
-        Command debugHp = new Command(CommandType.USE, "debug");
-        debugHp.setAlias(new String[]{"sethp", "hp", "testhp"});
-        getCommands().add(debugHp);
-        
+
+        // COMANDI DEBUG
+        // Comando per uccidere il player
+        Command kill = new Command(CommandType.USE, "kill");
+        kill.setAlias(new String[]{"die", "muori"});
+        getCommands().add(kill);
+
+        // Comando per curare il player
+        Command fullheal = new Command(CommandType.USE, "fullheal");
+        fullheal.setAlias(new String[]{"cura", "heal"});
+        getCommands().add(fullheal);
+
+        // Comando per HP bassi
+        Command lowHP = new Command(CommandType.USE, "lowhp");
+        getCommands().add(lowHP);
+
+        // Comando per vedere stato
+        Command status = new Command(CommandType.USE, "status");
+        status.setAlias(new String[]{"stato", "hp"});
+        getCommands().add(status);
         System.out.println("Inizializzati " + getCommands().size() + " comandi");
     }
 
