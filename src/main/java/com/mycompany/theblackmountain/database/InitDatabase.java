@@ -251,6 +251,8 @@ public class InitDatabase {
                         + "(3, 'ARROWS', 3, 5.0, 2.0, FALSE, 0, NULL), " // Frecce
                         + "(6, 'STAFF', 5, 5.0, 2.0, FALSE, 0, NULL), " // Bastone
                         + "(7, 'MAGIC', 12, 15.0, 2.0, FALSE, 0, NULL), " // Arco magico
+                        + "(8, 'BOOK', 15, 20.0, 3.0, FALSE, 0, 'Incantesimo del Fuoco'), " // Libro incantesimo fuoco
+                        + "(9, 'POISON', 0, 0.0, 1.0, TRUE, 10, 'Veleno mortale'), " // Veleno
                         + "(12, 'SWORD', 8, 10.0, 2.0, FALSE, 0, NULL);");  // Spada
                 stm.close();
             }
@@ -296,13 +298,12 @@ public class InitDatabase {
 
             if (count == 0) {
                 stm = conn.createStatement();
-                stm.execute("INSERT INTO ROOM_OBJECTS VALUES "
-                        + "(0, 100), " // Cassa nell'Ingresso
-                        + "(1, 4), " // Stringhe ragnatela nella Stanza del Topo
-                        + "(3, 101), " // Cassa nel Dormitorio
-                        + "(4, 102), " // Cassa nella Sala delle Guardie
-                        + "(6, 103)," // Cassa nella Stanza delle Torture
-                        + "(11, 7); "); // Chiave boss nella stanza del boss
+                stm.execute("INSERT INTO WEAPONS VALUES "
+                        + "(6, 'STAFF', 5, 5.0, 2.0, FALSE, 0, NULL), " // Bastone
+                        + "(7, 'MAGIC', 12, 15.0, 2.0, FALSE, 0, NULL), " // Arco magico
+                        + "(8, 'BOOK', 15, 20.0, 3.0, FALSE, 0, 'Incantesimo del Fuoco'), " // Libro incantesimo fuoco
+                        + "(9, 'POISON', 0, 0.0, 1.0, TRUE, 10, 'Veleno mortale'), " // Veleno
+                        + "(12, 'SWORD', 8, 10.0, 2.0, FALSE, 0, NULL);");  // Spada
                 stm.close();
             }
 

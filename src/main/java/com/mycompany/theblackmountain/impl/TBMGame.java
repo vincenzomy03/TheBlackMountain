@@ -15,9 +15,11 @@ import com.mycompany.theblackmountain.type.CommandType;
 
 import java.io.PrintStream;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -299,6 +301,30 @@ public class TBMGame extends GameDescription implements GameObservable {
                 return;
             }
 
+            if (commandName.equals("refreshchests")) {
+                if (gameLoader != null) {
+                    out.println("Refresh forzato delle casse in corso...");
+                    gameLoader.forceRefreshChests();
+                    out.println("Refresh completato! Prova ora ad aprire le casse.");
+
+                    // Debug immediato della stanza corrente
+                    if (getCurrentRoom() != null) {
+                        out.println("\nOggetti nella stanza corrente (" + getCurrentRoom().getName() + "):");
+                        for (GameObjects obj : getCurrentRoom().getObjects()) {
+                            if (obj.getId() >= 100 && obj.getId() <= 103) {
+                                out.println("- CASSA: " + obj.getName() + " (ID:" + obj.getId()
+                                        + ", Apribile:" + obj.isOpenable() + ", Aperta:" + obj.isOpen() + ")");
+                            } else {
+                                out.println("- " + obj.getName() + " (ID:" + obj.getId() + ")");
+                            }
+                        }
+                    }
+                } else {
+                    out.println("GameLoader non disponibile");
+                }
+                return;
+            }
+
             if (commandName.equals("lowhp")) {
                 if (player != null) {
                     int oldHp = player.getCurrentHp();
@@ -501,7 +527,6 @@ public class TBMGame extends GameDescription implements GameObservable {
         Command status = new Command(CommandType.USE, "status");
         status.setAlias(new String[]{"stato", "hp"});
         getCommands().add(status);
-        System.out.println("Inizializzati " + getCommands().size() + " comandi");
     }
 
     /**
