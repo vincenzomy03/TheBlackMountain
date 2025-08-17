@@ -307,7 +307,6 @@ public class GameGUI extends JFrame {
         return wrapper;
     }
 
-    // Aggiungi anche questo debug nei metodi di inizializzazione di GameGUI:
 // Modifica initializeGame per aggiungere debug:
     private void initializeGame(String saveData) {
         if (saveData == null) {
@@ -316,8 +315,6 @@ public class GameGUI extends JFrame {
             appendToOutput("Usa i comandi per esplorare, combattere e sopravvivere!");
             appendToOutput("================================================\n");
         } else {
-            appendToOutput("=== PARTITA CARICATA ===");
-            appendToOutput("Benvenuto di nuovo, avventuriero!");
             long seconds = totalPlayTime / 1000;
             long minutes = seconds / 60;
             long hours = minutes / 60;
@@ -337,10 +334,8 @@ public class GameGUI extends JFrame {
         updateUI();
     }
 
-// E anche in initializeGameWithLoadedData:
     private void initializeGameWithLoadedData() {
-        appendToOutput("=== GIOCO CARICATO ===");
-        appendToOutput("Benvenuto di nuovo, avventuriero!");
+        
 
         if (totalPlayTime > 0) {
             long seconds = totalPlayTime / 1000;
@@ -702,12 +697,9 @@ public class GameGUI extends JFrame {
             totalPlayTime = 0;
             gameStartTime = System.currentTimeMillis();
 
-            // Pulisci l'output e mostra il messaggio di inizio
+            // Pulisci l'output
             outputArea.setText("");
-            appendToOutput("=== NUOVA PARTITA ===");
-            appendToOutput("Benvenuto di nuovo, avventuriero!");
-            appendToOutput("La tua nuova avventura inizia ora...");
-            appendToOutput("======================\n");
+            
 
             // Mostra la stanza corrente
             appendToOutput(game.getCurrentRoom().getName());

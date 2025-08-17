@@ -92,10 +92,10 @@ public class Use extends GameObserver {
                     msg.append("❌ Errore nel sistema del gioco.");
                 }
             } else {
-                msg.append("📦 Per creare un arco magico ti servono:");
-                msg.append("\n  • Bastone").append(bastone == null ? " ❌" : " ✅");
-                msg.append("\n  • Stringhe di ragnatela").append(stringhe == null ? " ❌" : " ✅");
-                msg.append("\n💡 Vai nella Sala degli Incantesimi per combinare i materiali!");
+                msg.append(" Per creare un arco magico ti servono:");
+                msg.append("\n  • Bastone").append(bastone == null ? " (non ottenuto)" : " (ottenuto)");
+                msg.append("\n  • Stringhe di ragnatela").append(stringhe == null ? " (non ottenuto)" : " (ottenuto)");
+                msg.append("\n Puoi combinare i materiali solo nella Sala degli Incantesimi");
             }
         } else {
             msg.append("Non capisco cosa vuoi creare. Prova 'crea arco' se hai i materiali giusti.");

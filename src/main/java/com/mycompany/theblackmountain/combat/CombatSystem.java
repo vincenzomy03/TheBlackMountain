@@ -95,7 +95,7 @@ public class CombatSystem {
         }
 
         msg.append(" I tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp()).append("\n");
-        msg.append("🗡️ Scrivi 'usa [oggetto]' per usare un oggetto!\n");
+       
         msg.append("=========================");
 
         return msg.toString();
@@ -217,8 +217,7 @@ public String processCombatAction(ParserOutput parserOutput) {
     // *** CONTROLLO IMMEDIATO FINE COMBATTIMENTO - VITTORIA ***
     if (currentEnemies.isEmpty()) {
         endCombat();
-        result.append("\n\n✅ Vittoria! Hai sconfitto tutti i nemici!");
-        result.append("\n💡 Puoi continuare ad esplorare o usare 'combatti' se ci sono altri nemici.");
+        result.append("\n\nVittoria! Hai sconfitto tutti i nemici!");
         return result.toString();
     }
 
@@ -251,15 +250,14 @@ public String processCombatAction(ParserOutput parserOutput) {
 
     // Mostra stato attuale solo se il combattimento continua
     if (inCombat && !currentEnemies.isEmpty() && player.getCurrentHp() > 0) {
-        result.append("\n\n📊 Stato attuale:");
-        result.append("\n❤️ I tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
+        result.append("\n\nStato attuale:");
+        result.append("\nI tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
         for (GameCharacter enemy : currentEnemies) {
             if (enemy.isAlive()) {
-                result.append("\n👹 ").append(enemy.getName()).append(": ")
+                result.append(enemy.getName()).append(": ")
                         .append(enemy.getCurrentHp()).append("/").append(enemy.getMaxHp()).append(" HP");
             }
         }
-        result.append("\n🗡️ Scrivi 'usa [oggetto]' per continuare!");
     }
 
     currentTurn++;
