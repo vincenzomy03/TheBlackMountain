@@ -240,8 +240,8 @@ public String processCombatAction(ParserOutput parserOutput) {
                 // *** CONTROLLO MORTE PLAYER DOPO OGNI ATTACCO NEMICO ***
                 if (player.getCurrentHp() <= 0) {
                     endCombat();
-                    result.append("\n\n💀 Sei stato sconfitto! Game Over!");
-                    System.out.println("🚨 DEBUG: Game Over dopo attacco nemico - Player HP: " + player.getCurrentHp());
+                    result.append("\n\n Sei stato sconfitto! Game Over!");
+                    System.out.println(" DEBUG: Game Over dopo attacco nemico - Player HP: " + player.getCurrentHp());
                     return result.toString();
                 }
             }
@@ -254,7 +254,7 @@ public String processCombatAction(ParserOutput parserOutput) {
         result.append("\nI tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
         for (GameCharacter enemy : currentEnemies) {
             if (enemy.isAlive()) {
-                result.append(enemy.getName()).append(": ")
+                result.append("\n").append(enemy.getName()).append(": ")
                         .append(enemy.getCurrentHp()).append("/").append(enemy.getMaxHp()).append(" HP");
             }
         }

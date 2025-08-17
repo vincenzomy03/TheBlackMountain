@@ -30,6 +30,16 @@ public class Move extends GameObserver {
     }
 
     /**
+     * *** NUOVO METODO: Reset del sistema porte per nuova partita ***
+     */
+    public void resetForNewGame() {
+        if (doorSystem != null) {
+            doorSystem.resetAllDoors();
+            System.out.println("✅ Move Observer: Sistema porte resettato");
+        }
+    }
+
+    /**
      *
      * @param description
      * @param parserOutput

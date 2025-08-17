@@ -40,6 +40,34 @@ public class DoorSystem {
     }
     
     /**
+     * *** NUOVO METODO: Reset completo del sistema porte ***
+     * Resetta tutte le porte allo stato iniziale (tutte chiuse)
+     */
+    public void resetAllDoors() {
+        System.out.println(" Resettando stato di tutte le porte...");
+        
+        // Svuota la mappa delle porte sbloccate
+        unlockedDoors.clear();
+        
+        // Verifica che tutte le porte siano effettivamente chiuse
+        for (String doorKey : lockedDoors.keySet()) {
+            unlockedDoors.put(doorKey, false);
+        }
+        
+        System.out.println(lockedDoors.size() + " porte sono ora chiuse");
+        
+        // DEBUG: Stampa stato porte dopo reset
+        System.out.println(" DEBUG: Stato porte dopo reset:");
+        for (Map.Entry<String, Integer> entry : lockedDoors.entrySet()) {
+            String doorKey = entry.getKey();
+            int keyId = entry.getValue();
+            boolean isUnlocked = unlockedDoors.getOrDefault(doorKey, false);
+            System.out.println("  - Porta " + doorKey + " (chiave " + keyId + "): " + 
+                             (isUnlocked ? "APERTA" : "CHIUSA"));
+        }
+    }
+    
+    /**
      * Controlla se una porta è bloccata
      * @param fromRoomId stanza di partenza
      * @param direction direzione

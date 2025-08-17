@@ -26,7 +26,5 @@ public enum CharacterType {
     /**
      * Boss finale - Cane demone
      */
-    DEMON_DOG,
-    ENEMY,
-    NPC
+    DEMON_DOG
 }

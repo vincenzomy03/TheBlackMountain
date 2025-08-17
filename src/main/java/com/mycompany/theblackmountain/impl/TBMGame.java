@@ -87,7 +87,7 @@ public class TBMGame extends GameDescription implements GameObservable {
      * VERSIONE CORRETTA CHE NON USA gameLoader (che è ancora null)
      */
     private void forceCompleteReset() {
-        System.out.println("🔄 Reset forzato del database per stato pulito...");
+        System.out.println("Reset forzato del database per stato pulito...");
 
         try (Connection conn = database.getConnection()) {
 
@@ -99,7 +99,7 @@ public class TBMGame extends GameDescription implements GameObservable {
     """;
             try (var stmt = conn.prepareStatement(resetPlayerSql)) {
                 stmt.executeUpdate();
-                System.out.println("✅ Player stato ripristinato");
+                System.out.println("Player stato ripristinato");
             }
 
             // 2. Reset inventario a quello iniziale
@@ -116,7 +116,7 @@ public class TBMGame extends GameDescription implements GameObservable {
     """;
             try (var stmt = conn.prepareStatement(restoreInventorySql)) {
                 stmt.executeUpdate();
-                System.out.println("✅ Inventario iniziale ripristinato");
+                System.out.println("Inventario iniziale ripristinato");
             }
 
             // 3. Reset tutti i nemici a vivi
@@ -127,14 +127,14 @@ public class TBMGame extends GameDescription implements GameObservable {
     """;
             try (var stmt = conn.prepareStatement(resetEnemiesSql)) {
                 int updated = stmt.executeUpdate();
-                System.out.println("✅ " + updated + " nemici ripristinati");
+                System.out.println(updated + " nemici ripristinati");
             }
 
             // 4. Reset tutte le casse a chiuse
             String resetChestsSql = "UPDATE OBJECTS SET IS_OPEN = FALSE WHERE ID >= 100 AND ID <= 103";
             try (var stmt = conn.prepareStatement(resetChestsSql)) {
                 stmt.executeUpdate();
-                System.out.println("🔒 Casse chiuse");
+                System.out.println("Casse chiuse");
             }
 
             // 5. Rimuovi SOLO il contenuto delle casse dalle stanze, NON le casse stesse
@@ -144,7 +144,7 @@ public class TBMGame extends GameDescription implements GameObservable {
     """;
             try (var stmt = conn.prepareStatement(removeChestContentsSql)) {
                 int removed = stmt.executeUpdate();
-                System.out.println("📤 " + removed + " contenuti casse rimossi dalle stanze");
+                System.out.println(removed + " contenuti casse rimossi dalle stanze");
             }
 
             // 6. ASSICURATI CHE LE CASSE SIANO PRESENTI NELLE STANZE
@@ -154,16 +154,16 @@ public class TBMGame extends GameDescription implements GameObservable {
             // 7. DEBUG: Verifica presenza casse nel database
             String debugSql = "SELECT ROOM_ID, OBJECT_ID FROM ROOM_OBJECTS WHERE OBJECT_ID >= 100 ORDER BY ROOM_ID";
             try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(debugSql)) {
-                System.out.println("📋 DEBUG: Casse nel database dopo reset:");
+                System.out.println("DEBUG: Casse nel database dopo reset:");
                 while (rs.next()) {
                     System.out.println("  - Cassa " + rs.getInt("OBJECT_ID") + " in stanza " + rs.getInt("ROOM_ID"));
                 }
             }
 
-            System.out.println("✅ Reset forzato completato!");
+            System.out.println("Reset forzato completato!");
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nel reset forzato: " + e.getMessage());
+            System.err.println("Errore nel reset forzato: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -173,7 +173,7 @@ public class TBMGame extends GameDescription implements GameObservable {
      * Versione che non dipende da gameLoader
      */
     private static void ensureChestsInRoomsStatic(Connection conn) throws SQLException {
-        System.out.println("📦 Verifica presenza casse nelle stanze...");
+        System.out.println("Verifica presenza casse nelle stanze...");
 
         // Array con le casse e le loro stanze
         int[][] chestRoomPairs = {
@@ -205,16 +205,16 @@ public class TBMGame extends GameDescription implements GameObservable {
                             insertStmt.setInt(2, chestId);
                             insertStmt.executeUpdate();
                             totalInserted++;
-                            System.out.println("  ✅ Cassa " + chestId + " aggiunta alla stanza " + roomId);
+                            System.out.println("  Cassa " + chestId + " aggiunta alla stanza " + roomId);
                         }
                     } else {
-                        System.out.println("  ℹ️ Cassa " + chestId + " già presente nella stanza " + roomId);
+                        System.out.println("  Cassa " + chestId + " già presente nella stanza " + roomId);
                     }
                 }
             }
         }
 
-        System.out.println("📦 Totale casse inserite: " + totalInserted);
+        System.out.println("Totale casse inserite: " + totalInserted);
     }
 
     private void initializeObservers() {
@@ -270,6 +270,14 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
 
         try {
+            // CONTROLLO GAME OVER ALL'INIZIO 
+            if (isGameOver()) {
+                out.println("\n" + getGameOverMessage());
+                out.println("\nVuoi ricominciare una nuova partita? (si/no)");
+                out.flush();
+                return; // Esce subito, non elabora altri comandi
+            }
+
             // Salva l'ultimo comando per gli observer
             this.lastParserOutput = p;
 
@@ -288,7 +296,7 @@ public class TBMGame extends GameDescription implements GameObservable {
                         commandHandled = true;
                     }
                 } catch (Exception e) {
-                    System.err.println("⚠️ Errore in observer " + observer.getClass().getSimpleName() + ": " + e.getMessage());
+                    System.err.println("Errore in observer " + observer.getClass().getSimpleName() + ": " + e.getMessage());
                     e.printStackTrace();
                 }
             }
@@ -304,27 +312,24 @@ public class TBMGame extends GameDescription implements GameObservable {
                 out.flush();
             }
 
-            // *** CORREZIONE: Controlla il game over SOLO DOPO aver elaborato il comando ***
-            // E SOLO se il giocatore è effettivamente morto
+            // CONTROLLO GAME OVER ALLA FINE
+            // Dopo aver elaborato il comando, controlla se il giocatore è morto
             if (isGameOver()) {
                 out.println("\n" + getGameOverMessage());
+                out.println("\nVuoi ricominciare una nuova partita? (si/no)");
                 out.flush();
                 System.out.println("DEBUG: GAME OVER confermato - Player HP: "
                         + (player != null ? player.getCurrentHp() : "null"));
-                // Qui potresti aggiungere logica per fermare il gioco o resettarlo
             }
 
         } catch (Exception e) {
-            System.err.println("️ Errore nell'elaborazione comando: " + e.getMessage());
+            System.err.println("Errore nell'elaborazione comando: " + e.getMessage());
             e.printStackTrace();
             out.println("Si è verificato un errore nell'elaborazione del comando.");
             out.flush();
         }
     }
 
-// ============================================
-// 2. MIGLIORAMENTO del metodo isGameOver() in TBMGame.java
-// ============================================
     /**
      * Controlla se il giocatore è morto - VERSIONE CORRETTA
      *
@@ -337,23 +342,22 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
 
         int currentHp = player.getCurrentHp();
-        int maxHp = player.getMaxHp();
         boolean isDead = currentHp <= 0;
+        boolean isNotAlive = !player.isAlive();
 
         System.out.println("DEBUG Game Over Check:");
         System.out.println("  - Player: " + player.getName());
         System.out.println("  - Current HP: " + currentHp);
-        System.out.println("  - Max HP: " + maxHp);
-        System.out.println("  - Is Alive: " + player.isAlive());
-        System.out.println("  - Should be Game Over: " + isDead);
+        System.out.println("  - Max HP: " + player.getMaxHp());
+        System.out.println("  - Is Alive Flag: " + player.isAlive());
+        System.out.println("  - HP <= 0: " + isDead);
+        System.out.println("  - Not Alive: " + isNotAlive);
+        System.out.println("  - Should be Game Over: " + (isDead || isNotAlive));
 
-        // *** IMPORTANTE: Verifica anche il flag isAlive() ***
-        return isDead || !player.isAlive();
+        // Verifica entrambe le condizioni
+        return isDead || isNotAlive;
     }
 
-// ============================================
-// 3. NUOVO METODO: Forza fine del game over (per debug/reset)
-// ============================================
     /**
      * Forza la fine del game over e ripristina il giocatore
      */
@@ -364,11 +368,12 @@ public class TBMGame extends GameDescription implements GameObservable {
                 player.setCurrentHp(1); // HP minimo per evitare game over
             }
             player.setCurrentHp(Math.max(player.getCurrentHp(), 1));
+            // Il flag isAlive viene automaticamente aggiornato quando HP > 0
 
             // Aggiorna il database
             updateCharacterState(player);
 
-            System.out.println("🔄 Game Over state resettato - Player HP: " + player.getCurrentHp());
+            System.out.println("Game Over state resettato - Player HP: " + player.getCurrentHp() + ", Alive: " + player.isAlive());
         }
     }
 
@@ -426,20 +431,26 @@ public class TBMGame extends GameDescription implements GameObservable {
         attack.setAlias(new String[]{"attacco", "colpisci", "fight"});
         getCommands().add(attack);
 
-        // Comando per creare arco (CORREZIONE: era attack.setAlias invece di create.setAlias)
+        // Comando per creare arco
         Command create = new Command(CommandType.CREATE, "crea");
         create.setAlias(new String[]{"costruisci", "build", "create"});
         getCommands().add(create);
-
+        
+        // Comandi debug
+        Command debugHp = new Command(CommandType.USE, "debug");
+        debugHp.setAlias(new String[]{"sethp", "hp", "testhp"});
+        getCommands().add(debugHp);
+        
         System.out.println("Inizializzati " + getCommands().size() + " comandi");
     }
 
     /**
-     * Reset del gioco per una nuova partita - VERSIONE CORRETTA E SICURA
+     * Reset del gioco per una nuova partita
      */
+    // In TBMGame.java, sostituisci il metodo resetForNewGame() con questa versione corretta:
     public void resetForNewGame() {
         try {
-            System.out.println("🔄 Resetting gioco per nuova partita...");
+            System.out.println("DEBUG: Resetting gioco per nuova partita...");
 
             // 1. Reset posizione giocatore all'ingresso
             Room entrance = null;
@@ -452,7 +463,7 @@ public class TBMGame extends GameDescription implements GameObservable {
 
             if (entrance != null) {
                 setCurrentRoom(entrance);
-                System.out.println("✅ Giocatore riposizionato all'ingresso");
+                System.out.println("DEBUG: Giocatore riposizionato all'ingresso");
             }
 
             // 2. Reset COMPLETO del giocatore nel database
@@ -462,50 +473,75 @@ public class TBMGame extends GameDescription implements GameObservable {
                     String resetPlayerSql = "UPDATE CHARACTERS SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE, ROOM_ID = 0 WHERE CHARACTER_TYPE = 'PLAYER' AND ID = 0";
                     try (var stmt = conn.prepareStatement(resetPlayerSql)) {
                         stmt.executeUpdate();
-                        System.out.println("✅ Player HP ripristinato nel database");
+                        System.out.println("DEBUG: Player HP ripristinato nel database");
+                    }
+
+                    // *** CORREZIONE PRINCIPALE: Ricarica il player dal database ***
+                    String loadPlayerSql = "SELECT * FROM CHARACTERS WHERE CHARACTER_TYPE = 'PLAYER' AND ID = 0";
+                    try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(loadPlayerSql)) {
+                        if (rs.next()) {
+                            // Aggiorna l'oggetto player in memoria con i valori del database
+                            int dbCurrentHp = rs.getInt("CURRENT_HP");
+                            int dbMaxHp = rs.getInt("MAX_HP");
+                            boolean dbIsAlive = rs.getBoolean("IS_ALIVE");
+
+                            player.setMaxHp(dbMaxHp);
+                            player.setCurrentHp(dbCurrentHp);
+
+                            // Il flag isAlive viene automaticamente gestito da setCurrentHp()
+                            // Se HP > 0, il personaggio sarà automaticamente vivo
+                            // Se HP <= 0, sarà automaticamente morto
+                            // Se il database dice che è vivo ma HP è 0, forziamo HP positivo
+                            if (dbIsAlive && player.getCurrentHp() <= 0) {
+                                player.setCurrentHp(1); // Forza almeno 1 HP se dovrebbe essere vivo
+                            }
+
+                            System.out.println("DEBUG: Player ricaricato dal database - HP: " + player.getCurrentHp()
+                                    + "/" + player.getMaxHp() + ", Alive: " + player.isAlive());
+                        }
                     }
 
                     // 3. Reset COMPLETO inventario - svuota tutto
                     String clearInventorySql = "DELETE FROM INVENTORY WHERE CHARACTER_ID = 0";
                     try (var stmt = conn.prepareStatement(clearInventorySql)) {
                         stmt.executeUpdate();
-                        System.out.println("✅ Inventario svuotato nel database");
+                        System.out.println("DEBUG: Inventario svuotato nel database");
                     }
 
                     // 4. Ripristina inventario iniziale (pozione + spada)
                     String restoreInventorySql = "INSERT INTO INVENTORY (CHARACTER_ID, OBJECT_ID) VALUES (0, 2), (0, 12)";
                     try (var stmt = conn.prepareStatement(restoreInventorySql)) {
                         stmt.executeUpdate();
-                        System.out.println("✅ Inventario iniziale ripristinato nel database");
+                        System.out.println("DEBUG: Inventario iniziale ripristinato nel database");
                     }
 
                     // 5. Reset stato nemici - li rimette tutti vivi
                     String resetEnemiesSql = "UPDATE CHARACTERS SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE WHERE CHARACTER_TYPE != 'PLAYER'";
                     try (var stmt = conn.prepareStatement(resetEnemiesSql)) {
                         int updated = stmt.executeUpdate();
-                        System.out.println("✅ " + updated + " nemici ripristinati nel database");
+                        System.out.println("DEBUG: " + updated + " nemici ripristinati nel database");
                     }
 
-                    // 8. Reset casse nel database (chiudi tutte e rimuovi contenuti dalle stanze)
+                    // 6. Reset casse nel database (chiudi tutte e rimuovi contenuti dalle stanze)
                     if (gameLoader != null) {
                         gameLoader.resetAllChests();
-                        System.out.println("✅ Casse resettate tramite GameLoader");
+                        System.out.println("DEBUG: Casse resettate tramite GameLoader");
                     } else {
                         // Fallback se gameLoader è null
-                        System.out.println("⚠️ GameLoader null, uso reset casse diretto");
+                        System.out.println("WARNING: GameLoader null, uso reset casse diretto");
 
                         // Reset casse
                         String resetChestsSql = "UPDATE OBJECTS SET IS_OPEN = FALSE WHERE ID >= 100 AND ID <= 103";
                         try (var stmt = conn.prepareStatement(resetChestsSql)) {
                             stmt.executeUpdate();
-                            System.out.println("🔒 Casse chiuse");
+                            System.out.println("DEBUG: Casse chiuse");
                         }
 
                         // Rimuovi contenuti casse
                         String removeContentSql = "DELETE FROM ROOM_OBJECTS WHERE OBJECT_ID IN (1, 2, 5, 6, 8, 9, 10)";
                         try (var stmt = conn.prepareStatement(removeContentSql)) {
                             int removed = stmt.executeUpdate();
-                            System.out.println("📤 " + removed + " contenuti casse rimossi");
+                            System.out.println("DEBUG: " + removed + " contenuti casse rimossi");
                         }
 
                         // Assicura presenza casse
@@ -513,17 +549,13 @@ public class TBMGame extends GameDescription implements GameObservable {
                     }
 
                 } catch (SQLException e) {
-                    System.err.println("❌ Errore nel reset database: " + e.getMessage());
+                    System.err.println("ERROR: Errore nel reset database: " + e.getMessage());
                     e.printStackTrace();
                 }
             }
 
-            // 6. Reset HP giocatore in memoria
-            if (player != null) {
-                player.setCurrentHp(player.getMaxHp());
-                System.out.println("✅ HP giocatore ripristinati in memoria: " + player.getCurrentHp() + "/" + player.getMaxHp());
-            }
-
+            // *** NON SOVRASCRIVERE PIÙ L'HP QUI - È GIÀ STATO FATTO SOPRA ***
+            // Il player è già stato aggiornato dal database sopra
             // 7. Reset inventario in memoria - svuota e ripristina quello iniziale
             getInventory().clear();
 
@@ -548,11 +580,11 @@ public class TBMGame extends GameDescription implements GameObservable {
                                 getInventory().add(obj);
                             }
                         }
-                        System.out.println("✅ Inventario ricaricato: " + getInventory().size() + " oggetti");
+                        System.out.println("DEBUG: Inventario ricaricato: " + getInventory().size() + " oggetti");
                     }
 
                 } catch (SQLException e) {
-                    System.err.println("⚠️ Errore ricaricamento inventario, uso fallback");
+                    System.err.println("WARNING: Errore ricaricamento inventario, uso fallback");
                     // Fallback: crea oggetti manualmente
                     createDefaultInventory();
                 }
@@ -561,23 +593,50 @@ public class TBMGame extends GameDescription implements GameObservable {
                 createDefaultInventory();
             }
 
-            // 9. Ricarica nemici nelle stanze
+            // 8. Ricarica nemici nelle stanze
             for (Room room : getRooms()) {
                 room.getEnemies().clear();
             }
             reloadCharactersFromDatabase();
 
-            // 10. Termina eventuali combattimenti in corso
+            // 9. Termina eventuali combattimenti in corso
             if (combatSystem != null && combatSystem.isInCombat()) {
                 combatSystem.endCombat();
-                System.out.println("✅ Combattimento in corso terminato");
+                System.out.println("DEBUG: Combattimento in corso terminato");
             }
 
-            System.out.println("🎮 Gioco pronto per una nuova avventura!");
+            // 10. Debug finale dello stato
+            System.out.println("DEBUG: Reset completato - Player HP: "
+                    + (player != null ? player.getCurrentHp() + "/" + player.getMaxHp() : "null")
+                    + ", Is Alive: " + (player != null ? player.isAlive() : "null"));
+
+            System.out.println("DEBUG: Gioco pronto per una nuova avventura");
 
         } catch (Exception e) {
-            System.err.println("❌ Errore nel reset del gioco: " + e.getMessage());
+            System.err.println("ERROR: Errore nel reset del gioco: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * Reset del sistema porte
+     */
+    private void resetDoorSystems() {
+        try {
+            System.out.println("Resettando sistemi porte...");
+
+            // Reset del DoorSystem nel Move observer
+            for (GameObserver observer : observers) {
+                if (observer instanceof Move) {
+                    Move moveObserver = (Move) observer;
+                    moveObserver.resetForNewGame();
+                    break;
+                }
+            }
+
+            System.out.println("Sistemi porte resettati");
+        } catch (Exception e) {
+            System.err.println("Errore nel reset porte: " + e.getMessage());
         }
     }
 
@@ -600,7 +659,7 @@ public class TBMGame extends GameDescription implements GameObservable {
         sword.setPickupable(true);
         getInventory().add(sword);
 
-        System.out.println(" Inventario di default creato: " + getInventory().size() + " oggetti");
+        System.out.println("Inventario di default creato: " + getInventory().size() + " oggetti");
     }
 
     /**
@@ -614,7 +673,7 @@ public class TBMGame extends GameDescription implements GameObservable {
                 method.setAccessible(true);
                 return (GameObjects) method.invoke(gameLoader, rs);
             } catch (Exception e) {
-                System.err.println("⚠️ Errore reflection: " + e.getMessage());
+                System.err.println("Errore reflection: " + e.getMessage());
                 return null;
             }
         }
@@ -639,10 +698,10 @@ public class TBMGame extends GameDescription implements GameObservable {
                 loadCharactersMethod.setAccessible(true);
                 loadCharactersMethod.invoke(gameLoader, conn);
 
-                System.out.println("✅ Personaggi ricaricati dalle stanze");
+                System.out.println("Personaggi ricaricati dalle stanze");
             }
         } catch (Exception e) {
-            System.err.println("⚠️ Errore nel ricaricamento personaggi: " + e.getMessage());
+            System.err.println("Errore nel ricaricamento personaggi: " + e.getMessage());
             // Fallback: ricrea manualmente i nemici nelle stanze
             createDefaultEnemiesInRooms();
         }
@@ -655,14 +714,68 @@ public class TBMGame extends GameDescription implements GameObservable {
      */
     public String getGameOverMessage() {
         if (player == null) {
-            return "Errore di sistema";
+            return "Errore di sistema - giocatore non trovato.";
         }
 
         if (player.getCurrentHp() <= 0) {
-            return "La tua forza vitale si è esaurita...";
+            return "La tua avventura è finita... I tuoi HP sono scesi a zero e le tenebre ti avvolgono.";
         }
 
-        return "Game Over";
+        if (!player.isAlive()) {
+            return "Il tuo spirito vitale si è spento... Non puoi più continuare l'avventura.";
+        }
+
+        return "Game Over - La tua avventura è terminata.";
+    }
+
+    /**
+     * Gestisce la risposta del giocatore al game over Chiamalo dal main loop
+     * quando il giocatore risponde alla domanda di restart
+     */
+    public boolean handleGameOverResponse(String response) {
+        if (response == null) {
+            return false;
+        }
+
+        String cleanResponse = response.trim().toLowerCase();
+
+        if (cleanResponse.equals("si") || cleanResponse.equals("sì")
+                || cleanResponse.equals("s") || cleanResponse.equals("yes")
+                || cleanResponse.equals("y") || cleanResponse.equals("ricomincio")) {
+
+            System.out.println("Il giocatore ha scelto di ricominciare...");
+            resetForNewGame();
+            return true; // Indica che il gioco è stato resettato
+
+        } else if (cleanResponse.equals("no") || cleanResponse.equals("n")
+                || cleanResponse.equals("esci") || cleanResponse.equals("quit")) {
+
+            System.out.println("Il giocatore ha scelto di uscire dal gioco");
+            return false; // Indica che il giocatore vuole uscire
+
+        } else {
+            // Risposta non riconosciuta, richiedi di nuovo
+            System.out.println("Risposta non riconosciuta: " + response);
+            return false; // Non è né restart né quit, chiedi di nuovo
+        }
+    }
+
+    /**
+     * Verifica se il gioco è in stato di attesa game over
+     */
+    public boolean isWaitingForGameOverResponse() {
+        return isGameOver();
+    }
+
+    /**
+     * Debug: Forza un game over per test
+     */
+    public void forceGameOver() {
+        if (player != null) {
+            player.setCurrentHp(0); // Questo automaticamente imposta isAlive = false
+            updateCharacterState(player);
+            System.out.println("DEBUG: Game Over forzato");
+        }
     }
 
     /**
@@ -796,45 +909,42 @@ public class TBMGame extends GameDescription implements GameObservable {
     }
 
     /**
-     * Aggiungi questi metodi alla classe TBMGame per il debug
-     */
-    /**
      * Debug completo dello stato del gioco dopo il caricamento
      */
     public void debugGameState() {
         System.out.println("\n========== DEBUG STATO GIOCO ==========");
 
         // 1. Stato stanze
-        System.out.println("\n🏠 STANZE CARICATE:");
+        System.out.println("\nSTANZE CARICATE:");
         for (Room room : getRooms()) {
             System.out.println("Stanza " + room.getId() + ": " + room.getName());
 
             // Oggetti nella stanza
             if (!room.getObjects().isEmpty()) {
-                System.out.println("  📦 Oggetti (" + room.getObjects().size() + "):");
+                System.out.println("  Oggetti (" + room.getObjects().size() + "):");
                 for (GameObjects obj : room.getObjects()) {
                     System.out.println("    - " + obj.getName() + " (ID:" + obj.getId()
                             + ", Apribile:" + obj.isOpenable() + ", Aperto:" + obj.isOpen() + ")");
                 }
             } else {
-                System.out.println("  📦 Nessun oggetto");
+                System.out.println("  Nessun oggetto");
             }
 
             // Nemici nella stanza
             if (!room.getEnemies().isEmpty()) {
-                System.out.println("  👹 Nemici (" + room.getEnemies().size() + "):");
+                System.out.println("  Nemici (" + room.getEnemies().size() + "):");
                 for (GameCharacter enemy : room.getEnemies()) {
                     System.out.println("    - " + enemy.getName() + " (HP:" + enemy.getCurrentHp()
                             + "/" + enemy.getMaxHp() + ", Vivo:" + enemy.isAlive() + ")");
                 }
             } else {
-                System.out.println("  👹 Nessun nemico");
+                System.out.println("  Nessun nemico");
             }
             System.out.println();
         }
 
         // 2. Stato giocatore
-        System.out.println("\n🧙 GIOCATORE:");
+        System.out.println("\nGIOCATORE:");
         if (player != null) {
             System.out.println("  Nome: " + player.getName());
             System.out.println("  HP: " + player.getCurrentHp() + "/" + player.getMaxHp());
@@ -845,7 +955,7 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
 
         // 3. Inventario
-        System.out.println("\n🎒 INVENTARIO (" + getInventory().size() + " oggetti):");
+        System.out.println("\nINVENTARIO (" + getInventory().size() + " oggetti):");
         for (GameObjects obj : getInventory()) {
             System.out.println("  - " + obj.getName() + " (ID:" + obj.getId() + ")");
         }
@@ -853,77 +963,16 @@ public class TBMGame extends GameDescription implements GameObservable {
         System.out.println("\n======================================\n");
     }
 
-    /**
-     * Debug specifico per la cassa nella stanza 0
-     */
-    public void debugRoom0Chest() {
-        System.out.println("\n========== DEBUG CASSA STANZA 0 ==========");
-
-        Room room0 = null;
-        for (Room room : getRooms()) {
-            if (room.getId() == 0) {
-                room0 = room;
-                break;
-            }
-        }
-
-        if (room0 == null) {
-            System.out.println("❌ STANZA 0 NON TROVATA!");
-            return;
-        }
-
-        System.out.println("🏠 Stanza 0: " + room0.getName());
-        System.out.println("📦 Oggetti totali: " + room0.getObjects().size());
-
-        boolean chestFound = false;
-        for (GameObjects obj : room0.getObjects()) {
-            System.out.println("  - Oggetto: " + obj.getName()
-                    + " (ID:" + obj.getId() + ", Tipo:" + obj.getClass().getSimpleName() + ")");
-
-            if (obj.getId() == 100 || obj.getName().toLowerCase().contains("cassa")) {
-                chestFound = true;
-                System.out.println("    ✅ CASSA TROVATA!");
-                System.out.println("    - Apribile: " + obj.isOpenable());
-                System.out.println("    - Aperta: " + obj.isOpen());
-                System.out.println("    - Raccoglibile: " + obj.isPickupable());
-
-                // Verifica alias
-                if (obj.getAlias() != null && !obj.getAlias().isEmpty()) {
-                    System.out.println("    - Alias: " + obj.getAlias());
-                }
-            }
-        }
-
-        if (!chestFound) {
-            System.out.println("❌ NESSUNA CASSA TROVATA NELLA STANZA 0!");
-        }
-
-        // Verifica database
-        if (gameLoader != null) {
-            System.out.println("\n🔍 Verifica database:");
-            boolean isChestOpenInDB = gameLoader.isChestOpenInDatabase(100);
-            System.out.println("  - Cassa 100 aperta nel DB: " + isChestOpenInDB);
-        }
-
-        System.out.println("==========================================\n");
-    }
-
-    /**
-     * Chiama questo metodo dopo loadGame() nel metodo init()
-     */
     private void debugAfterLoad() {
-        System.out.println("🔍 DEBUG: Stato del gioco dopo caricamento");
+        System.out.println("DEBUG: Stato del gioco dopo caricamento");
         debugGameState();
-        debugRoom0Chest();
     }
 
     public void shutdown() {
         cleanup();
     }
 
-    // =====================================
-    //   GameObservable implementation
-    // =====================================
+    // GameObservable implementation
     @Override
     public void attach(GameObserver observer) {
         if (observer != null && !observers.contains(observer)) {
@@ -947,9 +996,7 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
     }
 
-    // =====================================
-    //   Getter / Setter
-    // =====================================
+    // Getter / Setter
     public CombatSystem getCombatSystem() {
         return combatSystem;
     }
