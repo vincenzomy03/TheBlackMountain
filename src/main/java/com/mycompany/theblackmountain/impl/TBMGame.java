@@ -95,9 +95,9 @@ public class TBMGame extends GameDescription implements GameObservable {
 
             // 1. Reset COMPLETO del giocatore
             String resetPlayerSql = """
-    UPDATE CHARACTERS 
-    SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE, ROOM_ID = 0 
-    WHERE CHARACTER_TYPE = 'PLAYER' AND ID = 0
+UPDATE CHARACTERS 
+SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE, ROOM_ID = 0 
+WHERE CHARACTER_TYPE = 'PLAYER' AND ID = 0
 """;
             try (var stmt = conn.prepareStatement(resetPlayerSql)) {
                 stmt.executeUpdate();
@@ -111,70 +111,82 @@ public class TBMGame extends GameDescription implements GameObservable {
             }
 
             String restoreInventorySql = """
-    INSERT INTO INVENTORY (CHARACTER_ID, OBJECT_ID) 
-    SELECT 0, 2 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 2)
-    UNION ALL
-    SELECT 0, 12 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 12)
+INSERT INTO INVENTORY (CHARACTER_ID, OBJECT_ID) 
+SELECT 0, 2 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 2)
+UNION ALL
+SELECT 0, 12 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 12)
 """;
             try (var stmt = conn.prepareStatement(restoreInventorySql)) {
                 stmt.executeUpdate();
-                System.out.println("Inventario iniziale ripristinato");
+                System.out.println("DEBUG: Inventario iniziale ripristinato nel database");
             }
 
             // 3. Reset tutti i nemici a vivi
             String resetEnemiesSql = """
-    UPDATE CHARACTERS 
-    SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE 
-    WHERE CHARACTER_TYPE != 'PLAYER'
+UPDATE CHARACTERS 
+SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE 
+WHERE CHARACTER_TYPE != 'PLAYER'
 """;
             try (var stmt = conn.prepareStatement(resetEnemiesSql)) {
                 int updated = stmt.executeUpdate();
-                System.out.println(updated + " nemici ripristinati");
+                System.out.println(updated + " nemici ripristinati nel database");
             }
 
-            // 4. Reset tutte le casse a chiuse
+            // 4. Reset casse nel database (chiudi tutte)
             String resetChestsSql = "UPDATE OBJECTS SET IS_OPEN = FALSE WHERE ID >= 100 AND ID <= 103";
             try (var stmt = conn.prepareStatement(resetChestsSql)) {
                 stmt.executeUpdate();
-                System.out.println("Casse chiuse");
+                System.out.println("DEBUG: Casse chiuse");
             }
 
-            // 5. Rimuovi SOLO il contenuto delle casse dalle stanze, NON le casse stesse
-            String removeChestContentsSql = """
-    DELETE FROM ROOM_OBJECTS 
-    WHERE OBJECT_ID IN (1, 2, 5, 6, 8, 9, 10)
-""";
-            try (var stmt = conn.prepareStatement(removeChestContentsSql)) {
+            // *** 5. CORREZIONE: Rimuovi TUTTI i contenuti dalle stanze, POI ripristina la configurazione iniziale ***
+            String removeAllContentSql = "DELETE FROM ROOM_OBJECTS WHERE OBJECT_ID NOT IN (100, 101, 102, 103, 4)";
+            try (var stmt = conn.prepareStatement(removeAllContentSql)) {
                 int removed = stmt.executeUpdate();
-                System.out.println(removed + " contenuti casse rimossi dalle stanze");
+                System.out.println("DEBUG: " + removed + " oggetti rimossi dalle stanze (mantenute solo casse e ragnatele)");
             }
 
-            // 6. Reset veleno dalle armi e ricrea veleno
+            // *** 6. RIPRISTINA LA CONFIGURAZIONE INIZIALE DELLE STANZE ***
+            // Ripristina solo gli oggetti che dovrebbero essere nelle stanze all'inizio:
+            // - Stanza 0: cassa 100
+            // - Stanza 1: ragnatele (ID 4) + cassa vuota se necessaria
+            // - Stanza 3: cassa 101  
+            // - Stanza 4: cassa 102 (che CONTIENE libro ID 8 e veleno ID 9)
+            // - Stanza 6: cassa 103
+            String restoreInitialRoomObjectsSql = """
+INSERT OR IGNORE INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES
+(0, 100),  -- Ingresso: cassa
+(1, 4),    -- Stanza Topo: ragnatele (oggetto fisso)
+(3, 101),  -- Dormitorio: cassa
+(4, 102),  -- Sala Guardie: cassa
+(4, 8),    -- Sala Guardie: libro (DENTRO la cassa 102)
+(4, 9),    -- Sala Guardie: veleno (DENTRO la cassa 102)
+(6, 103)   -- Torture: cassa
+""";
+            try (var stmt = conn.prepareStatement(restoreInitialRoomObjectsSql)) {
+                stmt.executeUpdate();
+                System.out.println("DEBUG: Configurazione iniziale stanze ripristinata");
+            }
+
+            // 7. Reset veleno dalle armi
             String resetPoisonSql = "UPDATE WEAPONS SET IS_POISONED = FALSE, POISON_DAMAGE = 0";
             try (var stmt = conn.prepareStatement(resetPoisonSql)) {
                 stmt.executeUpdate();
                 System.out.println("Veleno rimosso dalle armi");
             }
 
-            String recreatePoisonSql = """
-    INSERT OR REPLACE INTO OBJECTS (ID, NAME, DESCRIPTION, ALIASES, OPENABLE, PICKUPABLE, PUSHABLE, IS_OPEN, IS_PUSHED, OBJECT_TYPE) 
-    VALUES (9, 'veleno', 'Una boccetta scura. Può essere applicata su armi per aumentare il danno.', 'poison,boccetta', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL')
+            // 8. Debug: Verifica presenza oggetti nel database
+            String debugSql = """
+SELECT r.ROOM_ID, r.OBJECT_ID, o.NAME, o.OBJECT_TYPE
+FROM ROOM_OBJECTS r
+JOIN OBJECTS o ON r.OBJECT_ID = o.ID
+ORDER BY r.ROOM_ID, r.OBJECT_ID
 """;
-            try (var stmt = conn.prepareStatement(recreatePoisonSql)) {
-                stmt.executeUpdate();
-                System.out.println("Veleno ricreato");
-            }
-
-            // 7. ASSICURATI CHE LE CASSE SIANO PRESENTI NELLE STANZE
-            // NON usare gameLoader qui perché è ancora null!
-            ensureChestsInRoomsStatic(conn);
-
-            // 8. DEBUG: Verifica presenza casse nel database
-            String debugSql = "SELECT ROOM_ID, OBJECT_ID FROM ROOM_OBJECTS WHERE OBJECT_ID >= 100 ORDER BY ROOM_ID";
             try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(debugSql)) {
-                System.out.println("DEBUG: Casse nel database dopo reset:");
+                System.out.println("DEBUG: Oggetti nelle stanze dopo reset:");
                 while (rs.next()) {
-                    System.out.println("  - Cassa " + rs.getInt("OBJECT_ID") + " in stanza " + rs.getInt("ROOM_ID"));
+                    System.out.println("  - Stanza " + rs.getInt("ROOM_ID") + ": "
+                            + rs.getString("NAME") + " (ID:" + rs.getInt("OBJECT_ID") + ")");
                 }
             }
 

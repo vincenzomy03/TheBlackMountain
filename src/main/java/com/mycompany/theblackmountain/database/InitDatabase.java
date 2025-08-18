@@ -653,37 +653,7 @@ public class InitDatabase {
         }
     }
 
-    /**
-     * Ripristina il veleno nella cassa originale dopo il gameover.
-     */
-    public void resetPoison() {
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-
-            // 1. Rimuovo eventuali tracce del veleno dall'inventario o da altre stanze
-            String deleteFromInventory = "DELETE FROM INVENTORY WHERE OBJECT_ID = 9";
-            try (PreparedStatement stmt = conn.prepareStatement(deleteFromInventory)) {
-                stmt.executeUpdate();
-            }
-
-            String deleteFromRooms = "DELETE FROM ROOM_OBJECTS WHERE OBJECT_ID = 9";
-            try (PreparedStatement stmt = conn.prepareStatement(deleteFromRooms)) {
-                stmt.executeUpdate();
-            }
-
-            // 2. Re-inserisco il veleno nella cassa originale (stanza 4 → cassa 102)
-            String insertPoison = "INSERT INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES (4, 9)";
-            try (PreparedStatement stmt = conn.prepareStatement(insertPoison)) {
-                stmt.executeUpdate();
-            }
-
-            System.out.println("♻️ Veleno ripristinato nella cassa della stanza 4");
-
-        } catch (SQLException e) {
-            System.err.println("❌ Errore nel ripristino del veleno: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
+   
     /**
      * Metodo di utilità per testare la connessione
      */

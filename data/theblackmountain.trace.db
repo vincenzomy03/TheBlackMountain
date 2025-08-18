@@ -1,5 +1,11 @@
-2025-08-18 22:04:31 jdbc[6]: exception
-org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "    INSERT [*]OR REPLACE INTO OBJECTS (ID, NAME, DESCRIPTION, ALIASES, OPENABLE, PICKUPABLE, PUSHABLE, IS_OPEN, IS_PUSHED, OBJECT_TYPE)\000a    VALUES (9, 'veleno', 'Una boccetta scura. Può essere applicata su armi per aumentare il danno.', 'poison,boccetta', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL')\000a"; expected "INTO"; SQL statement:
-    INSERT OR REPLACE INTO OBJECTS (ID, NAME, DESCRIPTION, ALIASES, OPENABLE, PICKUPABLE, PUSHABLE, IS_OPEN, IS_PUSHED, OBJECT_TYPE)
-    VALUES (9, 'veleno', 'Una boccetta scura. Può essere applicata su armi per aumentare il danno.', 'poison,boccetta', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL')
+2025-08-18 22:19:35 jdbc[6]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "INSERT [*]OR IGNORE INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES\000a(0, 100),  -- Ingresso: cassa\000a(1, 4),    -- Stanza Topo: ragnatele (oggetto fisso)\000a(3, 101),  -- Dormitorio: cassa\000a(4, 102),  -- Sala Guardie: cassa\000a(4, 8),    -- Sala Guardie: libro (DENTRO la cassa 102)\000a(4, 9),    -- Sala Guardie: veleno (DENTRO la cassa 102)\000a(6, 103)   -- Torture: cassa\000a"; expected "INTO"; SQL statement:
+INSERT OR IGNORE INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES
+(0, 100),  -- Ingresso: cassa
+(1, 4),    -- Stanza Topo: ragnatele (oggetto fisso)
+(3, 101),  -- Dormitorio: cassa
+(4, 102),  -- Sala Guardie: cassa
+(4, 8),    -- Sala Guardie: libro (DENTRO la cassa 102)
+(4, 9),    -- Sala Guardie: veleno (DENTRO la cassa 102)
+(6, 103)   -- Torture: cassa
  [42001-214]
