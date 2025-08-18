@@ -10,8 +10,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
- * Classe di inizializzazione del database per The Black Mountain. Approccio
- * minimal e diretto senza DAO/Entity layers.
+ * Classe di inizializzazione del database per The Black Mountain.
  */
 public class InitDatabase {
 
@@ -280,14 +279,6 @@ public class InitDatabase {
                 stm.close();
             }
 
-            // Verifica e inserimento ROOM_OBJECTS
-            checkDataSql = "SELECT COUNT(*) FROM ROOM_OBJECTS";
-            stm = conn.createStatement();
-            rs = stm.executeQuery(checkDataSql);
-            rs.next();
-            count = rs.getInt(1);
-            rs.close();
-
             // Verifica e inserimento ROOM_OBJECTS - Posizionamento oggetti nelle stanze
             checkDataSql = "SELECT COUNT(*) FROM ROOM_OBJECTS";
             stm = conn.createStatement();
@@ -298,12 +289,15 @@ public class InitDatabase {
 
             if (count == 0) {
                 stm = conn.createStatement();
-                stm.execute("INSERT INTO WEAPONS VALUES "
-                        + "(6, 'STAFF', 5, 5.0, 2.0, FALSE, 0, NULL), " // Bastone
-                        + "(7, 'MAGIC', 12, 15.0, 2.0, FALSE, 0, NULL), " // Arco magico
-                        + "(8, 'BOOK', 15, 20.0, 3.0, FALSE, 0, 'Incantesimo del Fuoco'), " // Libro incantesimo fuoco
-                        + "(9, 'POISON', 0, 0.0, 1.0, TRUE, 10, 'Veleno mortale'), " // Veleno
-                        + "(12, 'SWORD', 8, 10.0, 2.0, FALSE, 0, NULL);");  // Spada
+                stm.execute("INSERT INTO ROOM_OBJECTS VALUES "
+                        + "(0, 100), " // Ingresso: cassa
+                        + "(1, 4), " // Stanza del Topo: ragnatela
+                        + "(2, 5), " // Mensa: pozione cura totale
+                        + "(3, 101), " // Dormitorio: cassa
+                        + "(4, 102), " // Sala Guardie: cassa
+                        + "(5, 7), " // Sala Incantesimi: arco magico
+                        + "(6, 103), " // Torture: cassa
+                        + "(7, 10);");  // Boss Room: chiave cella principessa
                 stm.close();
             }
 

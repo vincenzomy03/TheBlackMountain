@@ -9,8 +9,8 @@ import java.sql.SQLException;
 
 /**
  * Gestore database semplificato per The Black Mountain.
- * Sostituisce l'architettura complessa con un approccio diretto.
  */
+
 public class TBMDatabase {
 
     private static TBMDatabase instance;

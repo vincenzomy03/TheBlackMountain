@@ -132,69 +132,41 @@ public class GameLoader {
     }
 
     /**
-     * Carica tutte le stanze dal database.
+     * Metodo per popolare inizialmente la tabella ROOM_OBJECTS con gli oggetti
+     * fissi Questo metodo dovrebbe essere chiamato SOLO al primo avvio per
+     * popolare il database
      */
-    private void loadRooms(Connection conn) throws SQLException {
-        String sql = "SELECT * FROM ROOMS ORDER BY ID";
+    public void populateInitialRoomObjects() throws SQLException {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
 
-        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            // Controlla se ROOM_OBJECTS è vuota
+            String checkSql = "SELECT COUNT(*) FROM ROOM_OBJECTS";
+            try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkSql)) {
+                rs.next();
+                int count = rs.getInt(1);
 
-            while (rs.next()) {
-                Room room = new Room(
-                        rs.getInt("ID"),
-                        rs.getString("NAME"),
-                        rs.getString("DESCRIPTION")
-                );
+                if (count == 0) {
+                    System.out.println("Popolamento iniziale ROOM_OBJECTS...");
 
-                room.setLook(rs.getString("LOOK_DESCRIPTION"));
-                room.setVisible(rs.getBoolean("VISIBLE"));
+                    // Inserisci gli oggetti fissi nelle stanze
+                    String insertSql = """
+                    INSERT INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES
+                    (0, 100),   -- Cassa nell'Ingresso
+                    (1, 4),     -- Stringhe di ragnatela nella Stanza del Topo
+                    (3, 101),   -- Cassa nel Dormitorio
+                    (4, 102),   -- Cassa nella Sala delle Guardie
+                    (6, 103)    -- Cassa nella Stanza delle Torture
+                """;
 
-                roomMap.put(room.getId(), room);
-                game.getRooms().add(room);
-            }
-        }
-
-        System.out.println("Caricate " + roomMap.size() + " stanze");
-    }
-
-    /**
-     * Imposta le connessioni tra le stanze.
-     */
-    private void loadRoomConnections(Connection conn) throws SQLException {
-        String sql = "SELECT * FROM ROOM_CONNECTIONS";
-
-        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
-
-            while (rs.next()) {
-                int roomId = rs.getInt("ROOM_ID");
-                Room room = roomMap.get(roomId);
-
-                if (room != null) {
-                    // Imposta le connessioni (NULL safe)
-                    Integer northId = (Integer) rs.getObject("NORTH_ID");
-                    if (northId != null) {
-                        room.setNorth(roomMap.get(northId));
+                    try (Statement insertStmt = conn.createStatement()) {
+                        insertStmt.executeUpdate(insertSql);
+                        System.out.println("ROOM_OBJECTS popolata con oggetti iniziali");
                     }
-
-                    Integer southId = (Integer) rs.getObject("SOUTH_ID");
-                    if (southId != null) {
-                        room.setSouth(roomMap.get(southId));
-                    }
-
-                    Integer eastId = (Integer) rs.getObject("EAST_ID");
-                    if (eastId != null) {
-                        room.setEast(roomMap.get(eastId));
-                    }
-
-                    Integer westId = (Integer) rs.getObject("WEST_ID");
-                    if (westId != null) {
-                        room.setWest(roomMap.get(westId));
-                    }
+                } else {
+                    System.out.println("ROOM_OBJECTS già popolata (" + count + " elementi)");
                 }
             }
         }
-
-        System.out.println("🔗 Connessioni tra stanze impostate");
     }
 
     /**
@@ -203,13 +175,13 @@ public class GameLoader {
      */
     private void loadRoomObjects(Connection conn) throws SQLException {
         String sql = """
-        SELECT r.ROOM_ID, o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
-               w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
-        FROM ROOM_OBJECTS r
-        JOIN OBJECTS o ON r.OBJECT_ID = o.ID
-        LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
-        ORDER BY r.ROOM_ID, o.ID
-    """;
+    SELECT r.ROOM_ID, o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
+           w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
+    FROM ROOM_OBJECTS r
+    JOIN OBJECTS o ON r.OBJECT_ID = o.ID
+    LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
+    ORDER BY r.ROOM_ID, o.ID
+""";
 
         System.out.println("Caricamento oggetti dalle stanze...");
 
@@ -284,6 +256,74 @@ public class GameLoader {
     }
 
     /**
+     * Carica tutte le stanze dal database.
+     */
+    private void loadRooms(Connection conn) throws SQLException {
+        String sql = "SELECT * FROM ROOMS ORDER BY ID";
+
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                Room room = new Room(
+                        rs.getInt("ID"),
+                        rs.getString("NAME"),
+                        rs.getString("DESCRIPTION")
+                );
+
+                room.setLook(rs.getString("LOOK_DESCRIPTION"));
+                room.setVisible(rs.getBoolean("VISIBLE"));
+
+                roomMap.put(room.getId(), room);
+                game.getRooms().add(room);
+            }
+        }
+
+        System.out.println("Caricate " + roomMap.size() + " stanze");
+    }
+
+    /**
+     * Imposta le connessioni tra le stanze.
+     */
+    private void loadRoomConnections(Connection conn) throws SQLException {
+        String sql = "SELECT * FROM ROOM_CONNECTIONS";
+
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                int roomId = rs.getInt("ROOM_ID");
+                Room room = roomMap.get(roomId);
+
+                if (room != null) {
+                    // Imposta le connessioni (NULL safe)
+                    Integer northId = (Integer) rs.getObject("NORTH_ID");
+                    if (northId != null) {
+                        room.setNorth(roomMap.get(northId));
+                    }
+
+                    Integer southId = (Integer) rs.getObject("SOUTH_ID");
+                    if (southId != null) {
+                        room.setSouth(roomMap.get(southId));
+                    }
+
+                    Integer eastId = (Integer) rs.getObject("EAST_ID");
+                    if (eastId != null) {
+                        room.setEast(roomMap.get(eastId));
+                    }
+
+                    Integer westId = (Integer) rs.getObject("WEST_ID");
+                    if (westId != null) {
+                        room.setWest(roomMap.get(westId));
+                    }
+                }
+            }
+        }
+
+        System.out.println("🔗 Connessioni tra stanze impostate");
+    }
+
+    
+
+    /**
      * Determina quale cassa dovrebbe essere in una stanza
      */
     private int getExpectedChestForRoom(int roomId) {
@@ -301,7 +341,6 @@ public class GameLoader {
         };
     }
 
-    
     private void ensureChestsInRooms(Connection conn) throws SQLException {
         System.out.println("Verifica e correzione presenza casse nelle stanze...");
 
