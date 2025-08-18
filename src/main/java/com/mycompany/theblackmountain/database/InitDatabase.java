@@ -202,8 +202,8 @@ public class InitDatabase {
                 // Stanza 4 - Sala delle Guardie
                 stmt.setInt(1, 4);
                 stmt.setString(2, "Sala delle Guardie");
-                stmt.setString(3, "I resti di un banchetto interrotto sono sparsi ovunque.");
-                stmt.setString(4, "Tra i resti di una barricata, spunta una cassa semiaperta.");
+                stmt.setString(3, "La sala è colma di resti di armature e ossa spezzate. Un enorme goblin con una clava insanguinata ti fronteggia, affiancato da un compagno più piccolo e agile.");
+                stmt.setString(4, "Tra assi rotte e macerie intravedi una cassa di ferro semiaperta.");
                 stmt.setBoolean(5, true);
                 stmt.setString(6, "guard_hall");
                 stmt.addBatch();
@@ -247,7 +247,7 @@ public class InitDatabase {
                 stmt.executeBatch();
             }
 
-            System.out.println("✅ Stanze inserite");
+            System.out.println(" Stanze inserite");
         }
     }
 
@@ -396,7 +396,7 @@ public class InitDatabase {
                 stmt.executeBatch();
             }
 
-            System.out.println("✅ Personaggi inseriti (giocatore in stanza 0)");
+            System.out.println(" Personaggi inseriti (giocatore in stanza 0)");
         }
     }
 
@@ -650,6 +650,37 @@ public class InitDatabase {
             stm.close();
             System.out.println(" Oggetti fissi e casse inseriti nelle stanze");
             System.out.println("ℹ️ Gli oggetti delle casse verranno aggiunti alle stanze quando le casse vengono aperte");
+        }
+    }
+
+    /**
+     * Ripristina il veleno nella cassa originale dopo il gameover.
+     */
+    public void resetPoison() {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+
+            // 1. Rimuovo eventuali tracce del veleno dall'inventario o da altre stanze
+            String deleteFromInventory = "DELETE FROM INVENTORY WHERE OBJECT_ID = 9";
+            try (PreparedStatement stmt = conn.prepareStatement(deleteFromInventory)) {
+                stmt.executeUpdate();
+            }
+
+            String deleteFromRooms = "DELETE FROM ROOM_OBJECTS WHERE OBJECT_ID = 9";
+            try (PreparedStatement stmt = conn.prepareStatement(deleteFromRooms)) {
+                stmt.executeUpdate();
+            }
+
+            // 2. Re-inserisco il veleno nella cassa originale (stanza 4 → cassa 102)
+            String insertPoison = "INSERT INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES (4, 9)";
+            try (PreparedStatement stmt = conn.prepareStatement(insertPoison)) {
+                stmt.executeUpdate();
+            }
+
+            System.out.println("♻️ Veleno ripristinato nella cassa della stanza 4");
+
+        } catch (SQLException e) {
+            System.err.println("❌ Errore nel ripristino del veleno: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

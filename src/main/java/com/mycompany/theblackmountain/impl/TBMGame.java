@@ -87,7 +87,6 @@ public class TBMGame extends GameDescription implements GameObservable {
 
     /**
      * Reset forzato completo del database per evitare stati inconsistenti
-     * VERSIONE CORRETTA CHE NON USA gameLoader (che è ancora null)
      */
     private void forceCompleteReset() {
         System.out.println("Reset forzato del database per stato pulito...");
@@ -96,10 +95,10 @@ public class TBMGame extends GameDescription implements GameObservable {
 
             // 1. Reset COMPLETO del giocatore
             String resetPlayerSql = """
-        UPDATE CHARACTERS 
-        SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE, ROOM_ID = 0 
-        WHERE CHARACTER_TYPE = 'PLAYER' AND ID = 0
-    """;
+    UPDATE CHARACTERS 
+    SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE, ROOM_ID = 0 
+    WHERE CHARACTER_TYPE = 'PLAYER' AND ID = 0
+""";
             try (var stmt = conn.prepareStatement(resetPlayerSql)) {
                 stmt.executeUpdate();
                 System.out.println("Player stato ripristinato");
@@ -112,11 +111,11 @@ public class TBMGame extends GameDescription implements GameObservable {
             }
 
             String restoreInventorySql = """
-        INSERT INTO INVENTORY (CHARACTER_ID, OBJECT_ID) 
-        SELECT 0, 2 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 2)
-        UNION ALL
-        SELECT 0, 12 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 12)
-    """;
+    INSERT INTO INVENTORY (CHARACTER_ID, OBJECT_ID) 
+    SELECT 0, 2 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 2)
+    UNION ALL
+    SELECT 0, 12 WHERE NOT EXISTS (SELECT 1 FROM INVENTORY WHERE CHARACTER_ID = 0 AND OBJECT_ID = 12)
+""";
             try (var stmt = conn.prepareStatement(restoreInventorySql)) {
                 stmt.executeUpdate();
                 System.out.println("Inventario iniziale ripristinato");
@@ -124,10 +123,10 @@ public class TBMGame extends GameDescription implements GameObservable {
 
             // 3. Reset tutti i nemici a vivi
             String resetEnemiesSql = """
-        UPDATE CHARACTERS 
-        SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE 
-        WHERE CHARACTER_TYPE != 'PLAYER'
-    """;
+    UPDATE CHARACTERS 
+    SET CURRENT_HP = MAX_HP, IS_ALIVE = TRUE 
+    WHERE CHARACTER_TYPE != 'PLAYER'
+""";
             try (var stmt = conn.prepareStatement(resetEnemiesSql)) {
                 int updated = stmt.executeUpdate();
                 System.out.println(updated + " nemici ripristinati");
@@ -142,19 +141,35 @@ public class TBMGame extends GameDescription implements GameObservable {
 
             // 5. Rimuovi SOLO il contenuto delle casse dalle stanze, NON le casse stesse
             String removeChestContentsSql = """
-        DELETE FROM ROOM_OBJECTS 
-        WHERE OBJECT_ID IN (1, 2, 5, 6, 8, 9, 10)
-    """;
+    DELETE FROM ROOM_OBJECTS 
+    WHERE OBJECT_ID IN (1, 2, 5, 6, 8, 9, 10)
+""";
             try (var stmt = conn.prepareStatement(removeChestContentsSql)) {
                 int removed = stmt.executeUpdate();
                 System.out.println(removed + " contenuti casse rimossi dalle stanze");
             }
 
-            // 6. ASSICURATI CHE LE CASSE SIANO PRESENTI NELLE STANZE
+            // 6. Reset veleno dalle armi e ricrea veleno
+            String resetPoisonSql = "UPDATE WEAPONS SET IS_POISONED = FALSE, POISON_DAMAGE = 0";
+            try (var stmt = conn.prepareStatement(resetPoisonSql)) {
+                stmt.executeUpdate();
+                System.out.println("Veleno rimosso dalle armi");
+            }
+
+            String recreatePoisonSql = """
+    INSERT OR REPLACE INTO OBJECTS (ID, NAME, DESCRIPTION, ALIASES, OPENABLE, PICKUPABLE, PUSHABLE, IS_OPEN, IS_PUSHED, OBJECT_TYPE) 
+    VALUES (9, 'veleno', 'Una boccetta scura. Può essere applicata su armi per aumentare il danno.', 'poison,boccetta', FALSE, TRUE, FALSE, FALSE, FALSE, 'NORMAL')
+""";
+            try (var stmt = conn.prepareStatement(recreatePoisonSql)) {
+                stmt.executeUpdate();
+                System.out.println("Veleno ricreato");
+            }
+
+            // 7. ASSICURATI CHE LE CASSE SIANO PRESENTI NELLE STANZE
             // NON usare gameLoader qui perché è ancora null!
             ensureChestsInRoomsStatic(conn);
 
-            // 7. DEBUG: Verifica presenza casse nel database
+            // 8. DEBUG: Verifica presenza casse nel database
             String debugSql = "SELECT ROOM_ID, OBJECT_ID FROM ROOM_OBJECTS WHERE OBJECT_ID >= 100 ORDER BY ROOM_ID";
             try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(debugSql)) {
                 System.out.println("DEBUG: Casse nel database dopo reset:");
@@ -686,7 +701,9 @@ public class TBMGame extends GameDescription implements GameObservable {
                 }
             }
 
-            // *** NON SOVRASCRIVERE PIÙ L'HP QUI - È GIÀ STATO FATTO SOPRA ***
+            // Reset veleno dalle armi in inventario
+            resetPoisonFromInventoryWeapons();
+
             // Il player è già stato aggiornato dal database sopra
             // 7. Reset inventario in memoria - svuota e ripristina quello iniziale
             getInventory().clear();
@@ -1098,6 +1115,19 @@ public class TBMGame extends GameDescription implements GameObservable {
     private void debugAfterLoad() {
         System.out.println("DEBUG: Stato del gioco dopo caricamento");
         debugGameState();
+    }
+
+    private void resetPoisonFromInventoryWeapons() {
+        for (GameObjects obj : getInventory()) {
+            if (obj instanceof com.mycompany.theblackmountain.type.Weapon) {
+                com.mycompany.theblackmountain.type.Weapon weapon = (com.mycompany.theblackmountain.type.Weapon) obj;
+                if (weapon.isPoisoned()) {
+                    weapon.setPoisoned(false);
+                    weapon.setPoisonDamage(0);
+                    System.out.println("DEBUG: Veleno rimosso da " + weapon.getName());
+                }
+            }
+        }
     }
 
     public void shutdown() {

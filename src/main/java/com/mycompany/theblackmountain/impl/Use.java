@@ -146,7 +146,7 @@ public class Use extends GameObserver {
 
         if (weaponToPoison == null) {
             msg.append("Non hai armi nell'inventario da avvelenare!");
-            msg.append("\n💡 Il veleno può essere applicato su: spada, arco magico, o bastone.");
+            msg.append("\n Il veleno può essere applicato su: spada, arco magico, o bastone.");
             return msg.toString();
         }
 
@@ -159,12 +159,9 @@ public class Use extends GameObserver {
         // Applica il veleno usando il metodo della classe Weapon
         weaponToPoison.applyPoison(5); // 5 danni veleno aggiuntivi
 
-        msg.append("🧪 Applichi il veleno sulla tua ").append(weaponName).append("!");
-        msg.append("\n💀 L'arma ora infliggerà +5 danni da veleno!");
-        msg.append("\n⚔️ Statistiche aggiornate: ").append(weaponToPoison.getWeaponStats());
-
-        // Rimuovi il veleno dall'inventario
-        description.getInventory().remove(poison);
+        msg.append(" Applichi il veleno sulla tua ").append(weaponName).append("!");
+        msg.append("\n L'arma ora infliggerà +5 danni da veleno!");
+        msg.append("\n️ Statistiche aggiornate: ").append(weaponToPoison.getWeaponStats());
 
         // Aggiorna il database se disponibile
         if (description instanceof TBMGame) {
@@ -175,7 +172,7 @@ public class Use extends GameObserver {
             }
         }
 
-        msg.append("\n✅ Veleno applicato! La fiala è ora vuota.");
+        msg.append("\n Veleno applicato!");
 
         return msg.toString();
     }
@@ -238,8 +235,8 @@ public class Use extends GameObserver {
         game.updateCharacterState(player);
 
         msg.append("Hai bevuto la ").append(potion.getName()).append("!");
-        msg.append("\n💚 Recuperati ").append(actualHeal).append(" HP!");
-        msg.append("\n❤️ HP attuali: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
+        msg.append("\n Recuperati ").append(actualHeal).append(" HP!");
+        msg.append("\n️ HP attuali: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
 
         return msg.toString();
     }
@@ -272,13 +269,13 @@ public class Use extends GameObserver {
 
         // Controlla se ci sono nemici nella stanza
         if (description.getCurrentRoom().getEnemies().isEmpty()) {
-            msg.append("🔥 Mormori le parole arcane del libro, ma non ci sono nemici da colpire. ");
+            msg.append(" Mormori le parole arcane del libro, ma non ci sono nemici da colpire. ");
             msg.append("Le fiamme magiche si disperdono nell'aria senza trovare un bersaglio.");
             return msg.toString();
         }
 
         // Cast della palla di fuoco
-        msg.append("🔥 **INCANTESIMO DEL FUOCO** 🔥\n");
+        msg.append(" **INCANTESIMO DEL FUOCO** \n");
         msg.append("Leggi le antiche parole arcane dal grimorio. Una palla di fuoco si materializza nelle tue mani!\n\n");
 
         // Danni dell'incantesimo
@@ -297,7 +294,7 @@ public class Use extends GameObserver {
                 int newHp = Math.max(0, currentHp - actualDamage);
                 enemy.setCurrentHp(newHp);
 
-                msg.append("💥 La palla di fuoco colpisce ").append(enemy.getName())
+                msg.append(" La palla di fuoco colpisce ").append(enemy.getName())
                         .append(" per ").append(actualDamage).append(" danni! ");
 
                 if (newHp <= 0) {
@@ -332,7 +329,7 @@ public class Use extends GameObserver {
         // Rimuovi i nemici morti dalla lista
         description.getCurrentRoom().getEnemies().removeIf(enemy -> enemy.getCurrentHp() <= 0);
 
-        msg.append("\n🔥 L'incantesimo ha colpito ").append(enemiesHit).append(" nemici!");
+        msg.append("\n L'incantesimo ha colpito ").append(enemiesHit).append(" nemici!");
         if (enemiesKilled > 0) {
             msg.append(" ").append(enemiesKilled).append(" sono stati sconfitti!");
         }
@@ -340,7 +337,6 @@ public class Use extends GameObserver {
         // *** IMPORTANTE: Il libro si distrugge dopo l'uso ***
         GameObjects fireBook = GameUtils.getObjectFromInventory(description.getInventory(), 8);
         if (fireBook != null) {
-            description.getInventory().remove(fireBook);
 
             // Rimuovi dal database se disponibile
             if (description instanceof TBMGame) {
@@ -350,7 +346,7 @@ public class Use extends GameObserver {
                 }
             }
 
-            msg.append("\n📖 Il grimorio si dissolve in cenere dopo aver rilasciato la sua potente magia...");
+            msg.append("\n Il grimorio rimane utilizzabile dopo aver lanciato l'incantesimo!");
         }
 
         return msg.toString();
