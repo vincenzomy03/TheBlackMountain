@@ -321,8 +321,6 @@ public class GameLoader {
         System.out.println("🔗 Connessioni tra stanze impostate");
     }
 
-    
-
     /**
      * Determina quale cassa dovrebbe essere in una stanza
      */
@@ -621,6 +619,9 @@ public class GameLoader {
 
         try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
 
+            System.out.println("🧑 Caricamento personaggi...");
+            int characterCount = 0;
+
             while (rs.next()) {
                 GameCharacter character = new GameCharacter(
                         rs.getInt("ID"),
@@ -640,27 +641,45 @@ public class GameLoader {
                     character.setCurrentHp(0);
                 }
 
-                // Aggiungi alla lista appropriata
+                // CORREZIONE CRITICA: Aggiungi alla lista appropriata
                 CharacterType type = character.getType();
+
                 if (type == CharacterType.PLAYER) {
                     game.setPlayer(character);
+                    System.out.println("👤 Giocatore caricato: " + character.getName() + " (HP: " + character.getCurrentHp() + ")");
+                    characterCount++;
+
                 } else if (character.getType() == CharacterType.GOBLIN
                         || character.getType() == CharacterType.GIANT_RAT
                         || character.getType() == CharacterType.DEMON_DOG) {
 
-                    // *** NUOVO: Solo aggiungi nemici se sono vivi ***
+                    // Solo aggiungi nemici se sono vivi
                     if (isAlive && character.getCurrentHp() > 0) {
                         int roomId = rs.getInt("ROOM_ID");
                         Room room = roomMap.get(roomId);
                         if (room != null) {
                             room.getEnemies().add(character);
+                            System.out.println("👹 Nemico " + character.getName() + " caricato nella stanza " + roomId);
+                            characterCount++;
+                        } else {
+                            System.out.println("❌ ERRORE: Stanza " + roomId + " non trovata per nemico " + character.getName());
                         }
+                    } else {
+                        System.out.println("💀 Nemico " + character.getName() + " non caricato (morto)");
                     }
                 }
             }
-        }
 
-        System.out.println("Personaggi caricati");
+            System.out.println("✅ Caricati " + characterCount + " personaggi");
+
+            // VERIFICA CRITICA: Assicurati che il giocatore sia stato caricato
+            if (game.getPlayer() == null) {
+                System.err.println("❌ ERRORE CRITICO: Giocatore non caricato dal database!");
+                throw new SQLException("Impossibile caricare il giocatore dal database");
+            } else {
+                System.out.println("✅ Giocatore verificato: " + game.getPlayer().getName());
+            }
+        }
     }
 
     /**

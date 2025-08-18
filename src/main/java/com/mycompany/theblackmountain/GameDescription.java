@@ -18,13 +18,13 @@ import java.util.List;
  */
 public abstract class GameDescription {
 
-    private final List<Room> rooms = new ArrayList<>();
+    public final List<Room> rooms = new ArrayList<>();
 
     private final List<Command> commands = new ArrayList<>();
 
     private final List<GameObjects> inventory = new ArrayList<>();
 
-    private Room currentRoom;
+    public Room currentRoom;
 
     /**
      *

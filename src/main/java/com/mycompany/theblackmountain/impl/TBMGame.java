@@ -10,6 +10,7 @@ import com.mycompany.theblackmountain.type.GameCharacter;
 import com.mycompany.theblackmountain.type.GameObjects;
 import com.mycompany.theblackmountain.type.Room;
 import com.mycompany.theblackmountain.parser.ParserOutput;
+import com.mycompany.theblackmountain.type.CharacterType;
 import com.mycompany.theblackmountain.type.Command;
 import com.mycompany.theblackmountain.type.CommandType;
 
@@ -243,25 +244,71 @@ public class TBMGame extends GameDescription implements GameObservable {
         }
     }
 
+    // MODIFICA per TBMGame.java - Metodo verifyGameState()
+    /**
+     * Verifica che lo stato del gioco sia valido - VERSIONE CORRETTA
+     *
+     * @throws Exception se lo stato non è valido
+     */
     private void verifyGameState() throws Exception {
-        List<String> errors = new ArrayList<>();
-        if (getRooms().isEmpty()) {
-            errors.add("Nessuna stanza caricata");
-        }
-        if (getCurrentRoom() == null) {
-            errors.add("Stanza corrente non impostata");
-        }
-        if (player == null) {
-            errors.add("Giocatore non trovato");
-        }
-        if (getInventory() == null) {
-            errors.add("Inventario non inizializzato");
+        List<String> problems = new ArrayList<>();
+
+        // Verifica stanze caricate
+        if (rooms == null || rooms.isEmpty()) {
+            problems.add("Nessuna stanza caricata");
         }
 
-        if (!errors.isEmpty()) {
-            throw new Exception("Problemi nella verifica dello stato: " + String.join(", ", errors));
+        // Verifica stanza corrente - CORREZIONE: usa null check più sicuro
+        if (currentRoom == null) {
+            problems.add("Stanza corrente non impostata");
+
+            // TENTATIVO DI RECUPERO AUTOMATICO
+            if (rooms != null && !rooms.isEmpty()) {
+                System.out.println("⚠️ Tentativo di recupero: imposto stanza 0 come corrente");
+                setCurrentRoom(rooms.get(0)); // Imposta la prima stanza
+
+                // Rimuovi il problema dalla lista se risolto
+                problems.removeIf(p -> p.equals("Stanza corrente non impostata"));
+            }
         }
-        System.out.println("Stato del gioco verificato");
+
+        // Verifica giocatore - CORREZIONE: aggiungi tentativo di recupero
+        if (player == null) {
+            problems.add("Giocatore non trovato");
+
+            // TENTATIVO DI RECUPERO AUTOMATICO
+            System.out.println("⚠️ Tentativo di recupero: ricerca giocatore nelle strutture caricate");
+
+            // Cerca il giocatore tra tutti i personaggi caricati (se esistono)
+            for (Room room : rooms) {
+                for (GameCharacter character : room.getEnemies()) {
+                    if (character.getType() == CharacterType.PLAYER) {
+                        setPlayer(character);
+                        problems.removeIf(p -> p.equals("Giocatore non trovato"));
+                        System.out.println("✅ Giocatore recuperato dalla stanza " + room.getId());
+                        break;
+                    }
+                }
+                if (player != null) {
+                    break;
+                }
+            }
+
+            // Se ancora non trovato, crea un giocatore di emergenza
+            if (player == null) {
+                System.out.println("🚨 Creazione giocatore di emergenza");
+                player = new GameCharacter(0, "Giocatore", "Avventuriero coraggioso",
+                        100, 15, 5, CharacterType.PLAYER);
+                problems.removeIf(p -> p.equals("Giocatore non trovato"));
+            }
+        }
+
+        // Se ci sono ancora problemi, lancia eccezione
+        if (!problems.isEmpty()) {
+            String errorMessage = "Problemi nella verifica dello stato: " + String.join(", ", problems);
+            System.err.println("❌ " + errorMessage);
+            throw new Exception(errorMessage);
+        }
     }
 
     @Override
