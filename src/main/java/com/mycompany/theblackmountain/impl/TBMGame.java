@@ -736,6 +736,12 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
 
                         // Assicura presenza casse
                         ensureChestsInRoomsStatic(conn);
+
+                        for (GameObserver observer : observers) {
+                            if (observer instanceof Open) {
+                                ((Open) observer).resetForNewGame();
+                            }
+                        }
                     }
 
                 } catch (SQLException e) {
@@ -960,19 +966,14 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
      *
      * @return true se il gioco è completato (vittoria)
      */
+    @Override
     public boolean isGameCompleted() {
         if (getCurrentRoom() == null) {
             return false;
         }
 
-        // Il gioco è completato quando il giocatore arriva alla stanza di uscita (ID 8)
-        // con la principessa salvata
-        if (getCurrentRoom().getId() == 8) {
-            System.out.println("DEBUG: Player nella stanza di uscita!");
-            return true;
-        }
-
-        return false;
+        // Gioco completato = stanza uscita (ID 8) + principessa liberata
+        return getCurrentRoom().getId() == 8 && princessFreed;
     }
 
     /**

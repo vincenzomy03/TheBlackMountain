@@ -95,7 +95,7 @@ public class CombatSystem {
         }
 
         msg.append(" I tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp()).append("\n");
-       
+
         msg.append("=========================");
 
         return msg.toString();
@@ -152,117 +152,118 @@ public class CombatSystem {
     }
 
     /**
- * Processa l'azione di un nemico - VERSIONE CORRETTA
- * @param enemy nemico che agisce
- * @return risultato dell'azione
- */
-private String processEnemyAction(GameCharacter enemy) {
-    // I nemici attaccano sempre il giocatore
-    int damage = enemy.getAttack() + random.nextInt(3) - 1; // Variazione -1 a +1
-    int actualDamage = Math.max(1, damage - player.getDefense());
+     * Processa l'azione di un nemico - VERSIONE CORRETTA
+     *
+     * @param enemy nemico che agisce
+     * @return risultato dell'azione
+     */
+    private String processEnemyAction(GameCharacter enemy) {
+        // I nemici attaccano sempre il giocatore
+        int damage = enemy.getAttack() + random.nextInt(3) - 1; // Variazione -1 a +1
+        int actualDamage = Math.max(1, damage - player.getDefense());
 
-    int oldHp = player.getCurrentHp();
-    int newHp = Math.max(0, player.getCurrentHp() - actualDamage);
-    player.setCurrentHp(newHp);
+        int oldHp = player.getCurrentHp();
+        int newHp = Math.max(0, player.getCurrentHp() - actualDamage);
+        player.setCurrentHp(newHp);
 
-    // *** CORREZIONE FONDAMENTALE: Aggiorna il flag isAlive ***
-    if (newHp <= 0) {
-        player.setCurrentHp(0); // Assicurati che sia esattamente 0
-        // Il flag isAlive dovrebbe essere aggiornato automaticamente nel GameCharacter
-        // Ma forziamolo per sicurezza se il metodo esiste
-        System.out.println("🚨 DEBUG: Player HP = " + newHp + ", dovrebbe essere morto");
+        // *** CORREZIONE FONDAMENTALE: Aggiorna il flag isAlive ***
+        if (newHp <= 0) {
+            player.setCurrentHp(0); // Assicurati che sia esattamente 0
+            // Il flag isAlive dovrebbe essere aggiornato automaticamente nel GameCharacter
+            // Ma forziamolo per sicurezza se il metodo esiste
+            System.out.println("🚨 DEBUG: Player HP = " + newHp + ", dovrebbe essere morto");
+        }
+
+        // Aggiorna database se disponibile
+        if (gameDescription instanceof TBMGame) {
+            TBMGame game = (TBMGame) gameDescription;
+            game.updateCharacterState(player);
+        }
+
+        StringBuilder result = new StringBuilder();
+        result.append("").append(enemy.getName()).append(" ti attacca!");
+        result.append("\nSubisci ").append(actualDamage).append(" danni!");
+
+        if (player.getCurrentHp() <= 0) {
+            result.append("\n💀 Sei stato sconfitto!");
+            System.out.println("🚨 DEBUG: Player sconfitto - HP: " + player.getCurrentHp() + ", isAlive: " + player.isAlive());
+        }
+
+        return result.toString();
     }
-
-    // Aggiorna database se disponibile
-    if (gameDescription instanceof TBMGame) {
-        TBMGame game = (TBMGame) gameDescription;
-        game.updateCharacterState(player);
-    }
-
-    StringBuilder result = new StringBuilder();
-    result.append("").append(enemy.getName()).append(" ti attacca!");
-    result.append("\nSubisci ").append(actualDamage).append(" danni!");
-
-    if (player.getCurrentHp() <= 0) {
-        result.append("\n💀 Sei stato sconfitto!");
-        System.out.println("🚨 DEBUG: Player sconfitto - HP: " + player.getCurrentHp() + ", isAlive: " + player.isAlive());
-    }
-
-    return result.toString();
-}
 
 // ============================================
 // CORREZIONI al metodo processCombatAction() in CombatSystem.java
 // ============================================
+    /**
+     * Processa un'azione di combattimento - VERSIONE CORRETTA
+     *
+     * @param parserOutput comando del giocatore
+     * @return risultato dell'azione
+     */
+    public String processCombatAction(ParserOutput parserOutput) {
+        if (!inCombat) {
+            return "Non sei in combattimento!";
+        }
 
-/**
- * Processa un'azione di combattimento - VERSIONE CORRETTA
- * @param parserOutput comando del giocatore
- * @return risultato dell'azione
- */
-public String processCombatAction(ParserOutput parserOutput) {
-    if (!inCombat) {
-        return "Non sei in combattimento!";
-    }
+        StringBuilder result = new StringBuilder();
 
-    StringBuilder result = new StringBuilder();
+        // Azione del giocatore
+        String playerAction = processPlayerAction(parserOutput);
+        result.append(playerAction);
 
-    // Azione del giocatore
-    String playerAction = processPlayerAction(parserOutput);
-    result.append(playerAction);
+        // Rimuovi nemici morti dalla lista corrente
+        currentEnemies.removeIf(enemy -> !enemy.isAlive());
 
-    // Rimuovi nemici morti dalla lista corrente
-    currentEnemies.removeIf(enemy -> !enemy.isAlive());
+        // *** CONTROLLO IMMEDIATO FINE COMBATTIMENTO - VITTORIA ***
+        if (currentEnemies.isEmpty()) {
+            endCombat();
+            result.append("\n\nVittoria! Hai sconfitto tutti i nemici!");
+            return result.toString();
+        }
 
-    // *** CONTROLLO IMMEDIATO FINE COMBATTIMENTO - VITTORIA ***
-    if (currentEnemies.isEmpty()) {
-        endCombat();
-        result.append("\n\nVittoria! Hai sconfitto tutti i nemici!");
-        return result.toString();
-    }
+        // *** CONTROLLO MORTE PLAYER PRIMA DEL TURNO NEMICI ***
+        if (player.getCurrentHp() <= 0) {
+            endCombat();
+            result.append("\n\n💀 Sei stato sconfitto! Game Over!");
+            System.out.println("🚨 DEBUG: Game Over dichiarato - Player HP: " + player.getCurrentHp());
+            return result.toString();
+        }
 
-    // *** CONTROLLO MORTE PLAYER PRIMA DEL TURNO NEMICI ***
-    if (player.getCurrentHp() <= 0) {
-        endCombat();
-        result.append("\n\n💀 Sei stato sconfitto! Game Over!");
-        System.out.println("🚨 DEBUG: Game Over dichiarato - Player HP: " + player.getCurrentHp());
-        return result.toString();
-    }
+        // Turno dei nemici solo se ci sono ancora nemici vivi E il player è vivo
+        if (inCombat && !currentEnemies.isEmpty() && player.getCurrentHp() > 0) {
+            result.append("\n\n--- Turno dei nemici ---");
+            for (GameCharacter enemy : currentEnemies) {
+                if (enemy.isAlive()) {
+                    String enemyAction = processEnemyAction(enemy);
+                    result.append("\n").append(enemyAction);
 
-    // Turno dei nemici solo se ci sono ancora nemici vivi E il player è vivo
-    if (inCombat && !currentEnemies.isEmpty() && player.getCurrentHp() > 0) {
-        result.append("\n\n--- Turno dei nemici ---");
-        for (GameCharacter enemy : currentEnemies) {
-            if (enemy.isAlive()) {
-                String enemyAction = processEnemyAction(enemy);
-                result.append("\n").append(enemyAction);
-                
-                // *** CONTROLLO MORTE PLAYER DOPO OGNI ATTACCO NEMICO ***
-                if (player.getCurrentHp() <= 0) {
-                    endCombat();
-                    result.append("\n\n Sei stato sconfitto! Game Over!");
-                    System.out.println(" DEBUG: Game Over dopo attacco nemico - Player HP: " + player.getCurrentHp());
-                    return result.toString();
+                    // *** CONTROLLO MORTE PLAYER DOPO OGNI ATTACCO NEMICO ***
+                    if (player.getCurrentHp() <= 0) {
+                        endCombat();
+                        result.append("\n\n Sei stato sconfitto! Game Over!");
+                        System.out.println(" DEBUG: Game Over dopo attacco nemico - Player HP: " + player.getCurrentHp());
+                        return result.toString();
+                    }
                 }
             }
         }
-    }
 
-    // Mostra stato attuale solo se il combattimento continua
-    if (inCombat && !currentEnemies.isEmpty() && player.getCurrentHp() > 0) {
-        result.append("\n\nStato attuale:");
-        result.append("\nI tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
-        for (GameCharacter enemy : currentEnemies) {
-            if (enemy.isAlive()) {
-                result.append("\n").append(enemy.getName()).append(": ")
-                        .append(enemy.getCurrentHp()).append("/").append(enemy.getMaxHp()).append(" HP");
+        // Mostra stato attuale solo se il combattimento continua
+        if (inCombat && !currentEnemies.isEmpty() && player.getCurrentHp() > 0) {
+            result.append("\n\nStato attuale:");
+            result.append("\nI tuoi HP: ").append(player.getCurrentHp()).append("/").append(player.getMaxHp());
+            for (GameCharacter enemy : currentEnemies) {
+                if (enemy.isAlive()) {
+                    result.append("\n").append(enemy.getName()).append(": ")
+                            .append(enemy.getCurrentHp()).append("/").append(enemy.getMaxHp()).append(" HP");
+                }
             }
         }
-    }
 
-    currentTurn++;
-    return result.toString();
-}
+        currentTurn++;
+        return result.toString();
+    }
 
     /**
      * Processa l'azione del giocatore
@@ -431,8 +432,34 @@ public String processCombatAction(ParserOutput parserOutput) {
         if (target.getCurrentHp() <= 0) {
             target.setCurrentHp(0);
             result.append("\n💀 ").append(target.getName()).append(" è stato sconfitto!");
+
+            // NUOVO: Se il boss (Cane Demone) viene sconfitto, droppa la chiave
+            if (target.getId() == 7 && target.getName().equals("Cane Demone")) {
+                result.append("\n\n🔥 Il Cane Demone crolla con un ultimo ululato terrificante!");
+                result.append("\n✨ Dal suo collo cade una chiave pesante e decorata!");
+
+                // Aggiungi la chiave alla stanza corrente
+                if (gameDescription.getCurrentRoom() != null && gameDescription.getCurrentRoom().getId() == 7) {
+                    GameObjects bossKey = new GameObjects(11, "chiave del collo del boss",
+                            "Una chiave pesante, con pendaglio di ferro annerito. Cade dal collo del demone canino.");
+                    bossKey.setPickupable(true);
+                    bossKey.setAlias(new String[]{"chiave boss", "chiave finale", "chiave demone"});
+
+                    gameDescription.getCurrentRoom().getObjects().add(bossKey);
+
+                    // Salva nel database
+                    if (gameDescription instanceof TBMGame) {
+                        TBMGame game = (TBMGame) gameDescription;
+                        if (game.getGameLoader() != null) {
+                            game.getGameLoader().moveObjectToRoom(bossKey, gameDescription.getCurrentRoom());
+                        }
+                    }
+
+                    System.out.println("DEBUG: Chiave del boss droppata");
+                }
+            }
         } else {
-            result.append("\n❤️ ").append(target.getName()).append(" HP: ")
+            result.append("\n️ ").append(target.getName()).append(" HP: ")
                     .append(target.getCurrentHp()).append("/").append(target.getMaxHp());
         }
 

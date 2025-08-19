@@ -610,7 +610,6 @@ public class InitDatabase {
                 stmt.setString(10, "DOOR");
                 stmt.addBatch();
 
-                
                 stm.execute("INSERT INTO ROOM_OBJECTS VALUES "
                         + "(0, 100), " // Ingresso: cassa (chiusa)
                         + "(1, 4), " // Stanza del Topo: ragnatela (oggetto fisso)
@@ -691,12 +690,13 @@ public class InitDatabase {
             stm = conn.createStatement();
             // Solo oggetti fissi e casse, NON il contenuto delle casse
             stm.execute("INSERT INTO ROOM_OBJECTS VALUES "
-                    + "(0, 100), " // Ingresso: cassa (chiusa)
-                    + "(1, 4), " // Stanza del Topo: ragnatela (oggetto fisso)
-                    + "(3, 101), " // Dormitorio: cassa (chiusa)
-                    + "(4, 102), " // Sala Guardie: cassa (chiusa) ← qui libro e veleno sono DENTRO
-                    + "(6, 103);"); // Torture: cassa (chiusa)
-            stm.close();
+                    + "(0, 100), " // Ingresso: cassa
+                    + "(1, 4), " // Stanza del Topo: ragnatela
+                    + "(3, 101), " // Dormitorio: cassa
+                    + "(4, 102), " // Sala Guardie: cassa
+                    + "(6, 103), " // Torture: cassa
+                    + "(7, 13), " // Boss: cella principessa
+                    + "(7, 15);"); // Boss: porta est
             System.out.println(" Oggetti fissi e casse inseriti nelle stanze");
             System.out.println("ℹ️ Gli oggetti delle casse verranno aggiunti alle stanze quando le casse vengono aperte");
         }

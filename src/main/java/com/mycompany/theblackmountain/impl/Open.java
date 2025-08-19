@@ -11,6 +11,7 @@ import com.mycompany.theblackmountain.type.ContainerObj;
 import com.mycompany.theblackmountain.type.CommandType;
 import com.mycompany.theblackmountain.GameObserver;
 import com.mycompany.theblackmountain.database.GameLoader;
+import com.mycompany.theblackmountain.type.GameCharacter;
 import java.util.Iterator;
 import java.util.List;
 
@@ -19,6 +20,8 @@ import java.util.List;
  * @author vince
  */
 public class Open extends GameObserver {
+
+    private static boolean princessFreed = false;
 
     /**
      *
@@ -50,12 +53,77 @@ public class Open extends GameObserver {
                 GameObjects obj = parserOutput.getObject();
                 System.out.println("DEBUG Open: Oggetto specifico trovato - " + obj.getName() + " (ID: " + obj.getId() + ")");
 
-                // Gestione casse (id >= 100)
-                if (obj.getId() >= 100 && obj.getId() <= 103) {
+                // 🔹 NUOVO: Gestione cella della principessa (ID 13)
+                if (obj.getId() == 13) {
+                    TBMGame game = (TBMGame) description;
+
+                    // Controlla se il boss (id 7) è vivo nella stanza 7
+                    boolean bossDefeated = true;
+                    if (game.getCurrentRoom() != null && game.getCurrentRoom().getId() == 7) {
+                        for (GameCharacter enemy : game.getCurrentRoom().getEnemies()) {
+                            if (enemy.getId() == 7 && enemy.isAlive()) {
+                                bossDefeated = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!bossDefeated) {
+                        return "La cella è sigillata magicamente. Devi sconfiggere il guardiano prima.";
+                    }
+
+                    if (!obj.isOpen()) {
+                        obj.setOpen(true);
+                        game.updateObjectState(obj);
+                        princessFreed = true;
+
+                        return "🗝️ Apri la cella della principessa!\n\n"
+                                + "👸 \"Grazie eroe! Ora possiamo fuggire!\"\n\n"
+                                + "✨ La principessa è libera! Ora devi trovare l'uscita a est.";
+                    } else {
+                        return "La cella è già aperta e la principessa è libera.";
+                    }
+                } // 🔹 NUOVO: Gestione porta est (ID 15)
+                else if (obj.getId() == 15) {
+                    TBMGame game = (TBMGame) description;
+
+                    // Cerca la chiave del boss (ID 11) nell’inventario
+                    GameObjects bossKey = null;
+                    for (GameObjects invObj : game.getInventory()) {
+                        if (invObj.getId() == 11) {
+                            bossKey = invObj;
+                            break;
+                        }
+                    }
+
+                    if (bossKey == null) {
+                        return "La porta è sigillata. Ti serve la chiave del guardiano.";
+                    }
+
+                    if (!princessFreed) {
+                        return "Non puoi andartene senza salvare la principessa!";
+                    }
+
+                    if (!obj.isOpen()) {
+                        obj.setOpen(true);
+                        game.updateObjectState(obj);
+
+                        // Rimuovi la chiave
+                        game.getInventory().remove(bossKey);
+                        game.destroyObject(bossKey);
+
+                        return "🗝️ Usi la chiave del demone!\n\n"
+                                + "🚪 La porta si apre! L'uscita è libera!\n\n"
+                                + "🌅 Ora puoi andare a EST per uscire dalla montagna!";
+                    } else {
+                        return "La porta è già aperta. Vai a EST per uscire!";
+                    }
+                } // Gestione casse (id 100-103)
+                else if (obj.getId() >= 100 && obj.getId() <= 103) {
                     System.out.println("DEBUG Open: È una cassa, procedo con apertura DB");
                     return openChestFromDB(description, obj);
-                } else if (obj.isOpenable() && !obj.isOpen()) {
-                    // Gestione oggetti normali apribili
+                } // Gestione oggetti normali apribili
+                else if (obj.isOpenable() && !obj.isOpen()) {
                     return handleNormalObject(description, obj, msg);
                 } else if (obj.isOpen()) {
                     msg.append("È già aperto.");
@@ -380,7 +448,7 @@ public class Open extends GameObserver {
     }
 
     /**
-     * NUOVO METODO: Restituisce i contenuti attesi di una cassa
+     * Restituisce i contenuti attesi di una cassa
      */
     private List<Integer> getExpectedChestContents(int chestId) {
         return switch (chestId) {
@@ -395,6 +463,11 @@ public class Open extends GameObserver {
             default ->
                 null;
         };
+    }
+
+    public void resetForNewGame() {
+        princessFreed = false;
+        System.out.println("DEBUG: Stati Open observer resettati");
     }
 
     /**

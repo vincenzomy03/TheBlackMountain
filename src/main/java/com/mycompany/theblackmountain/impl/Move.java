@@ -63,9 +63,9 @@ public class Move extends GameObserver {
             return "";
         }
 
-        // CORREZIONE: Controllo più rigoroso per bloccare movimento con nemici vivi
+        // Controllo più rigoroso per bloccare movimento con nemici vivi
         if (hasLivingEnemies(description)) {
-            return "⚔️ Non puoi lasciare questa stanza! Ci sono ancora nemici da sconfiggere.\n💡 Usa il comando 'combatti' per iniziare la battaglia.";
+            return "️ Non puoi lasciare questa stanza! Ci sono ancora nemici da sconfiggere.\n Usa il comando 'combatti' per iniziare la battaglia.";
         }
 
         // Se siamo in combattimento e il comando è di movimento, blocca
@@ -75,6 +75,11 @@ public class Move extends GameObserver {
 
         String direction = "";
         String result = "";
+
+        if (princessFreed && targetRoom.getId() != 8 && game.getCurrentRoom().getId() == 7) {
+            return " La principessa ti ferma: \"Non possiamo andare da quella parte! "
+                    + "L'uscita è a EST, dobbiamo fuggire subito!\"";
+        }
 
         switch (commandType) {
             case NORD:
@@ -145,13 +150,12 @@ public class Move extends GameObserver {
                 return "";
         }
 
-        // CORREZIONE: Aggiungi messaggio di successo per evitare "comando non riconosciuto"
         if (!direction.isEmpty()) {
             // Descrivi la nuova stanza
             result += "Ti dirigi a " + getDirectionName(direction) + ".\n\n";
-            result += "📍 " + description.getCurrentRoom().getName() + "\n";
+            result += " " + description.getCurrentRoom().getName() + "\n";
             result += description.getCurrentRoom().getDescription();
-            
+
             // Informa il giocatore se ci sono nemici nella nuova stanza
             if (hasLivingEnemies(description)) {
                 result += "\n" + getEnemyWarning(description);
@@ -166,11 +170,16 @@ public class Move extends GameObserver {
      */
     private String getDirectionName(String direction) {
         switch (direction.toLowerCase()) {
-            case "north": return "nord";
-            case "south": return "sud";
-            case "east": return "est";
-            case "west": return "ovest";
-            default: return direction;
+            case "north":
+                return "nord";
+            case "south":
+                return "sud";
+            case "east":
+                return "est";
+            case "west":
+                return "ovest";
+            default:
+                return direction;
         }
     }
 
