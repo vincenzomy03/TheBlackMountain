@@ -1,78 +1,88 @@
 package com.mycompany.theblackmountain.thread;
 
+import java.io.InputStream;
+import java.io.BufferedInputStream;
+import javax.sound.sampled.*;
+
 /**
- * Manager per la musica cinematica (intro e outro) separata dalla musica di background
+ * Manager per la musica cinematica (intro e outro)
+ *
  * @author vince
  */
 public class CinematicMusicManager {
-    
-    private Thread introMusicThread;
-    private Thread outroMusicThread;
-    private CinematicMusic introMusic;
-    private CinematicMusic outroMusic;
-    
+
+    private Clip currentClip;
+
     /**
      * Avvia la musica dell'intro
      */
     public void startIntroMusic() {
-        stopIntroMusic(); // Ferma eventuali musiche precedenti
-        
-        introMusic = new CinematicMusic("intro_music.wav");
-        introMusicThread = new Thread(introMusic);
-        introMusicThread.setName("IntroMusicThread");
-        introMusicThread.start();
-        
-        System.out.println(" Musica intro avviata");
+        playMusic("intro_music.wav");
     }
-    
-    /**
-     * Ferma la musica dell'intro
-     */
-    public void stopIntroMusic() {
-        if (introMusic != null) {
-            introMusic.stop();
-            introMusic = null;
-        }
-        if (introMusicThread != null) {
-            introMusicThread.interrupt();
-            introMusicThread = null;
-        }
-    }
-    
+
     /**
      * Avvia la musica dell'outro
      */
     public void startOutroMusic() {
-        stopOutroMusic(); // Ferma eventuali musiche precedenti
-        
-        outroMusic = new CinematicMusic("outro_music.wav");
-        outroMusicThread = new Thread(outroMusic);
-        outroMusicThread.setName("OutroMusicThread");
-        outroMusicThread.start();
-        
-        System.out.println(" Musica outro avviata");
+        playMusic("outro_music.wav");
     }
-    
+
+    /**
+     * Ferma la musica dell'intro
+     */
+    public void stopIntroMusic() {
+        stopCurrentMusic();
+    }
+
     /**
      * Ferma la musica dell'outro
      */
     public void stopOutroMusic() {
-        if (outroMusic != null) {
-            outroMusic.stop();
-            outroMusic = null;
-        }
-        if (outroMusicThread != null) {
-            outroMusicThread.interrupt();
-            outroMusicThread = null;
+        stopCurrentMusic();
+    }
+
+    /**
+     * Metodo unificato per riprodurre musica
+     */
+    private void playMusic(String fileName) {
+        stopCurrentMusic(); // Ferma la musica precedente
+
+        try {
+            InputStream audioStream = getClass().getResourceAsStream("/audio/" + fileName);
+            if (audioStream == null) {
+                System.err.println("File audio non trovato: " + fileName);
+                return;
+            }
+
+            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(
+                    new BufferedInputStream(audioStream)
+            );
+
+            currentClip = AudioSystem.getClip();
+            currentClip.open(audioInputStream);
+
+            // Imposta volume se supportato
+            if (currentClip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                FloatControl volumeControl = (FloatControl) currentClip.getControl(FloatControl.Type.MASTER_GAIN);
+                volumeControl.setValue(volumeControl.getMaximum() - 5.0f); // Volume leggermente ridotto
+            }
+
+            currentClip.start();
+            System.out.println("Musica cinematica avviata: " + fileName);
+
+        } catch (Exception e) {
+            System.err.println("Errore riproduzione musica " + fileName + ": " + e.getMessage());
         }
     }
-    
+
     /**
-     * Ferma tutte le musiche (intro e outro)
+     * Ferma la musica corrente
      */
-    public void stopAllMusic() {
-        stopIntroMusic();
-        stopOutroMusic();
-        System.out.println(" Tutte le musiche cinematiche fermate");
+    private void stopCurrentMusic() {
+        if (currentClip != null) {
+            currentClip.stop();
+            currentClip.close();
+            currentClip = null;
+        }
     }
 }

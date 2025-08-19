@@ -1,27 +1,21 @@
 package com.mycompany.theblackmountain.thread;
 
-import java.io.File;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.FloatControl;
+import java.io.InputStream;
+import java.io.BufferedInputStream;
+import javax.sound.sampled.*;
 
 /**
- * Singleton per gestire la musica di background in tutto il gioco
+ * Singleton per gestire la musica di background
  * @author vince
  */
 public class MusicManager {
     private static MusicManager instance;
     
-    private Thread musicThread;
-    private Music music;
+    private Clip audioClip;
     private boolean musicEnabled = true;
+    private FloatControl volumeControl;
     
-    private MusicManager() {
-        // Private constructor per Singleton
-    }
+    private MusicManager() {}
     
     public static MusicManager getInstance() {
         if (instance == null) {
@@ -31,17 +25,42 @@ public class MusicManager {
     }
     
     /**
-     * Avvia la musica di background se non è già in esecuzione
+     * Avvia la musica di background
      */
     public void startMusic() {
-        if (music == null || musicThread == null || !musicThread.isAlive()) {
-            music = new Music();
-            musicThread = new Thread(music);
-            musicThread.start();
+        if (audioClip != null && audioClip.isRunning()) {
+            return; // Già in esecuzione
+        }
+        
+        try {
+            stopMusic(); // Ferma eventuali clip precedenti
             
-            if (!musicEnabled) {
-                music.setVolume(0.0f);
+            InputStream audioStream = getClass().getResourceAsStream("/audio/background_music.wav");
+            if (audioStream == null) {
+                System.err.println("File audio non trovato: background_music.wav");
+                return;
             }
+            
+            AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(
+                new BufferedInputStream(audioStream)
+            );
+            
+            audioClip = AudioSystem.getClip();
+            audioClip.open(audioInputStream);
+            
+            // Ottieni controllo volume
+            if (audioClip.isControlSupported(FloatControl.Type.MASTER_GAIN)) {
+                volumeControl = (FloatControl) audioClip.getControl(FloatControl.Type.MASTER_GAIN);
+            }
+            
+            // Imposta volume iniziale
+            updateVolume();
+            
+            // Avvia in loop
+            audioClip.loop(Clip.LOOP_CONTINUOUSLY);
+            
+        } catch (Exception e) {
+            System.err.println("Errore avvio musica: " + e.getMessage());
         }
     }
     
@@ -49,13 +68,11 @@ public class MusicManager {
      * Ferma la musica
      */
     public void stopMusic() {
-        if (music != null) {
-            music.stop();
-            music = null;
-        }
-        if (musicThread != null) {
-            musicThread.interrupt();
-            musicThread = null;
+        if (audioClip != null) {
+            audioClip.stop();
+            audioClip.close();
+            audioClip = null;
+            volumeControl = null;
         }
     }
     
@@ -64,26 +81,25 @@ public class MusicManager {
      */
     public void setMusicEnabled(boolean enabled) {
         this.musicEnabled = enabled;
-        if (music != null) {
-            if (enabled) {
-                music.setVolume(0.8f); // Volume normale
+        updateVolume();
+    }
+    
+    /**
+     * Aggiorna il volume in base alle impostazioni
+     */
+    private void updateVolume() {
+        if (volumeControl != null) {
+            if (musicEnabled) {
+                // Volume normale (-10 dB dal massimo)
+                volumeControl.setValue(volumeControl.getMaximum() - 10.0f);
             } else {
-                music.setVolume(0.0f); // Silenzioso
+                // Silenzioso
+                volumeControl.setValue(volumeControl.getMinimum());
             }
         }
     }
     
-    /**
-     * Verifica se la musica è abilitata
-     */
     public boolean isMusicEnabled() {
         return musicEnabled;
-    }
-    
-    /**
-     * Ottiene l'istanza della musica corrente
-     */
-    public Music getMusic() {
-        return music;
     }
 }

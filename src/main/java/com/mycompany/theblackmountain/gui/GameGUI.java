@@ -1,6 +1,5 @@
 package com.mycompany.theblackmountain.gui;
 
-import com.mycompany.theblackmountain.GameDescription;
 import com.mycompany.theblackmountain.impl.TBMGame;
 import com.mycompany.theblackmountain.parser.Parser;
 import com.mycompany.theblackmountain.parser.ParserOutput;
@@ -13,10 +12,8 @@ import com.mycompany.theblackmountain.gui.utils.UIImageManager;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -32,7 +29,7 @@ public class GameGUI extends JFrame {
     private JTextArea outputArea;
     private JTextField inputField;
     private JButton northButton, southButton, eastButton, westButton;
-    private JButton lookButton, inventoryButton, saveButton, soundToggleButton;
+    private JButton inventoryButton, saveButton, soundToggleButton;
     private JButton useAttackButton, useSwordButton, useBowButton, usePotionButton;
     private JButton commandsButton;
     private JButton helpButton;
@@ -186,7 +183,7 @@ public class GameGUI extends JFrame {
         usePotionButton = UIComponents.createActionButton(
                 UIComponents.ActionType.USE_POTION, e -> performAction("usa pozione di cura")
         );
-        lookButton = UIComponents.createActionButton(
+        UIComponents.createActionButton(
                 UIComponents.ActionType.LOOK, e -> performAction("osserva")
         );
         saveButton = UIComponents.createActionButton(
@@ -374,7 +371,6 @@ public class GameGUI extends JFrame {
         ParserOutput output = parser.parse(command, game.getCommands(),
                 game.getCurrentRoom().getObjects(), game.getInventory());
 
-        // ===== FIX PRINCIPALE =====
         StringWriter stringWriter = new StringWriter();
         PrintStream out = new PrintStream(new OutputStream() {
             public void write(int b) {
@@ -786,7 +782,7 @@ public class GameGUI extends JFrame {
             );
 
             // Ricrea anche il pulsante look
-            lookButton = UIComponents.createActionButton(
+            UIComponents.createActionButton(
                     UIComponents.ActionType.LOOK, e -> performAction("osserva")
             );
 

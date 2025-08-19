@@ -112,8 +112,6 @@ public class MainMenu extends JFrame {
 
     /**
      * Crea un pulsante del menu principale che supporta immagini personalizzate
-     * Questo metodo usa UIComponents per supportare le immagini che aggiungerai
-     * in futuro
      */
     private JButton createImageMenuButton(String imageName, String text, String tooltip,
             Dimension size, ActionListener action) {
@@ -130,7 +128,6 @@ public class MainMenu extends JFrame {
         button.setMaximumSize(size);
         button.setMinimumSize(size);
 
-        // Se esistono immagini personalizzate, usale
         if (buttonIcons[0] != null && !isPlaceholderIcon(buttonIcons[0])) {
             button.setIcon(buttonIcons[0]);
             button.setHorizontalTextPosition(SwingConstants.CENTER);
@@ -152,7 +149,6 @@ public class MainMenu extends JFrame {
                 }
             });
         } else {
-            // Stile testuale elegante se non ci sono immagini
             setupTextualButton(button);
         }
 
@@ -278,7 +274,7 @@ public class MainMenu extends JFrame {
                 return baseFont.deriveFont(Font.BOLD, 60f);
             }
         } catch (Exception e) {
-            System.err.println("⚠️ Font personalizzato non trovato per il titolo");
+            System.err.println("️ Font personalizzato non trovato per il titolo");
         }
         return new Font("Serif", Font.BOLD, 60);
     }
@@ -290,7 +286,7 @@ public class MainMenu extends JFrame {
         if (icon != null) {
             setIconImage(icon.getImage());
         } else {
-            System.err.println("⚠️ Icona finestra non trovata");
+            System.err.println("️ Icona finestra non trovata");
         }
     }
 
@@ -310,21 +306,19 @@ public class MainMenu extends JFrame {
                 clip.start();
             }
         } catch (Exception e) {
-            // Suono non critico, ignora errori
+            // Ignora errori
         }
     }
 
-    // Sostituisci il metodo startNewGame() in MainMenu.java con questa versione:
     private void startNewGame() {
         // Ferma la musica del menu
         MusicManager.getInstance().setMusicEnabled(false);
 
-        // Mostra l'intro prima di avviare il gioco
-        IntroScreen.showIntro(this, () -> {
-            // Questo callback viene eseguito quando l'intro finisce
+        // Usa il sistema di caricamento reale
+        LoadingScreen.showRealLoadingScreen(this, null, (game, totalPlayTime) -> {
 
-            // Usa il sistema di caricamento reale
-            LoadingScreen.showRealLoadingScreen(this, null, (game, totalPlayTime) -> {
+            // Mostra l'intro prima di avviare il gioco
+            IntroScreen.showIntro(this, () -> {
                 // Questo callback viene eseguito quando il caricamento è completato
                 SwingUtilities.invokeLater(() -> {
                     try {
