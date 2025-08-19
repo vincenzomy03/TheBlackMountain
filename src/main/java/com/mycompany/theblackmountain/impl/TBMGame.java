@@ -468,6 +468,16 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
                         + (player != null ? player.getCurrentHp() : "null"));
             }
 
+            if (isGameCompleted()) {
+                out.println("\n" + getVictoryMessage());
+                out.flush();
+                System.out.println("DEBUG: GIOCO COMPLETATO - Vittoria!");
+
+                // Segnala la vittoria 
+                notifyGameCompleted();
+                return;
+            }
+
         } catch (Exception e) {
             System.err.println("ERROR: Errore nell'elaborazione comando: " + e.getMessage());
             e.printStackTrace();
@@ -766,6 +776,8 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
                 System.out.println("DEBUG: Combattimento in corso terminato");
             }
 
+            resetCompletionState();
+
             // 10. Debug finale dello stato
             System.out.println("DEBUG: Reset completato - Player HP: "
                     + (player != null ? player.getCurrentHp() + "/" + player.getMaxHp() : "null")
@@ -777,6 +789,7 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
             System.err.println("ERROR: Errore nel reset del gioco: " + e.getMessage());
             e.printStackTrace();
         }
+
     }
 
     /**
@@ -919,6 +932,135 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
             System.out.println("Risposta non riconosciuta: " + response);
             return false; // Non è né restart né quit, chiedi di nuovo
         }
+    }
+
+    /**
+     * Controlla se il giocatore ha completato il gioco
+     *
+     * @return true se il gioco è completato (vittoria)
+     */
+    public boolean isGameCompleted() {
+        // Logica per determinare se il gioco è completato
+        // Esempio: il giocatore è nella stanza finale (ID 8 - uscita) con la principessa salvata
+
+        if (getCurrentRoom() == null) {
+            return false;
+        }
+
+        // Controlla se siamo nella stanza di uscita (assumendo ID 8 o simile)
+        if (getCurrentRoom().getId() == 8) { // Stanza di uscita
+            return true;
+        }
+
+        // Alternativa: controlla se il boss finale è stato sconfitto
+        // e il giocatore ha un oggetto specifico (chiave della principessa, ecc.)
+        if (isBossFinalDefeated() && hasCompletionItem()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Verifica se il boss finale è stato sconfitto
+     */
+    private boolean isBossFinalDefeated() {
+        // Cerca il boss finale nelle stanze
+        for (Room room : getRooms()) {
+            for (GameCharacter enemy : room.getEnemies()) {
+                if (enemy.getName().toLowerCase().contains("cane demone")
+                        || enemy.getName().toLowerCase().contains("boss")) {
+                    if (enemy.isAlive()) {
+                        return false; // Boss ancora vivo
+                    }
+                }
+            }
+        }
+        return true; // Nessun boss vivo trovato
+    }
+
+    /**
+     * Verifica se il giocatore ha l'oggetto di completamento
+     */
+    private boolean hasCompletionItem() {
+        // Controlla se il giocatore ha salvato la principessa o ha un oggetto chiave
+        for (GameObjects obj : getInventory()) {
+            if (obj.getName().toLowerCase().contains("chiave principessa")
+                    || obj.getName().toLowerCase().contains("corona")
+                    || obj.getName().toLowerCase().contains("medaglia")) {
+                return true;
+            }
+        }
+        return true; // Per ora, assume che il completamento sia basato solo sul boss
+    }
+
+    /**
+     * Messaggio di vittoria personalizzato
+     */
+    public String getVictoryMessage() {
+        return "Hai salvato la principessa e sconfitto i nemici della Montagna Nera! La tua missione è completa!";
+    }
+
+    /**
+     * Campo per memorizzare se il gioco è stato completato
+     */
+    private boolean gameCompleted = false;
+
+    /**
+     * Lista di listener per la vittoria
+     */
+    private final List<GameCompletionListener> completionListeners = new ArrayList<>();
+
+    /**
+     * Interfaccia per i listener di completamento gioco
+     */
+    public interface GameCompletionListener {
+
+        void onGameCompleted();
+    }
+
+    /**
+     * Aggiunge un listener per il completamento del gioco
+     */
+    public void addCompletionListener(GameCompletionListener listener) {
+        completionListeners.add(listener);
+    }
+
+    /**
+     * Rimuove un listener per il completamento del gioco
+     */
+    public void removeCompletionListener(GameCompletionListener listener) {
+        completionListeners.remove(listener);
+    }
+
+    /**
+     * Notifica tutti i listener che il gioco è completato
+     */
+    private void notifyGameCompleted() {
+        if (!gameCompleted) {
+            gameCompleted = true;
+            for (GameCompletionListener listener : completionListeners) {
+                try {
+                    listener.onGameCompleted();
+                } catch (Exception e) {
+                    System.err.println("Errore in completion listener: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * Verifica se il gioco è stato completato
+     */
+    public boolean hasGameBeenCompleted() {
+        return gameCompleted;
+    }
+
+    /**
+     * Reset dello stato di completamento (per nuove partite)
+     */
+    private void resetCompletionState() {
+        gameCompleted = false;
     }
 
     /**

@@ -314,22 +314,37 @@ public class MainMenu extends JFrame {
         }
     }
 
-    // Sostituisci solo questi metodi nella tua classe MainMenu esistente:
+    // Sostituisci il metodo startNewGame() in MainMenu.java con questa versione:
     private void startNewGame() {
-        // Usa il nuovo sistema di caricamento reale
-        LoadingScreen.showRealLoadingScreen(this, null, (game, totalPlayTime) -> {
-            // Questo callback viene eseguito quando il caricamento è completato
-            SwingUtilities.invokeLater(() -> {
-                try {
-                    GameGUI gameGUI = new GameGUI(game, totalPlayTime);
-                    gameGUI.setVisible(true);
-                    this.dispose();
-                } catch (Exception e) {
-                    JOptionPane.showMessageDialog(this,
-                            "Errore nell'avvio del gioco: " + e.getMessage(),
-                            "Errore", JOptionPane.ERROR_MESSAGE);
-                    e.printStackTrace();
-                }
+        // Ferma la musica del menu
+        MusicManager.getInstance().setMusicEnabled(false);
+
+        // Mostra l'intro prima di avviare il gioco
+        IntroScreen.showIntro(this, () -> {
+            // Questo callback viene eseguito quando l'intro finisce
+
+            // Usa il sistema di caricamento reale
+            LoadingScreen.showRealLoadingScreen(this, null, (game, totalPlayTime) -> {
+                // Questo callback viene eseguito quando il caricamento è completato
+                SwingUtilities.invokeLater(() -> {
+                    try {
+                        GameGUI gameGUI = new GameGUI(game, totalPlayTime);
+                        gameGUI.setVisible(true);
+                        this.dispose();
+
+                        // Riattiva la musica di background del gioco
+                        MusicManager.getInstance().setMusicEnabled(true);
+
+                    } catch (Exception e) {
+                        JOptionPane.showMessageDialog(this,
+                                "Errore nell'avvio del gioco: " + e.getMessage(),
+                                "Errore", JOptionPane.ERROR_MESSAGE);
+                        e.printStackTrace();
+
+                        // In caso di errore, riattiva la musica del menu
+                        MusicManager.getInstance().setMusicEnabled(true);
+                    }
+                });
             });
         });
     }
