@@ -272,7 +272,7 @@ public class InitDatabase {
                     + "(7, 6, NULL, NULL, 8), "
                     + "(8, NULL, NULL, 7, NULL);");
             stm.close();
-            System.out.println("✅ Connessioni stanze inserite");
+            System.out.println(" Connessioni stanze inserite");
         }
     }
 
@@ -571,10 +571,59 @@ public class InitDatabase {
                     stmt.addBatch();
                 }
 
+                // Oggetto 13 - Cella della principessa (apribile)
+                stmt.setInt(1, 13);
+                stmt.setString(2, "cella");
+                stmt.setString(3, "Una cella di ferro con sbarre spesse. All'interno è prigioniera una principessa.");
+                stmt.setString(4, "prigione,gabbia,celle");
+                stmt.setBoolean(5, true); // openable
+                stmt.setBoolean(6, false); // not pickupable
+                stmt.setBoolean(7, false);
+                stmt.setBoolean(8, false); // starts closed
+                stmt.setBoolean(9, false);
+                stmt.setString(10, "CONTAINER");
+                stmt.addBatch();
+
+// Oggetto 14 - Principessa (personaggio speciale)
+                stmt.setInt(1, 14);
+                stmt.setString(2, "principessa");
+                stmt.setString(3, "La bella principessa che devi salvare. I suoi occhi brillano di speranza.");
+                stmt.setString(4, "princess,ragazza");
+                stmt.setBoolean(5, false);
+                stmt.setBoolean(6, false); // non raccoglibile
+                stmt.setBoolean(7, false);
+                stmt.setBoolean(8, false);
+                stmt.setBoolean(9, false);
+                stmt.setString(10, "NPC");
+                stmt.addBatch();
+
+// Oggetto 15 - Porta finale ad est (apribile)
+                stmt.setInt(1, 15);
+                stmt.setString(2, "porta est");
+                stmt.setString(3, "Una pesante porta di metallo che conduce all'uscita della montagna. È bloccata.");
+                stmt.setString(4, "porta,uscita,exit");
+                stmt.setBoolean(5, true); // openable
+                stmt.setBoolean(6, false);
+                stmt.setBoolean(7, false);
+                stmt.setBoolean(8, false); // starts closed
+                stmt.setBoolean(9, false);
+                stmt.setString(10, "DOOR");
+                stmt.addBatch();
+
+                
+                stm.execute("INSERT INTO ROOM_OBJECTS VALUES "
+                        + "(0, 100), " // Ingresso: cassa (chiusa)
+                        + "(1, 4), " // Stanza del Topo: ragnatela (oggetto fisso)
+                        + "(3, 101), " // Dormitorio: cassa (chiusa)
+                        + "(4, 102), " // Sala Guardie: cassa (chiusa)
+                        + "(6, 103), " // Torture: cassa (chiusa)
+                        + "(7, 13), " // Boss: cella della principessa
+                        + "(7, 15);"); // Boss: porta est bloccata
+
                 stmt.executeBatch();
             }
 
-            System.out.println("✅ Oggetti inseriti");
+            System.out.println(" Oggetti inseriti");
         }
     }
 
@@ -653,7 +702,6 @@ public class InitDatabase {
         }
     }
 
-   
     /**
      * Metodo di utilità per testare la connessione
      */

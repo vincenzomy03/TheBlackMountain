@@ -16,11 +16,9 @@ import com.mycompany.theblackmountain.type.CommandType;
 
 import java.io.PrintStream;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +29,7 @@ public class TBMGame extends GameDescription implements GameObservable {
     private CombatSystem combatSystem;
     private GameCharacter player;
     private final List<GameObserver> observers = new ArrayList<>();
+    private boolean immortalModeEnabled = false;
 
     // Campo per memorizzare l'ultimo ParserOutput
     private ParserOutput lastParserOutput;
@@ -426,6 +425,18 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
                 return;
             }
 
+            if (commandName.equals("immortal")) {
+                setImmortalMode(true);
+                out.println("DEBUG: Modalità IMMORTALE attivata! Non perderai più HP.");
+                return;
+            }
+
+            if (commandName.equals("notimmortal")) {
+                setImmortalMode(false);
+                out.println("DEBUG: Modalità immortale disattivata. Ora puoi subire danni normalmente.");
+                return;
+            }
+
             // Salva l'ultimo comando per gli observer
             this.lastParserOutput = p;
 
@@ -611,6 +622,16 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
         Command status = new Command(CommandType.USE, "status");
         status.setAlias(new String[]{"stato", "hp"});
         getCommands().add(status);
+
+        // Comando per attivare immortalità
+        Command immortal = new Command(CommandType.USE, "immortal");
+        immortal.setAlias(new String[]{"invincible", "godmode"});
+        getCommands().add(immortal);
+
+        // Comando per disattivare immortalità  
+        Command notImmortal = new Command(CommandType.USE, "notimmortal");
+        notImmortal.setAlias(new String[]{"mortal", "nogodmode"});
+        getCommands().add(notImmortal);
     }
 
     /**
@@ -940,58 +961,18 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
      * @return true se il gioco è completato (vittoria)
      */
     public boolean isGameCompleted() {
-        // Logica per determinare se il gioco è completato
-        // Esempio: il giocatore è nella stanza finale (ID 8 - uscita) con la principessa salvata
-
         if (getCurrentRoom() == null) {
             return false;
         }
 
-        // Controlla se siamo nella stanza di uscita (assumendo ID 8 o simile)
-        if (getCurrentRoom().getId() == 8) { // Stanza di uscita
-            return true;
-        }
-
-        // Alternativa: controlla se il boss finale è stato sconfitto
-        // e il giocatore ha un oggetto specifico (chiave della principessa, ecc.)
-        if (isBossFinalDefeated() && hasCompletionItem()) {
+        // Il gioco è completato quando il giocatore arriva alla stanza di uscita (ID 8)
+        // con la principessa salvata
+        if (getCurrentRoom().getId() == 8) {
+            System.out.println("DEBUG: Player nella stanza di uscita!");
             return true;
         }
 
         return false;
-    }
-
-    /**
-     * Verifica se il boss finale è stato sconfitto
-     */
-    private boolean isBossFinalDefeated() {
-        // Cerca il boss finale nelle stanze
-        for (Room room : getRooms()) {
-            for (GameCharacter enemy : room.getEnemies()) {
-                if (enemy.getName().toLowerCase().contains("cane demone")
-                        || enemy.getName().toLowerCase().contains("boss")) {
-                    if (enemy.isAlive()) {
-                        return false; // Boss ancora vivo
-                    }
-                }
-            }
-        }
-        return true; // Nessun boss vivo trovato
-    }
-
-    /**
-     * Verifica se il giocatore ha l'oggetto di completamento
-     */
-    private boolean hasCompletionItem() {
-        // Controlla se il giocatore ha salvato la principessa o ha un oggetto chiave
-        for (GameObjects obj : getInventory()) {
-            if (obj.getName().toLowerCase().contains("chiave principessa")
-                    || obj.getName().toLowerCase().contains("corona")
-                    || obj.getName().toLowerCase().contains("medaglia")) {
-                return true;
-            }
-        }
-        return true; // Per ora, assume che il completamento sia basato solo sul boss
     }
 
     /**
@@ -1337,5 +1318,14 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
         if (database != null) {
             System.out.println(database.getDatabaseInfo());
         }
+    }
+
+    public boolean isImmortalModeEnabled() {
+        return immortalModeEnabled;
+    }
+
+    public void setImmortalMode(boolean enabled) {
+        this.immortalModeEnabled = enabled;
+        System.out.println("DEBUG: Modalità immortale " + (enabled ? "ATTIVATA" : "DISATTIVATA"));
     }
 }
