@@ -30,16 +30,6 @@ public class Move extends GameObserver {
     }
 
     /**
-     * *** NUOVO METODO: Reset del sistema porte per nuova partita ***
-     */
-    public void resetForNewGame() {
-        if (doorSystem != null) {
-            doorSystem.resetAllDoors();
-            System.out.println("✅ Move Observer: Sistema porte resettato");
-        }
-    }
-
-    /**
      *
      * @param description
      * @param parserOutput
@@ -65,7 +55,7 @@ public class Move extends GameObserver {
 
         // Controllo più rigoroso per bloccare movimento con nemici vivi
         if (hasLivingEnemies(description)) {
-            return "️ Non puoi lasciare questa stanza! Ci sono ancora nemici da sconfiggere.\n Usa il comando 'combatti' per iniziare la battaglia.";
+            return "⚠️ Non puoi lasciare questa stanza! Ci sono ancora nemici da sconfiggere.\n💡 Usa il comando 'combatti' per iniziare la battaglia.";
         }
 
         // Se siamo in combattimento e il comando è di movimento, blocca
@@ -76,9 +66,16 @@ public class Move extends GameObserver {
         String direction = "";
         String result = "";
 
-        if (princessFreed && targetRoom.getId() != 8 && game.getCurrentRoom().getId() == 7) {
-            return " La principessa ti ferma: \"Non possiamo andare da quella parte! "
-                    + "L'uscita è a EST, dobbiamo fuggire subito!\"";
+        // CORREZIONE: Controllo principessa liberata - usa casting sicuro
+        if (description instanceof TBMGame) {
+            TBMGame game = (TBMGame) description;
+            if (game.isPrincessFreed() && description.getCurrentRoom().getId() == 7) {
+                // Se siamo nella stanza 7 (boss) e la principessa è liberata, controlla direzione
+                if (commandType != CommandType.EAST) {
+                    return "🧝‍♀️ La principessa ti ferma: \"Non possiamo andare da quella parte! "
+                            + "L'uscita è a EST, dobbiamo fuggire subito!\"";
+                }
+            }
         }
 
         switch (commandType) {
@@ -153,7 +150,7 @@ public class Move extends GameObserver {
         if (!direction.isEmpty()) {
             // Descrivi la nuova stanza
             result += "Ti dirigi a " + getDirectionName(direction) + ".\n\n";
-            result += " " + description.getCurrentRoom().getName() + "\n";
+            result += "📍 " + description.getCurrentRoom().getName() + "\n";
             result += description.getCurrentRoom().getDescription();
 
             // Informa il giocatore se ci sono nemici nella nuova stanza
@@ -180,6 +177,16 @@ public class Move extends GameObserver {
                 return "ovest";
             default:
                 return direction;
+        }
+    }
+
+    /**
+     * Reset del sistema porte per nuova partita ***
+     */
+    public void resetForNewGame() {
+        if (doorSystem != null) {
+            doorSystem.resetAllDoors();
+            System.out.println("✅ Move Observer: Sistema porte resettato");
         }
     }
 

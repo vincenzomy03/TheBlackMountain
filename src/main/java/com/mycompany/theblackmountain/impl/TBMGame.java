@@ -29,7 +29,7 @@ public class TBMGame extends GameDescription implements GameObservable {
     private CombatSystem combatSystem;
     private GameCharacter player;
     private final List<GameObserver> observers = new ArrayList<>();
-    private boolean immortalModeEnabled = false;
+    private boolean princessFreed = false;
 
     // Campo per memorizzare l'ultimo ParserOutput
     private ParserOutput lastParserOutput;
@@ -425,17 +425,7 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
                 return;
             }
 
-            if (commandName.equals("immortal")) {
-                setImmortalMode(true);
-                out.println("DEBUG: Modalità IMMORTALE attivata! Non perderai più HP.");
-                return;
-            }
-
-            if (commandName.equals("notimmortal")) {
-                setImmortalMode(false);
-                out.println("DEBUG: Modalità immortale disattivata. Ora puoi subire danni normalmente.");
-                return;
-            }
+           
 
             // Salva l'ultimo comando per gli observer
             this.lastParserOutput = p;
@@ -622,16 +612,7 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
         Command status = new Command(CommandType.USE, "status");
         status.setAlias(new String[]{"stato", "hp"});
         getCommands().add(status);
-
-        // Comando per attivare immortalità
-        Command immortal = new Command(CommandType.USE, "immortal");
-        immortal.setAlias(new String[]{"invincible", "godmode"});
-        getCommands().add(immortal);
-
-        // Comando per disattivare immortalità  
-        Command notImmortal = new Command(CommandType.USE, "notimmortal");
-        notImmortal.setAlias(new String[]{"mortal", "nogodmode"});
-        getCommands().add(notImmortal);
+       
     }
 
     /**
@@ -804,6 +785,8 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
             }
 
             resetCompletionState();
+            
+            resetPrincessState();
 
             // 10. Debug finale dello stato
             System.out.println("DEBUG: Reset completato - Player HP: "
@@ -966,7 +949,6 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
      *
      * @return true se il gioco è completato (vittoria)
      */
-    @Override
     public boolean isGameCompleted() {
         if (getCurrentRoom() == null) {
             return false;
@@ -974,6 +956,11 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
 
         // Gioco completato = stanza uscita (ID 8) + principessa liberata
         return getCurrentRoom().getId() == 8 && princessFreed;
+    }
+
+    private void resetPrincessState() {
+        princessFreed = false;
+        System.out.println("DEBUG: Stato principessa resettato");
     }
 
     /**
@@ -1321,12 +1308,13 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
         }
     }
 
-    public boolean isImmortalModeEnabled() {
-        return immortalModeEnabled;
+    
+
+    public boolean isPrincessFreed() {
+        return princessFreed;
     }
 
-    public void setImmortalMode(boolean enabled) {
-        this.immortalModeEnabled = enabled;
-        System.out.println("DEBUG: Modalità immortale " + (enabled ? "ATTIVATA" : "DISATTIVATA"));
+    public void setPrincessFreed(boolean princessFreed) {
+        this.princessFreed = princessFreed;
     }
 }

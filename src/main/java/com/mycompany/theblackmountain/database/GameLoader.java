@@ -502,48 +502,157 @@ public class GameLoader {
             }
         }
 
-        System.out.println("🔧 Totale oggetti fissi ripristinati: " + totalRestored);
+        System.out.println(" Totale oggetti fissi ripristinati: " + totalRestored);
     }
 
     /**
      * reset completo delle casse
      */
+    /**
+     * Reset completo di tutte le casse - VERSIONE CORRETTA CON CONTROLLI
+     */
     public void resetAllChests() {
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+        System.out.println(" Resetting tutte le casse del gioco...");
 
-            System.out.println("🔄 Reset di tutte le casse...");
+        try (Connection conn = database.getConnection()) {
 
-            // 1. Chiudi tutte le casse
-            String resetChestsSql = "UPDATE OBJECTS SET IS_OPEN = FALSE WHERE ID >= 100 AND ID <= 103";
-            try (PreparedStatement stmt = conn.prepareStatement(resetChestsSql)) {
-                int updated = stmt.executeUpdate();
-                System.out.println("🔒 " + updated + " casse chiuse");
+            // 1. PRIMA - Verifica che le casse esistano nella tabella OBJECTS
+            String checkChestsExistSql = "SELECT ID FROM OBJECTS WHERE ID IN (100, 101, 102, 103) ORDER BY ID";
+            java.util.List<Integer> existingChests = new java.util.ArrayList<>();
+
+            try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(checkChestsExistSql)) {
+                while (rs.next()) {
+                    existingChests.add(rs.getInt("ID"));
+                }
             }
 
-            // 2. CORREZIONE: Rimuovi SOLO il contenuto delle casse dalle stanze
-            // Mantieni sempre l'oggetto 4 (stringhe ragnatela) nella stanza 1
+            System.out.println(" Casse esistenti nel database: " + existingChests);
+
+            if (existingChests.isEmpty()) {
+                System.out.println("️ NESSUNA CASSA TROVATA NEL DATABASE! Creazione casse...");
+                createMissingChests(conn);
+
+                // Ricarica la lista dopo la creazione
+                try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(checkChestsExistSql)) {
+                    while (rs.next()) {
+                        existingChests.add(rs.getInt("ID"));
+                    }
+                }
+            }
+
+            // 2. Chiudi tutte le casse esistenti
+            if (!existingChests.isEmpty()) {
+                String chestIds = existingChests.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+                String resetChestsSql = "UPDATE OBJECTS SET IS_OPEN = FALSE WHERE ID IN (" + chestIds + ")";
+                try (var stmt = conn.prepareStatement(resetChestsSql)) {
+                    int updated = stmt.executeUpdate();
+                    System.out.println(" " + updated + " casse chiuse");
+                }
+            }
+
+            // 3. Rimuovi TUTTI i contenuti dalle stanze (tranne oggetti fissi)
             String removeContentSql = """
-        DELETE FROM ROOM_OBJECTS 
-        WHERE OBJECT_ID IN (1, 2, 5, 6, 8, 9, 10)
-        AND NOT (ROOM_ID = 1 AND OBJECT_ID = 4)
+            DELETE FROM ROOM_OBJECTS 
+            WHERE OBJECT_ID NOT IN (
+                SELECT ID FROM OBJECTS WHERE OBJECT_TYPE IN ('DECORATION', 'FIXED')
+            )
+            AND OBJECT_ID NOT IN (100, 101, 102, 103)
         """;
-
-            try (PreparedStatement stmt = conn.prepareStatement(removeContentSql)) {
+            try (var stmt = conn.prepareStatement(removeContentSql)) {
                 int removed = stmt.executeUpdate();
-                System.out.println("📤 Rimossi " + removed + " oggetti contenuti nelle casse dalle stanze");
+                System.out.println("🗑️ " + removed + " oggetti rimossi dalle stanze");
             }
 
-            // 3. ASSICURATI CHE LE CASSE SIANO NELLE STANZE CORRETTE
-            ensureChestsInRooms(conn);
+            // 4. Posiziona le casse nelle stanze corrette (SOLO se esistono)
+            int[][] chestRoomMapping = {
+                {0, 100}, // Ingresso -> Cassa 100
+                {3, 101}, // Dormitorio -> Cassa 101  
+                {4, 102}, // Sala Guardie -> Cassa 102
+                {6, 103} // Sala Torture -> Cassa 103
+            };
 
-            // 4. Ripristina oggetti fissi che dovrebbero sempre essere presenti
-            restoreFixedRoomObjects(conn);
+            String insertChestSql = "INSERT OR IGNORE INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES (?, ?)";
+            int chestsPlaced = 0;
+
+            try (var stmt = conn.prepareStatement(insertChestSql)) {
+                for (int[] mapping : chestRoomMapping) {
+                    int roomId = mapping[0];
+                    int chestId = mapping[1];
+
+                    // Inserisci solo se la cassa esiste
+                    if (existingChests.contains(chestId)) {
+                        stmt.setInt(1, roomId);
+                        stmt.setInt(2, chestId);
+                        stmt.addBatch();
+                        chestsPlaced++;
+                    } else {
+                        System.out.println("️ Cassa " + chestId + " non esiste, salto...");
+                    }
+                }
+
+                if (chestsPlaced > 0) {
+                    stmt.executeBatch();
+                    System.out.println(" " + chestsPlaced + " casse posizionate nelle stanze");
+                }
+            }
+
+            // 5. Ripristina contenuti INIZIALI delle casse (nella stanza, non nel contenitore)
+            if (existingChests.contains(102)) { // Solo se la cassa 102 esiste
+                String restoreInitialContentSql = """
+                INSERT OR IGNORE INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) 
+                SELECT 4, ID FROM OBJECTS 
+                WHERE ID IN (8, 9) 
+                AND EXISTS (SELECT 1 FROM OBJECTS WHERE ID = 102)
+            """;
+                try (var stmt = conn.prepareStatement(restoreInitialContentSql)) {
+                    int restored = stmt.executeUpdate();
+                    System.out.println(" " + restored + " oggetti iniziali ripristinati");
+                }
+            }
 
             System.out.println(" Reset casse completato!");
 
         } catch (SQLException e) {
             System.err.println(" Errore nel reset delle casse: " + e.getMessage());
             e.printStackTrace();
+            throw new RuntimeException("Errore nel reset delle casse", e);
+        }
+    }
+
+    /**
+     * Crea le casse mancanti nel database
+     */
+    private void createMissingChests(Connection conn) throws SQLException {
+        System.out.println("️ Creando casse mancanti...");
+
+        // Definizione delle casse
+        Object[][] chestDefinitions = {
+            {100, "cassa di legno", "Una robusta cassa di legno con rinforzi metallici.", true, true, false},
+            {101, "cassa del dormitorio", "Una cassa personale con incisioni decorative.", true, true, false},
+            {102, "cassa delle guardie", "Una cassa militare con serratura robusta.", true, true, false},
+            {103, "cassa della tortura", "Una cassa dall'aspetto sinistro, macchiata di scuro.", true, true, false}
+        };
+
+        String insertChestSql = """
+        INSERT OR IGNORE INTO OBJECTS 
+        (ID, NAME, DESCRIPTION, OBJECT_TYPE, IS_PICKUPABLE, IS_OPENABLE, IS_OPEN) 
+        VALUES (?, ?, ?, 'CONTAINER', ?, ?, ?)
+    """;
+
+        try (var stmt = conn.prepareStatement(insertChestSql)) {
+            for (Object[] chest : chestDefinitions) {
+                stmt.setInt(1, (Integer) chest[0]);      // ID
+                stmt.setString(2, (String) chest[1]);    // NAME
+                stmt.setString(3, (String) chest[2]);    // DESCRIPTION
+                stmt.setBoolean(4, (Boolean) chest[3]);  // IS_PICKUPABLE
+                stmt.setBoolean(5, (Boolean) chest[4]);  // IS_OPENABLE
+                stmt.setBoolean(6, (Boolean) chest[5]);  // IS_OPEN
+                stmt.addBatch();
+            }
+
+            int[] results = stmt.executeBatch();
+            int created = java.util.Arrays.stream(results).sum();
+            System.out.println("✅ " + created + " casse create nel database");
         }
     }
 
