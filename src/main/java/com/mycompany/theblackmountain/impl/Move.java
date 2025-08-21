@@ -11,6 +11,9 @@ import com.mycompany.theblackmountain.combat.CombatSystem;
 import com.mycompany.theblackmountain.systems.DoorSystem;
 import com.mycompany.theblackmountain.type.CommandType;
 import com.mycompany.theblackmountain.type.GameCharacter;
+import com.mycompany.theblackmountain.gui.OutroScreen;
+
+import javax.swing.*;
 
 /**
  *
@@ -53,9 +56,27 @@ public class Move extends GameObserver {
             return "";
         }
 
+        // NUOVO: Gestione principessa liberata
+        if (description instanceof TBMGame) {
+            TBMGame game = (TBMGame) description;
+            
+            // Se la principessa è liberata, permetti solo movimento verso EST dalla stanza 7
+            if (game.isPrincessLiberated() && game.getCurrentRoom().getId() == 7) {
+                if (commandType == CommandType.NORD || commandType == CommandType.SOUTH || 
+                    commandType == CommandType.WEST) {
+                    return "\"Non possiamo tornare indietro ora!\" dice la principessa. \"L'uscita e' a EST, dobbiamo scappare!\"";
+                }
+                
+                // Se va a EST dalla stanza 7, attiva la sequenza finale
+                if (commandType == CommandType.EAST) {
+                    return handleFinalExit(game);
+                }
+            }
+        }
+
         // Controllo più rigoroso per bloccare movimento con nemici vivi
         if (hasLivingEnemies(description)) {
-            return "⚠️ Non puoi lasciare questa stanza! Ci sono ancora nemici da sconfiggere.\n💡 Usa il comando 'combatti' per iniziare la battaglia.";
+            return "ATTENZIONE! Non puoi lasciare questa stanza! Ci sono ancora nemici da sconfiggere.\nUsa il comando 'combatti' per iniziare la battaglia.";
         }
 
         // Se siamo in combattimento e il comando è di movimento, blocca
@@ -65,18 +86,6 @@ public class Move extends GameObserver {
 
         String direction = "";
         String result = "";
-
-        // CORREZIONE: Controllo principessa liberata - usa casting sicuro
-        if (description instanceof TBMGame) {
-            TBMGame game = (TBMGame) description;
-            if (game.isPrincessFreed() && description.getCurrentRoom().getId() == 7) {
-                // Se siamo nella stanza 7 (boss) e la principessa è liberata, controlla direzione
-                if (commandType != CommandType.EAST) {
-                    return "🧝‍♀️ La principessa ti ferma: \"Non possiamo andare da quella parte! "
-                            + "L'uscita è a EST, dobbiamo fuggire subito!\"";
-                }
-            }
-        }
 
         switch (commandType) {
             case NORD:
@@ -92,7 +101,7 @@ public class Move extends GameObserver {
 
                     description.setCurrentRoom(description.getCurrentRoom().getNorth());
                 } else {
-                    return "Da quella parte non si può andare!";
+                    return "Da quella parte non si puo' andare!";
                 }
                 break;
             case SOUTH:
@@ -108,7 +117,7 @@ public class Move extends GameObserver {
 
                     description.setCurrentRoom(description.getCurrentRoom().getSouth());
                 } else {
-                    return "Da quella parte non si può andare!";
+                    return "Da quella parte non si puo' andare!";
                 }
                 break;
             case EAST:
@@ -124,7 +133,7 @@ public class Move extends GameObserver {
 
                     description.setCurrentRoom(description.getCurrentRoom().getEast());
                 } else {
-                    return "Da quella parte non si può andare!";
+                    return "Da quella parte non si puo' andare!";
                 }
                 break;
             case WEST:
@@ -140,7 +149,7 @@ public class Move extends GameObserver {
 
                     description.setCurrentRoom(description.getCurrentRoom().getWest());
                 } else {
-                    return "Da quella parte non si può andare!";
+                    return "Da quella parte non si puo' andare!";
                 }
                 break;
             default:
@@ -150,7 +159,7 @@ public class Move extends GameObserver {
         if (!direction.isEmpty()) {
             // Descrivi la nuova stanza
             result += "Ti dirigi a " + getDirectionName(direction) + ".\n\n";
-            result += "📍 " + description.getCurrentRoom().getName() + "\n";
+            result += description.getCurrentRoom().getName() + "\n";
             result += description.getCurrentRoom().getDescription();
 
             // Informa il giocatore se ci sono nemici nella nuova stanza
@@ -160,6 +169,36 @@ public class Move extends GameObserver {
         }
 
         return result;
+    }
+
+    /**
+     * Gestisce l'uscita finale del gioco
+     */
+    private String handleFinalExit(TBMGame game) {
+            
+            // Programma l'outro dopo 2 secondi
+            Timer outroTimer = new Timer(2000, e -> {
+                SwingUtilities.invokeLater(() -> {
+                    // Avvia l'outro
+                    OutroScreen.showOutro(null, () -> {
+                        // Dopo l'outro, aspetta 3 secondi e chiudi il gioco
+                        Timer exitTimer = new Timer(3000, exitEvent -> {
+                            System.out.println("Gioco completato - Uscita...");
+                            System.exit(0);
+                        });
+                        exitTimer.setRepeats(false);
+                        exitTimer.start();
+                    });
+                });
+            });
+            outroTimer.setRepeats(false);
+            outroTimer.start();
+        
+        
+        return "Tu e la principessa correte verso la liberta'!\n\n"
+               + "Il sole del mattino illumina i vostri volti mentre lasciate per sempre\n"
+               + "la Montagna Nera alle vostre spalle...\n\n"
+               + "MISSIONE COMPLETATA";
     }
 
     /**
@@ -181,12 +220,12 @@ public class Move extends GameObserver {
     }
 
     /**
-     * Reset del sistema porte per nuova partita ***
+     * Reset del sistema porte per nuova partita
      */
     public void resetForNewGame() {
         if (doorSystem != null) {
             doorSystem.resetAllDoors();
-            System.out.println("✅ Move Observer: Sistema porte resettato");
+            System.out.println("Move Observer: Sistema porte resettato");
         }
     }
 
@@ -217,20 +256,20 @@ public class Move extends GameObserver {
         }
 
         StringBuilder warning = new StringBuilder();
-        warning.append("\n⚠️ ATTENZIONE! ");
+        warning.append("\nATTENZIONE! ");
 
         if (enemyCount == 1) {
             GameCharacter enemy = description.getCurrentRoom().getEnemies().stream()
                     .filter(GameCharacter::isAlive)
                     .findFirst().orElse(null);
             if (enemy != null) {
-                warning.append("C'è un ").append(enemy.getName()).append(" in questa stanza!");
+                warning.append("C'e' un ").append(enemy.getName()).append(" in questa stanza!");
             }
         } else {
             warning.append("Ci sono ").append(enemyCount).append(" nemici in questa stanza!");
         }
 
-        warning.append("\n💡 Usa il comando 'combatti' per iniziare la battaglia.");
+        warning.append("\nUsa il comando 'combatti' per iniziare la battaglia.");
 
         return warning.toString();
     }

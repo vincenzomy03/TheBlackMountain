@@ -39,6 +39,8 @@ public class GameGUI extends JFrame {
     private long gameStartTime;
     private long totalPlayTime;
 
+    private boolean princessLiberated = false;
+
     public GameGUI() throws Exception {
         this(null);
     }
@@ -332,7 +334,6 @@ public class GameGUI extends JFrame {
     }
 
     private void initializeGameWithLoadedData() {
-        
 
         if (totalPlayTime > 0) {
             long seconds = totalPlayTime / 1000;
@@ -695,7 +696,6 @@ public class GameGUI extends JFrame {
 
             // Pulisci l'output
             outputArea.setText("");
-            
 
             // Mostra la stanza corrente
             appendToOutput(game.getCurrentRoom().getName());
@@ -830,4 +830,31 @@ public class GameGUI extends JFrame {
         updateWeaponButtons();
         System.out.println("Pulsanti azione ricaricati con nuove immagini");
     }
+
+// Gestione finale movimento
+    private void handleFinalMovement() {
+        if (princessLiberated && game.getCurrentRoom().getId() == 7) {
+            if (northButton != null) {
+                northButton.setEnabled(false);
+            }
+            if (southButton != null) {
+                southButton.setEnabled(false);
+            }
+            if (westButton != null) {
+                westButton.setEnabled(false);
+            }
+
+            if (eastButton != null) {
+                eastButton.setBackground(Color.YELLOW);
+                eastButton.setText("USCITA FINALE →");
+            }
+        }
+    }
+
+    public void onRoomChanged() {
+        if (princessLiberated) {
+            handleFinalMovement();
+        }
+    }
+
 }

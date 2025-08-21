@@ -30,6 +30,8 @@ public class TBMGame extends GameDescription implements GameObservable {
     private GameCharacter player;
     private final List<GameObserver> observers = new ArrayList<>();
     private boolean princessFreed = false;
+    private boolean princessLiberated = false;
+    private boolean gameEndingTriggered = false;
 
     // Campo per memorizzare l'ultimo ParserOutput
     private ParserOutput lastParserOutput;
@@ -425,8 +427,6 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
                 return;
             }
 
-           
-
             // Salva l'ultimo comando per gli observer
             this.lastParserOutput = p;
 
@@ -612,13 +612,62 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
         Command status = new Command(CommandType.USE, "status");
         status.setAlias(new String[]{"stato", "hp"});
         getCommands().add(status);
-       
+
+    }
+
+    /**
+     * Chiamato quando la principessa viene liberata
+     */
+    public void onPrincessFreed() {
+        this.princessLiberated = true;
+        System.out.println("DEBUG: Principessa liberata - aggiornamento GUI richiesto");
+
+        // Notifica la GUI per aggiornare la mappa e mostrare l'immagine
+        notifyPrincessLiberation();
+    }
+
+    /**
+     * Controlla se la principessa è stata liberata
+     */
+    public boolean isPrincessLiberated() {
+        return princessLiberated;
+    }
+
+    /**
+     * Notifica i listener della liberazione della principessa
+     */
+    private void notifyPrincessLiberation() {
+        // Questo metodo dovrebbe essere chiamato dalla GUI per aggiornare
+        for (PrincessLiberationListener listener : princessLiberationListeners) {
+            try {
+                listener.onPrincessLiberated();
+            } catch (Exception e) {
+                System.err.println("Errore in princess liberation listener: " + e.getMessage());
+            }
+        }
+    }
+
+// Lista di listener per la liberazione
+    private final List<PrincessLiberationListener> princessLiberationListeners = new ArrayList<>();
+
+    /**
+     * Interfaccia per listener della liberazione
+     */
+    public interface PrincessLiberationListener {
+
+        void onPrincessLiberated();
+    }
+
+    /**
+     * Aggiunge un listener per la liberazione della principessa
+     */
+    public void addPrincessLiberationListener(PrincessLiberationListener listener) {
+        princessLiberationListeners.add(listener);
     }
 
     /**
      * Reset del gioco per una nuova partita
      */
-    // In TBMGame.java, sostituisci il metodo resetForNewGame() con questa versione corretta:
     public void resetForNewGame() {
         try {
             System.out.println("DEBUG: Resetting gioco per nuova partita...");
@@ -785,7 +834,7 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
             }
 
             resetCompletionState();
-            
+
             resetPrincessState();
 
             // 10. Debug finale dello stato
@@ -1307,8 +1356,6 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
             System.out.println(database.getDatabaseInfo());
         }
     }
-
-    
 
     public boolean isPrincessFreed() {
         return princessFreed;

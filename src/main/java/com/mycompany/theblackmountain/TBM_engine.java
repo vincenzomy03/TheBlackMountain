@@ -5,6 +5,7 @@ package com.mycompany.theblackmountain;
 
 import com.mycompany.theblackmountain.gui.MainMenu;
 import com.mycompany.theblackmountain.gui.GameGUI;
+import com.mycompany.theblackmountain.gui.SplashScreen;
 import com.mycompany.theblackmountain.impl.TBMGame;
 import com.mycompany.theblackmountain.parser.Parser;
 import com.mycompany.theblackmountain.parser.ParserOutput;
@@ -96,8 +97,11 @@ public class TBM_engine {
             // Modalità grafica (default)
             SwingUtilities.invokeLater(() -> {
                 try {
+                    new SplashScreen(() -> {
                     MainMenu mainMenu = new MainMenu();
                     mainMenu.setVisible(true);
+                    });
+                    
                 } catch (Exception e) {
                     System.err.println("Errore nell'avvio del menu principale: " + e.getMessage());
                     e.printStackTrace();
@@ -113,23 +117,5 @@ public class TBM_engine {
                 }
             });
         }
-    }
-    
-    /**
-     * Metodo di utilità per avviare direttamente il gioco (per testing)
-     */
-    public static void startDirectGame() {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                // Avvia la musica
-                MusicManager.getInstance().startMusic();
-                
-                GameGUI gameGUI = new GameGUI();
-                gameGUI.setVisible(true);
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(null, "Error starting game: " + e.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
     }
 }
