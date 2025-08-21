@@ -10,6 +10,7 @@ import com.mycompany.theblackmountain.type.GameCharacter;
 import com.mycompany.theblackmountain.type.GameObjects;
 import com.mycompany.theblackmountain.type.Room;
 import com.mycompany.theblackmountain.parser.ParserOutput;
+import com.mycompany.theblackmountain.thread.MusicManager;
 import com.mycompany.theblackmountain.type.CharacterType;
 import com.mycompany.theblackmountain.type.Command;
 import com.mycompany.theblackmountain.type.CommandType;
@@ -613,6 +614,11 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
         status.setAlias(new String[]{"stato", "hp"});
         getCommands().add(status);
 
+        // Comando per liberare la principessa
+        Command liberate = new Command(CommandType.USE, "libera");
+        liberate.setAlias(new String[]{"libera principessa", "salva principessa", "free"});
+        getCommands().add(liberate);
+
     }
 
     /**
@@ -1003,8 +1009,15 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
             return false;
         }
 
-        // Gioco completato = stanza uscita (ID 8) + principessa liberata
-        return getCurrentRoom().getId() == 8 && princessFreed;
+        // Gioco completato = stanza uscita (ID 8) + principessa liberata  
+        boolean completed = getCurrentRoom().getId() == 8 && princessFreed;
+
+        if (completed) {
+            // Ferma la musica del gioco quando viene completato
+            MusicManager.getInstance().stopMusic();
+        }
+
+        return completed;
     }
 
     private void resetPrincessState() {

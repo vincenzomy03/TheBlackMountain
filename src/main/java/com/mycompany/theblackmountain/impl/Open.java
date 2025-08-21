@@ -39,12 +39,46 @@ public class Open extends GameObserver {
         System.out.println("DEBUG Open: Oggetto - " + (parserOutput.getObject() != null ? parserOutput.getObject().getName() : "null"));
         System.out.println("DEBUG Open: InvObject - " + (parserOutput.getInvObject() != null ? parserOutput.getInvObject().getName() : "null"));
 
+        // COMANDO SPECIALE: libera principessa
+        if (parserOutput.getCommand().getName().toLowerCase().contains("libera")) {
+            System.out.println("DEBUG Open: Comando libera principessa ricevuto");
+
+            // Controlla se siamo nella stanza del boss (ID 7)
+            if (description.getCurrentRoom().getId() != 7) {
+                return "Non c'e' nessuna principessa da liberare qui.";
+            }
+
+            // Finto controllo della chiave (sappiamo che ce l'ha)
+            boolean hasKey = false;
+            for (GameObjects obj : description.getInventory()) {
+                if (obj.getId() == 10 || obj.getName().toLowerCase().contains("chiave")) {
+                    hasKey = true;
+                    break;
+                }
+            }
+
+            if (!hasKey) {
+                return "Ti serve una chiave per liberare la principessa.";
+            }
+
+            // Libera la principessa
+            TBMGame game = (TBMGame) description;
+            game.setPrincessFreed(true);
+            game.onPrincessFreed();
+
+            return "Usi la chiave per aprire la cella!\n\n"
+                    + "\"Grazie, coraggioso eroe!\" esclama la principessa con voce tremula.\n"
+                    + "\"Mi hai salvata da questo incubo! Ora dobbiamo fuggire insieme!\n"
+                    + "L'uscita dovrebbe essere a EST da qui. Andiamo, presto!\"\n\n"
+                    + "La principessa e' finalmente libera! L'uscita ti aspetta a EST.";
+        }
+
         if (parserOutput.getCommand().getType() == CommandType.OPEN) {
             System.out.println("DEBUG Open: Comando OPEN confermato, procedo...");
 
             // MODIFICA CRITICA: Controlla sempre se si tratta di una cassa
             String commandText = parserOutput.getCommand().getName().toLowerCase();
-            boolean isChestCommand = commandText.contains("cassa") || commandText.equals("apri");
+            boolean isChestCommand = commandText.contains("cassa") || commandText.contains("cella") || commandText.equals("apri");
 
             System.out.println("DEBUG Open: Comando text: '" + commandText + "', isChestCommand: " + isChestCommand);
 
@@ -155,10 +189,17 @@ public class Open extends GameObserver {
                 } else {
                     msg.append("Non puoi aprire questo oggetto.");
                 }
-            } // CASO 2: Oggetto nell'inventario
+            } // CASO 2: Oggetto nell'inventario - MA solo se non è una chiave per aprire qualcos'altro
             else if (parserOutput.getInvObject() != null) {
                 GameObjects invObj = parserOutput.getInvObject();
                 System.out.println("DEBUG Open: Oggetto inventario trovato - " + invObj.getName());
+
+                // Se è una chiave, cerca cosa aprire nella stanza invece di aprire la chiave stessa
+                if (invObj.getName().toLowerCase().contains("chiave")) {
+                    System.out.println("DEBUG Open: È una chiave, cerco cosa aprire nella stanza");
+                    return handleChestSearch(description);
+                }
+
                 return handleInventoryObject(description, invObj, msg);
             } // CASO 3: Nessun oggetto specifico - cerca cassa nella stanza
             else if (isChestCommand) {
@@ -248,10 +289,6 @@ public class Open extends GameObserver {
         if (openableObj != null) {
             System.out.println("DEBUG Open: Trovato oggetto apribile: " + openableObj.getName());
 
-            // Gestione speciale per cella
-            if (openableObj.getName().toLowerCase().contains("cella")) {
-                return openPrincessCell(description, openableObj);
-            }
 
             // Gestione speciale per porta est
             if (openableObj.getName().toLowerCase().contains("porta est")) {
@@ -275,54 +312,6 @@ public class Open extends GameObserver {
             }
         }
         return null;
-    }
-
-    // Nuovo metodo per aprire la cella della principessa
-    private String openPrincessCell(GameDescription description, GameObjects cella) {
-        System.out.println("DEBUG Open: Tentativo apertura cella principessa");
-
-        if (cella.isOpen()) {
-            return "La cella e' gia' aperta e la principessa e' libera!";
-        }
-
-        // Controlla se il giocatore ha la chiave della principessa
-        boolean hasKey = false;
-        for (GameObjects obj : description.getInventory()) {
-            if (obj.getName().toLowerCase().contains("chiave cella principessa")
-                    || obj.getName().toLowerCase().contains("chiave principessa")) {
-                hasKey = true;
-                break;
-            }
-        }
-
-        if (!hasKey) {
-            return "La cella e' chiusa a chiave. Ti serve la chiave della principessa per aprirla.";
-        }
-
-        // Apri la cella e libera la principessa
-        cella.setOpen(true);
-        princessFreed = true;
-
-        // Notifica la liberazione se possibile
-        if (description instanceof TBMGame) {
-            ((TBMGame) description).onPrincessFreed();
-        }
-
-        // Aggiungi la principessa alla stanza (come oggetto visibile)
-        GameObjects principessa = new GameObjects(14, "principessa",
-                "La bella principessa che hai salvato! Ti guarda con gratitudine.");
-        principessa.setPickupable(false);
-        description.getCurrentRoom().getObjects().add(principessa);
-
-        // Aggiorna il database
-        GameLoader gameLoader = getGameLoader(description);
-        if (gameLoader != null) {
-            gameLoader.updateObjectState(cella);
-            gameLoader.moveObjectToRoom(principessa, description.getCurrentRoom());
-        }
-
-        return "Hai aperto la cella! La principessa e' finalmente libera!\n"
-                + "'Grazie, coraggioso eroe!' dice la principessa. 'Ora possiamo fuggire insieme!'";
     }
 
     // Nuovo metodo per aprire la porta finale
