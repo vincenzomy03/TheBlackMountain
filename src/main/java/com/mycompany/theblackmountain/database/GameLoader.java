@@ -506,34 +506,270 @@ public class GameLoader {
     }
 
     /**
-     * reset completo delle casse
+     * Metodo chiamato quando il boss viene sconfitto Fa cadere la chiave
+     * dell'uscita nella stanza del boss
      */
+    public void onBossDefeated(int bossRoomId) {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+
+            System.out.println("Il Cane Demone è stato sconfitto! La chiave dell'uscita cade a terra...");
+
+            // Aggiungi la chiave dell'uscita (ID 11) alla stanza del boss
+            String insertKeySQL = "INSERT OR IGNORE INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES (?, ?)";
+            try (PreparedStatement stmt = conn.prepareStatement(insertKeySQL)) {
+                stmt.setInt(1, bossRoomId);
+                stmt.setInt(2, 11); // Chiave dell'uscita
+                stmt.executeUpdate();
+            }
+
+            // Aggiungi anche alla memoria di gioco se il room è già caricato
+            Room bossRoom = roomMap.get(bossRoomId);
+            if (bossRoom != null) {
+                // Verifica che non ci sia già
+                boolean alreadyPresent = bossRoom.getObjects().stream()
+                        .anyMatch(obj -> obj.getId() == 11);
+
+                if (!alreadyPresent) {
+                    // Carica l'oggetto dal database
+                    String getObjectSQL = "SELECT * FROM OBJECTS WHERE ID = ?";
+                    try (PreparedStatement stmt = conn.prepareStatement(getObjectSQL)) {
+                        stmt.setInt(1, 11);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            if (rs.next()) {
+                                GameObjects exitKey = createObjectFromResultSet(rs);
+                                if (exitKey != null) {
+                                    bossRoom.getObjects().add(exitKey);
+                                    System.out.println("Chiave dell'uscita aggiunta alla stanza del boss");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Errore nel gestire la sconfitta del boss: " + e.getMessage());
+        }
+    }
+
     /**
-     * Reset completo di tutte le casse - VERSIONE CORRETTA CON CONTROLLI
+     * Verifica se il giocatore ha la chiave corretta per aprire un oggetto
+     */
+    public boolean hasKeyForObject(int objectId, List<GameObjects> inventory) {
+        // Mappatura oggetti -> chiavi richieste
+        return switch (objectId) {
+            case 13 -> // Cella principessa
+                inventory.stream().anyMatch(obj -> obj.getId() == 10); // chiave cella principessa
+            case 15 -> // Porta est
+                inventory.stream().anyMatch(obj -> obj.getId() == 11); // chiave uscita
+            default ->
+                true; // Altri oggetti non richiedono chiavi specifiche
+        };
+    }
+
+    /**
+     * Apre la cella della principessa e libera la principessa
+     */
+    public boolean openPrincessCell(Room bossRoom, List<GameObjects> inventory) {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
+
+            // Verifica che il giocatore abbia la chiave cella principessa (ID 10)
+            boolean hasKey = inventory.stream().anyMatch(obj -> obj.getId() == 10);
+            if (!hasKey) {
+                return false; // Non ha la chiave
+            }
+
+            // Trova la cella nella stanza
+            GameObjects cell = bossRoom.getObjects().stream()
+                    .filter(obj -> obj.getId() == 13)
+                    .findFirst()
+                    .orElse(null);
+
+            if (cell != null) {
+                // Apri la cella
+                cell.setOpen(true);
+                updateObjectState(cell);
+
+                // Libera la principessa aggiungendola alla stanza
+                String getPrincessSQL = "SELECT * FROM OBJECTS WHERE ID = 14";
+                try (PreparedStatement stmt = conn.prepareStatement(getPrincessSQL)) {
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            GameObjects princess = createObjectFromResultSet(rs);
+                            if (princess != null) {
+                                bossRoom.getObjects().add(princess);
+
+                                // Aggiungi la principessa alla stanza nel database
+                                String insertPrincessSQL = "INSERT OR IGNORE INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES (?, ?)";
+                                try (PreparedStatement insertStmt = conn.prepareStatement(insertPrincessSQL)) {
+                                    insertStmt.setInt(1, bossRoom.getId());
+                                    insertStmt.setInt(2, 14);
+                                    insertStmt.executeUpdate();
+                                }
+
+                                System.out.println("La principessa è libera!");
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return false;
+
+        } catch (SQLException e) {
+            System.err.println("Errore nell'aprire la cella della principessa: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Apre la porta dell'uscita verso est
+     */
+    public boolean openExitDoor(Room bossRoom, List<GameObjects> inventory) {
+        // Verifica che il giocatore abbia la chiave dell'uscita (ID 11)
+        boolean hasKey = inventory.stream().anyMatch(obj -> obj.getId() == 11);
+        if (!hasKey) {
+            return false; // Non ha la chiave
+        }
+
+        // Trova la porta nella stanza
+        GameObjects door = bossRoom.getObjects().stream()
+                .filter(obj -> obj.getId() == 15)
+                .findFirst()
+                .orElse(null);
+
+        if (door != null) {
+            // Apri la porta
+            door.setOpen(true);
+            updateObjectState(door);
+            System.out.println("La porta dell'uscita si apre con un rumore metallico!");
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Verifica se la principessa è stata liberata
+     */
+    public boolean isPrincessFree(Room bossRoom) {
+        return bossRoom.getObjects().stream()
+                .anyMatch(obj -> obj.getId() == 14); // Principessa presente nella stanza
+    }
+
+    /**
+     * Verifica se la porta dell'uscita è aperta
+     */
+    public boolean isExitDoorOpen(Room bossRoom) {
+        return bossRoom.getObjects().stream()
+                .filter(obj -> obj.getId() == 15)
+                .findFirst()
+                .map(GameObjects::isOpen)
+                .orElse(false);
+    }
+
+    /**
+     * Aggiorna la query per il contenuto della cassa 103 (torture room) Ora
+     * contiene la chiave per aprire la cella della principessa
+     */
+    private String getChestContentQuery(int chestId) {
+        switch (chestId) {
+            case 100: // Cassa nell'Ingresso
+                return """
+        SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
+               w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
+        FROM OBJECTS o
+        LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
+        WHERE o.ID IN (1, 2)
+        """; // chiave ingresso, pozione cura
+
+            case 101: // Cassa nel Dormitorio
+                return """
+        SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
+               w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
+        FROM OBJECTS o
+        LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
+        WHERE o.ID IN (5, 6)
+        """; // pozione cura totale, bastone
+
+            case 102: // Cassa nella Sala Guardie
+                return """
+        SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
+               w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
+        FROM OBJECTS o
+        LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
+        WHERE o.ID IN (8, 9)
+        """; // LIBRO INCANTESIMO FUOCO, VELENO
+
+            case 103: // Cassa nella Stanza delle Torture - AGGIORNATA
+                return """
+        SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
+               w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
+        FROM OBJECTS o
+        LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
+        WHERE o.ID IN (10)
+        """; // chiave cella principessa
+
+            default:
+                return null; // Cassa vuota o sconosciuta
+        }
+    }
+
+    /**
+     * Metodo per gestire il movimento del giocatore con la principessa Una
+     * volta che la principessa è libera, limita i movimenti verso l'uscita
+     */
+    public boolean canMoveToRoom(Room currentRoom, Room targetRoom, boolean princessIsFree) {
+        if (!princessIsFree) {
+            return true; // Movimento normale se la principessa non è ancora libera
+        }
+
+        // Se la principessa è libera, può muoversi solo verso l'uscita (stanza 8)
+        // o rimanere nella stanza del boss (stanza 7)
+        int currentRoomId = currentRoom.getId();
+        int targetRoomId = targetRoom.getId();
+
+        // Dalla stanza del boss (7) può andare solo all'uscita (8)
+        if (currentRoomId == 7) {
+            return targetRoomId == 8;
+        }
+
+        // Dall'uscita (8) può tornare solo al boss (7)
+        if (currentRoomId == 8) {
+            return targetRoomId == 7;
+        }
+
+        // Da altre stanze non dovrebbe essere possibile se la principessa è libera
+        return false;
+    }
+
+    /**
+     * Reset completo di tutte le casse - VERSIONE CORRETTA
      */
     public void resetAllChests() {
-        System.out.println(" Resetting tutte le casse del gioco...");
+        System.out.println("Resetting tutte le casse del gioco...");
 
-        try (Connection conn = database.getConnection()) {
+        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
 
-            // 1. PRIMA - Verifica che le casse esistano nella tabella OBJECTS
+            // 1. Verifica che le casse esistano nella tabella OBJECTS
             String checkChestsExistSql = "SELECT ID FROM OBJECTS WHERE ID IN (100, 101, 102, 103) ORDER BY ID";
-            java.util.List<Integer> existingChests = new java.util.ArrayList<>();
+            List<Integer> existingChests = new ArrayList<>();
 
-            try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(checkChestsExistSql)) {
+            try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkChestsExistSql)) {
                 while (rs.next()) {
                     existingChests.add(rs.getInt("ID"));
                 }
             }
 
-            System.out.println(" Casse esistenti nel database: " + existingChests);
+            System.out.println("Casse esistenti nel database: " + existingChests);
 
             if (existingChests.isEmpty()) {
-                System.out.println("️ NESSUNA CASSA TROVATA NEL DATABASE! Creazione casse...");
+                System.out.println("NESSUNA CASSA TROVATA NEL DATABASE! Creazione casse...");
                 createMissingChests(conn);
 
                 // Ricarica la lista dopo la creazione
-                try (var stmt = conn.createStatement(); var rs = stmt.executeQuery(checkChestsExistSql)) {
+                try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkChestsExistSql)) {
                     while (rs.next()) {
                         existingChests.add(rs.getInt("ID"));
                     }
@@ -542,28 +778,29 @@ public class GameLoader {
 
             // 2. Chiudi tutte le casse esistenti
             if (!existingChests.isEmpty()) {
-                String chestIds = existingChests.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+                String chestIds = existingChests.stream().map(String::valueOf)
+                        .collect(java.util.stream.Collectors.joining(","));
                 String resetChestsSql = "UPDATE OBJECTS SET IS_OPEN = FALSE WHERE ID IN (" + chestIds + ")";
-                try (var stmt = conn.prepareStatement(resetChestsSql)) {
-                    int updated = stmt.executeUpdate();
-                    System.out.println(" " + updated + " casse chiuse");
+                try (Statement stmt = conn.createStatement()) {
+                    int updated = stmt.executeUpdate(resetChestsSql);
+                    System.out.println(updated + " casse chiuse");
                 }
             }
 
             // 3. Rimuovi TUTTI i contenuti dalle stanze (tranne oggetti fissi)
             String removeContentSql = """
-            DELETE FROM ROOM_OBJECTS 
-            WHERE OBJECT_ID NOT IN (
-                SELECT ID FROM OBJECTS WHERE OBJECT_TYPE IN ('DECORATION', 'FIXED')
-            )
-            AND OBJECT_ID NOT IN (100, 101, 102, 103)
-        """;
-            try (var stmt = conn.prepareStatement(removeContentSql)) {
-                int removed = stmt.executeUpdate();
-                System.out.println("🗑️ " + removed + " oggetti rimossi dalle stanze");
+        DELETE FROM ROOM_OBJECTS 
+        WHERE OBJECT_ID NOT IN (
+            SELECT ID FROM OBJECTS WHERE OBJECT_TYPE IN ('DECORATION', 'FIXED')
+        )
+        AND OBJECT_ID NOT IN (100, 101, 102, 103, 4, 13, 15)
+    """;
+            try (Statement stmt = conn.createStatement()) {
+                int removed = stmt.executeUpdate(removeContentSql);
+                System.out.println(removed + " oggetti rimossi dalle stanze");
             }
 
-            // 4. Posiziona le casse nelle stanze corrette (SOLO se esistono)
+            // 4. Posiziona le casse nelle stanze corrette
             int[][] chestRoomMapping = {
                 {0, 100}, // Ingresso -> Cassa 100
                 {3, 101}, // Dormitorio -> Cassa 101  
@@ -571,49 +808,48 @@ public class GameLoader {
                 {6, 103} // Sala Torture -> Cassa 103
             };
 
-            String insertChestSql = "INSERT OR IGNORE INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) VALUES (?, ?)";
+            String insertChestSql = "MERGE INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) KEY(ROOM_ID, OBJECT_ID) VALUES (?, ?)";
             int chestsPlaced = 0;
 
-            try (var stmt = conn.prepareStatement(insertChestSql)) {
+            try (PreparedStatement stmt = conn.prepareStatement(insertChestSql)) {
                 for (int[] mapping : chestRoomMapping) {
                     int roomId = mapping[0];
                     int chestId = mapping[1];
 
-                    // Inserisci solo se la cassa esiste
                     if (existingChests.contains(chestId)) {
                         stmt.setInt(1, roomId);
                         stmt.setInt(2, chestId);
                         stmt.addBatch();
                         chestsPlaced++;
                     } else {
-                        System.out.println("️ Cassa " + chestId + " non esiste, salto...");
+                        System.out.println("Cassa " + chestId + " non esiste, salto...");
                     }
                 }
 
                 if (chestsPlaced > 0) {
                     stmt.executeBatch();
-                    System.out.println(" " + chestsPlaced + " casse posizionate nelle stanze");
+                    System.out.println(chestsPlaced + " casse posizionate nelle stanze");
                 }
             }
 
-            // 5. Ripristina contenuti INIZIALI delle casse (nella stanza, non nel contenitore)
-            if (existingChests.contains(102)) { // Solo se la cassa 102 esiste
-                String restoreInitialContentSql = """
-                INSERT OR IGNORE INTO ROOM_OBJECTS (ROOM_ID, OBJECT_ID) 
-                SELECT 4, ID FROM OBJECTS 
-                WHERE ID IN (8, 9) 
-                AND EXISTS (SELECT 1 FROM OBJECTS WHERE ID = 102)
-            """;
-                try (var stmt = conn.prepareStatement(restoreInitialContentSql)) {
-                    int restored = stmt.executeUpdate();
-                    System.out.println(" " + restored + " oggetti iniziali ripristinati");
-                }
+            // 5. Reset stati di gioco importanti
+            String resetGameStateSQL = """
+        UPDATE OBJECTS SET IS_OPEN = FALSE 
+        WHERE ID IN (13, 15); -- Cella principessa e porta uscita
+        
+        DELETE FROM ROOM_OBJECTS 
+        WHERE OBJECT_ID IN (11, 14); -- Rimuovi chiave uscita e principessa libera
+    """;
+
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate(resetGameStateSQL);
+                System.out.println("Stati del finale del gioco resettati");
             }
 
-            System.out.println(" Reset casse completato!");
+            System.out.println("Reset casse completato!");
 
         } catch (SQLException e) {
-            System.err.println(" Errore nel reset delle casse: " + e.getMessage());
+            System.err.println("Errore nel reset delle casse: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("Errore nel reset delle casse", e);
         }
@@ -623,9 +859,8 @@ public class GameLoader {
      * Crea le casse mancanti nel database
      */
     private void createMissingChests(Connection conn) throws SQLException {
-        System.out.println("️ Creando casse mancanti...");
+        System.out.println("Creando casse mancanti...");
 
-        // Definizione delle casse
         Object[][] chestDefinitions = {
             {100, "cassa di legno", "Una robusta cassa di legno con rinforzi metallici.", true, true, false},
             {101, "cassa del dormitorio", "Una cassa personale con incisioni decorative.", true, true, false},
@@ -634,12 +869,12 @@ public class GameLoader {
         };
 
         String insertChestSql = """
-        INSERT OR IGNORE INTO OBJECTS 
-        (ID, NAME, DESCRIPTION, OBJECT_TYPE, IS_PICKUPABLE, IS_OPENABLE, IS_OPEN) 
-        VALUES (?, ?, ?, 'CONTAINER', ?, ?, ?)
-    """;
+    INSERT OR IGNORE INTO OBJECTS 
+    (ID, NAME, DESCRIPTION, OBJECT_TYPE, PICKUPABLE, OPENABLE, IS_OPEN) 
+    VALUES (?, ?, ?, 'CONTAINER', ?, ?, ?)
+""";
 
-        try (var stmt = conn.prepareStatement(insertChestSql)) {
+        try (PreparedStatement stmt = conn.prepareStatement(insertChestSql)) {
             for (Object[] chest : chestDefinitions) {
                 stmt.setInt(1, (Integer) chest[0]);      // ID
                 stmt.setString(2, (String) chest[1]);    // NAME
@@ -652,7 +887,7 @@ public class GameLoader {
 
             int[] results = stmt.executeBatch();
             int created = java.util.Arrays.stream(results).sum();
-            System.out.println("✅ " + created + " casse create nel database");
+            System.out.println(created + " casse create nel database");
         }
     }
 
@@ -1007,55 +1242,6 @@ public class GameLoader {
         }
 
         return foundObjects;
-    }
-
-    /**
-     * Restituisce la query SQL per il contenuto di una cassa specifica
-     *
-     * @param chestId ID della cassa
-     * @return query SQL o null se la cassa è vuota
-     */
-    private String getChestContentQuery(int chestId) {
-        switch (chestId) {
-            case 100: // Cassa nell'Ingresso
-                return """
-            SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
-                   w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
-            FROM OBJECTS o
-            LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
-            WHERE o.ID IN (1, 2)
-            """; // chiave ingresso, pozione cura
-
-            case 101: // Cassa nel Dormitorio
-                return """
-            SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
-                   w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
-            FROM OBJECTS o
-            LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
-            WHERE o.ID IN (5, 6)
-            """; // pozione cura totale, bastone
-
-            case 102: // Cassa nella Sala Guardie
-                return """
-            SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
-                   w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
-            FROM OBJECTS o
-            LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
-            WHERE o.ID IN (8, 9)
-            """; // LIBRO INCANTESIMO FUOCO, VELENO
-
-            case 103: // Cassa nella Stanza delle Torture
-                return """
-            SELECT o.*, w.WEAPON_TYPE, w.ATTACK_BONUS, w.CRITICAL_CHANCE, 
-                   w.CRITICAL_MULTIPLIER, w.IS_POISONED, w.POISON_DAMAGE, w.SPECIAL_EFFECT
-            FROM OBJECTS o
-            LEFT JOIN WEAPONS w ON o.ID = w.OBJECT_ID
-            WHERE o.ID IN (10)
-            """; // chiave cella principessa
-
-            default:
-                return null; // Cassa vuota o sconosciuta
-        }
     }
 
     /**

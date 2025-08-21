@@ -54,10 +54,10 @@ public class InitDatabase {
             insertRoomObjectsIfEmpty(conn);
 
             conn.close();
-            System.out.println("✅ Database inizializzato con successo!");
+            System.out.println("Database inizializzato con successo!");
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nell'inizializzazione del database: " + e.getMessage());
+            System.err.println("Errore nell'inizializzazione del database: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -159,7 +159,6 @@ public class InitDatabase {
         rs.close();
 
         if (count == 0) {
-            // USARE PREPARED STATEMENTS per gestire caratteri speciali
             String sql = "INSERT INTO ROOMS (ID, NAME, DESCRIPTION, LOOK_DESCRIPTION, VISIBLE, IMAGE_PATH) VALUES (?, ?, ?, ?, ?, ?)";
 
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -230,7 +229,7 @@ public class InitDatabase {
                 stmt.setInt(1, 7);
                 stmt.setString(2, "Sala del Signore dei Goblin");
                 stmt.setString(3, "L'aria è irrespirabile. Un fumo denso copre il volto del cane demone, una creatura infernale con zanne fumanti.");
-                stmt.setString(4, "Sul piedistallo alle spalle del demone c'è una chiave che potrebbe aprire la cella.");
+                stmt.setString(4, "Sul piedistallo alle spalle del demone c'è una cella di ferro dove è imprigionata la principessa.");
                 stmt.setBoolean(5, true);
                 stmt.setString(6, "boss_room");
                 stmt.addBatch();
@@ -247,7 +246,7 @@ public class InitDatabase {
                 stmt.executeBatch();
             }
 
-            System.out.println(" Stanze inserite");
+            System.out.println("Stanze inserite");
         }
     }
 
@@ -269,10 +268,10 @@ public class InitDatabase {
                     + "(4, 3, NULL, NULL, 5), "
                     + "(5, NULL, NULL, 4, NULL), "
                     + "(6, 1, 7, NULL, NULL), "
-                    + "(7, 6, NULL, NULL, 8), "
-                    + "(8, NULL, NULL, 7, NULL);");
+                    + "(7, 6, NULL, 8, NULL), "
+                    + "(8, NULL, NULL, NULL, 7);");
             stm.close();
-            System.out.println(" Connessioni stanze inserite");
+            System.out.println("Connessioni stanze inserite");
         }
     }
 
@@ -285,7 +284,6 @@ public class InitDatabase {
         rs.close();
 
         if (count == 0) {
-            // USARE PREPARED STATEMENTS anche per i personaggi
             String sql = "INSERT INTO CHARACTERS (ID, NAME, DESCRIPTION, CHARACTER_TYPE, MAX_HP, CURRENT_HP, ATTACK, DEFENSE, IS_ALIVE, ROOM_ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -396,7 +394,7 @@ public class InitDatabase {
                 stmt.executeBatch();
             }
 
-            System.out.println(" Personaggi inseriti (giocatore in stanza 0)");
+            System.out.println("Personaggi inseriti (giocatore in stanza 0)");
         }
     }
 
@@ -409,7 +407,6 @@ public class InitDatabase {
         rs.close();
 
         if (count == 0) {
-            // USARE PREPARED STATEMENTS per gestire caratteri speciali
             String sql = "INSERT INTO OBJECTS (ID, NAME, DESCRIPTION, ALIASES, OPENABLE, PICKUPABLE, PUSHABLE, IS_OPEN, IS_PUSHED, OBJECT_TYPE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -521,7 +518,7 @@ public class InitDatabase {
                 stmt.setInt(1, 10);
                 stmt.setString(2, "chiave cella principessa");
                 stmt.setString(3, "Una chiave dorata e decorata, diversa da tutte le altre. Probabilmente apre la cella della principessa.");
-                stmt.setString(4, "chiave principessa,chiave dorata");
+                stmt.setString(4, "chiave principessa,chiave dorata,chiave cella");
                 stmt.setBoolean(5, false);
                 stmt.setBoolean(6, true);
                 stmt.setBoolean(7, false);
@@ -530,11 +527,11 @@ public class InitDatabase {
                 stmt.setString(10, "NORMAL");
                 stmt.addBatch();
 
-                // Oggetto 11 - Chiave del collo del boss
+                // Oggetto 11 - Chiave del collo del boss (quella che cade quando muore)
                 stmt.setInt(1, 11);
-                stmt.setString(2, "chiave del collo del boss");
-                stmt.setString(3, "Una chiave pesante, con pendaglio di ferro annerito. Cade dal collo del demone canino quando lo sconfiggi.");
-                stmt.setString(4, "chiave boss,chiave finale");
+                stmt.setString(2, "chiave dell'uscita");
+                stmt.setString(3, "Una chiave pesante, con pendaglio di ferro annerito. È necessaria per aprire la porta dell'uscita verso est.");
+                stmt.setString(4, "chiave boss,chiave uscita,chiave est");
                 stmt.setBoolean(5, false);
                 stmt.setBoolean(6, true);
                 stmt.setBoolean(7, false);
@@ -571,11 +568,11 @@ public class InitDatabase {
                     stmt.addBatch();
                 }
 
-                // Oggetto 13 - Cella della principessa (apribile)
+                // Oggetto 13 - Cella della principessa (apribile con chiave 10)
                 stmt.setInt(1, 13);
                 stmt.setString(2, "cella");
-                stmt.setString(3, "Una cella di ferro con sbarre spesse. All'interno è prigioniera una principessa.");
-                stmt.setString(4, "prigione,gabbia,celle");
+                stmt.setString(3, "Una cella di ferro con sbarre spesse. All'interno è prigioniera la principessa.");
+                stmt.setString(4, "prigione,gabbia,celle,cella principessa");
                 stmt.setBoolean(5, true); // openable
                 stmt.setBoolean(6, false); // not pickupable
                 stmt.setBoolean(7, false);
@@ -584,7 +581,7 @@ public class InitDatabase {
                 stmt.setString(10, "CONTAINER");
                 stmt.addBatch();
 
-// Oggetto 14 - Principessa (personaggio speciale)
+                // Oggetto 14 - Principessa (all'interno della cella)
                 stmt.setInt(1, 14);
                 stmt.setString(2, "principessa");
                 stmt.setString(3, "La bella principessa che devi salvare. I suoi occhi brillano di speranza.");
@@ -597,11 +594,11 @@ public class InitDatabase {
                 stmt.setString(10, "NPC");
                 stmt.addBatch();
 
-// Oggetto 15 - Porta finale ad est (apribile)
+                // Oggetto 15 - Porta finale ad est (apribile con chiave 11)
                 stmt.setInt(1, 15);
                 stmt.setString(2, "porta est");
                 stmt.setString(3, "Una pesante porta di metallo che conduce all'uscita della montagna. È bloccata.");
-                stmt.setString(4, "porta,uscita,exit");
+                stmt.setString(4, "porta,uscita,exit,porta dell'uscita");
                 stmt.setBoolean(5, true); // openable
                 stmt.setBoolean(6, false);
                 stmt.setBoolean(7, false);
@@ -610,19 +607,10 @@ public class InitDatabase {
                 stmt.setString(10, "DOOR");
                 stmt.addBatch();
 
-                stm.execute("INSERT INTO ROOM_OBJECTS VALUES "
-                        + "(0, 100), " // Ingresso: cassa (chiusa)
-                        + "(1, 4), " // Stanza del Topo: ragnatela (oggetto fisso)
-                        + "(3, 101), " // Dormitorio: cassa (chiusa)
-                        + "(4, 102), " // Sala Guardie: cassa (chiusa)
-                        + "(6, 103), " // Torture: cassa (chiusa)
-                        + "(7, 13), " // Boss: cella della principessa
-                        + "(7, 15);"); // Boss: porta est bloccata
-
                 stmt.executeBatch();
             }
 
-            System.out.println(" Oggetti inseriti");
+            System.out.println("Oggetti inseriti");
         }
     }
 
@@ -656,7 +644,7 @@ public class InitDatabase {
                     + "(7, 'MAGIC', 12, 15.0, 2.0, FALSE, 0, NULL), "
                     + "(12, 'SWORD', 8, 10.0, 2.0, FALSE, 0, NULL);");
             stm.close();
-            System.out.println(" Armi inserite");
+            System.out.println("Armi inserite");
         }
     }
 
@@ -674,7 +662,7 @@ public class InitDatabase {
                     + "(0, 2), " // Pozione di cura
                     + "(0, 12);"); // Spada
             stm.close();
-            System.out.println("✅ Inventario iniziale del giocatore impostato");
+            System.out.println("Inventario iniziale del giocatore impostato");
         }
     }
 
@@ -697,8 +685,9 @@ public class InitDatabase {
                     + "(6, 103), " // Torture: cassa
                     + "(7, 13), " // Boss: cella principessa
                     + "(7, 15);"); // Boss: porta est
-            System.out.println(" Oggetti fissi e casse inseriti nelle stanze");
-            System.out.println("ℹ️ Gli oggetti delle casse verranno aggiunti alle stanze quando le casse vengono aperte");
+            stm.close();
+            System.out.println("Oggetti fissi e casse inseriti nelle stanze");
+            System.out.println("Gli oggetti delle casse verranno aggiunti alle stanze quando le casse vengono aperte");
         }
     }
 
