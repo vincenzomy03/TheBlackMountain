@@ -25,7 +25,7 @@ git clone https://github.com/vincenzomy03/TheBlackMountain.git
 
 ## 📖 Guida al gioco
 
-All’interno del **[Report](doc/DocumentazioneMAP.md)** trovi una breve guida con le istruzioni principali per giocare.
+All’interno del **[Report](doc/Documentazione_MAP.md)** trovi una breve guida con le istruzioni principali per giocare.
 
 ---
 
