@@ -86,15 +86,13 @@ public class MainMenu extends JFrame {
         Dimension buttonSize = new Dimension(300, 80);
         int spacing = 25;
 
-        // NUOVA PARTITA - usando UIComponents per supportare immagini future
+        // Creazione pulsanti con lambda per ActionListener
         newGameButton = createImageMenuButton("new_game", "NUOVA PARTITA",
                 "Inizia una nuova avventura", buttonSize, e -> startNewGame());
 
-        // CARICA PARTITA
         loadGameButton = createImageMenuButton("load_game", "CARICA PARTITA",
                 "Continua un'avventura salvata", buttonSize, e -> loadGame());
 
-        // ESCI
         exitButton = createImageMenuButton("exit", "ESCI",
                 "Chiudi il gioco", buttonSize, e -> exitGame());
 

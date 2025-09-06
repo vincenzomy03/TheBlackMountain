@@ -28,7 +28,6 @@ public class OutroScreen extends JFrame {
         "Il ritorno al regno fu un trionfo. Il re ti accolse come un eroe.",
         "Ma più delle lodi, ciò che rimarrà è la leggenda di colui che osò sfidare la Montagna Nera.",
         "Per molti sarai un mito, per altri un salvatore: per te, resterà l'eco di un'avventura indimenticabile.",
-        "--- CREDITS ---\n\nGrazie per aver giocato!\n\nSviluppato da: Vincenzo My\nIspirato dalle grandi avventure testuali"
     };
 
     private int currentSegment = 0;

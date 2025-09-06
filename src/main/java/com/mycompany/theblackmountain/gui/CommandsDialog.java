@@ -161,11 +161,4 @@ public class CommandsDialog extends JDialog {
         dispose();
     }
 
-    private void showNotImplemented(String commandName) {
-        JOptionPane.showMessageDialog(this,
-                "Il comando '" + commandName + "' non è ancora implementato.\n"
-                + "Sarà disponibile in una versione futura!",
-                "Funzione non disponibile",
-                JOptionPane.INFORMATION_MESSAGE);
-    }
 }

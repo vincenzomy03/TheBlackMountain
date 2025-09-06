@@ -418,13 +418,13 @@ public class GameGUI extends JFrame {
 
 // E modifica anche il metodo checkAndHandleGameOver per aggiungere più debug:
     private void checkAndHandleGameOver() {
-        System.out.println("🔍 checkAndHandleGameOver() chiamato");
+        System.out.println(" checkAndHandleGameOver() chiamato");
 
         if (game.isGameOver()) {
-            System.out.println("💀 Game Over rilevato!");
+            System.out.println(" Game Over rilevato!");
             handleGameOver();
         } else {
-            System.out.println("✅ Giocatore ancora vivo");
+            System.out.println(" Giocatore ancora vivo");
         }
     }
 
@@ -596,6 +596,8 @@ public class GameGUI extends JFrame {
                 + "  osserva     - Descrive la stanza e gli oggetti presenti\n"
                 + "  inventario  - Mostra gli oggetti in tuo possesso\n"
                 + "  apri cassa  - Tenta di aprire una cassa nella stanza (se presente)\n"
+                + "  prendi [oggetto]  - Raccoglie l'oggetto desiderato\n"
+                + "  crea arco  - Permette di creare un arco solo se in possesso dei giusti oggetti\n"
         );
         tabbedPane.addTab("Interazione", new JScrollPane(interazioneArea));
 
@@ -605,18 +607,21 @@ public class GameGUI extends JFrame {
                 + "  attacca              - Attacca un nemico presente nella stanza\n"
                 + "  usa spada            - Attacca usando la spada\n"
                 + "  usa arco             - Attacca usando l'arco (se lo possiedi)\n"
-                + "  usa pozione di cura  - Recupera punti vita usando una pozione"
+                + "  usa pozione di cura  - Recupera punti vita usando una pozione\n"
+                + "  usa veleno  - Applica veleno alla spada\n"
+                + "  usa libro   - Attacca creando una palla di fuoco che fa danno ad area\n"
         );
         tabbedPane.addTab("Combattimento", new JScrollPane(combattimentoArea));
 
-        // --- ALTRO ---
-        JTextArea altroArea = createHelpTextArea(
-                "=== ALTRI COMANDI ===\n\n"
-                + "  salva    - Salva la partita corrente\n"
-                + "  comandi  - Apre il menu dei comandi aggiuntivi\n"
-                + "  help     - Mostra questa finestra di aiuto\n"
+        // --- COMANDI DEBUG/CHEAT
+        JTextArea cheatArea = createHelpTextArea(
+                "=== COMANDI DI CHEAT ===\n\n"
+                + "  kill      - Comando per uccidere il player\n"
+                + "  fullheal  - Comando per curare il player\n"
+                + "  lowhp     - Comando per impostare gli HP bassi\n"
+                + "  status    - Comando per vedere stato del player\n"
         );
-        tabbedPane.addTab("Altro", new JScrollPane(altroArea));
+        tabbedPane.addTab("Cheat", new JScrollPane(cheatArea));
 
         // Mostra dialog con le schede
         JOptionPane.showMessageDialog(

@@ -22,7 +22,7 @@ public class IntroScreen extends JFrame {
 
     private String[] storyParagraphs = {
         "Il regno era scosso dal dolore: la principessa era stata rapita dai goblin, trascinata nelle profondità della Montagna Nera.",
-        "Nessun cavaliere aveva osato inseguirli, ma il re si era rivolto a te, avventuriero rinomato per coraggio e geste.",
+        "Nessun cavaliere aveva osato inseguirli, ma il re si era rivolto a te, avventuriero rinomato per coraggio e gesta.",
         "Davanti al trono, con voce grave, ti aveva implorato di riportare indietro sua figlia.",
         "Non era l'oro né l'onore a muoverti, ma il richiamo dell'impresa: un destino che non potevi rifiutare.",
         "Dopo giorni di viaggio, hai raggiunto i piedi della Montagna Nera. La sua sagoma si erge minacciosa contro il cielo.",
