@@ -457,13 +457,12 @@ public class GameLoader {
         }
     }
 
-    // Aggiungi questo metodo al GameLoader.java dopo resetAllChests()
     /**
      * Ripristina gli oggetti che dovrebbero sempre essere presenti nelle stanze
      * (non contenuti nelle casse)
      */
     private void restoreFixedRoomObjects(Connection conn) throws SQLException {
-        System.out.println("🔧 Ripristino oggetti fissi nelle stanze...");
+        System.out.println(" Ripristino oggetti fissi nelle stanze...");
 
         // Oggetti che dovrebbero sempre essere presenti in specifiche stanze
         int[][] fixedObjectPairs = {
@@ -506,7 +505,7 @@ public class GameLoader {
     }
 
     /**
-     * Metodo chiamato quando il boss viene sconfitto Fa cadere la chiave
+     * Metodo chiamato quando il boss viene sconfitto fa cadere la chiave
      * dell'uscita nella stanza del boss
      */
     public void onBossDefeated(int bossRoomId) {
@@ -670,8 +669,7 @@ public class GameLoader {
     }
 
     /**
-     * Aggiorna la query per il contenuto della cassa 103 (torture room) Ora
-     * contiene la chiave per aprire la cella della principessa
+     * 
      */
     private String getChestContentQuery(int chestId) {
         switch (chestId) {
@@ -745,7 +743,7 @@ public class GameLoader {
     }
 
     /**
-     * Reset completo di tutte le casse - VERSIONE CORRETTA
+     * Reset completo di tutte le casse
      */
     public void resetAllChests() {
         System.out.println("Resetting tutte le casse del gioco...");
@@ -916,7 +914,7 @@ public class GameLoader {
     }
 
     /**
-     * NUOVO METODO: Debug delle casse nel database
+     * Debug delle casse nel database
      */
     private void debugChestsInDatabase(Connection conn) throws SQLException {
         System.out.println("🔍 DEBUG: Stato attuale delle casse nel database:");
@@ -990,7 +988,7 @@ public class GameLoader {
 
                 if (type == CharacterType.PLAYER) {
                     game.setPlayer(character);
-                    System.out.println("👤 Giocatore caricato: " + character.getName() + " (HP: " + character.getCurrentHp() + ")");
+                    System.out.println(" Giocatore caricato: " + character.getName() + " (HP: " + character.getCurrentHp() + ")");
                     characterCount++;
 
                 } else if (character.getType() == CharacterType.GOBLIN
@@ -1003,25 +1001,25 @@ public class GameLoader {
                         Room room = roomMap.get(roomId);
                         if (room != null) {
                             room.getEnemies().add(character);
-                            System.out.println("👹 Nemico " + character.getName() + " caricato nella stanza " + roomId);
+                            System.out.println(" Nemico " + character.getName() + " caricato nella stanza " + roomId);
                             characterCount++;
                         } else {
-                            System.out.println("❌ ERRORE: Stanza " + roomId + " non trovata per nemico " + character.getName());
+                            System.out.println("ERRORE: Stanza " + roomId + " non trovata per nemico " + character.getName());
                         }
                     } else {
-                        System.out.println("💀 Nemico " + character.getName() + " non caricato (morto)");
+                        System.out.println(" Nemico " + character.getName() + " non caricato (morto)");
                     }
                 }
             }
 
-            System.out.println("✅ Caricati " + characterCount + " personaggi");
+            System.out.println(" Caricati " + characterCount + " personaggi");
 
             // VERIFICA CRITICA: Assicurati che il giocatore sia stato caricato
             if (game.getPlayer() == null) {
-                System.err.println("❌ ERRORE CRITICO: Giocatore non caricato dal database!");
+                System.err.println(" ERRORE CRITICO: Giocatore non caricato dal database!");
                 throw new SQLException("Impossibile caricare il giocatore dal database");
             } else {
-                System.out.println("✅ Giocatore verificato: " + game.getPlayer().getName());
+                System.out.println(" Giocatore verificato: " + game.getPlayer().getName());
             }
         }
     }
@@ -1051,7 +1049,7 @@ public class GameLoader {
                 }
             }
 
-            System.out.println("🎒 Caricati " + inventoryCount + " oggetti nell'inventario");
+            System.out.println(" Caricati " + inventoryCount + " oggetti nell'inventario");
         }
     }
 
@@ -1203,12 +1201,12 @@ public class GameLoader {
             // Query per ottenere gli oggetti che dovrebbero essere nella cassa
             String sql = getChestContentQuery(chestId);
             if (sql == null) {
-                System.out.println("❌ Nessuna query definita per cassa " + chestId);
+                System.out.println(" Nessuna query definita per cassa " + chestId);
                 return foundObjects; // Cassa vuota
             }
 
-            System.out.println("🔍 Apertura cassa " + chestId + " nella stanza " + room.getId());
-            System.out.println("📋 Query SQL: " + sql);
+            System.out.println(" Apertura cassa " + chestId + " nella stanza " + room.getId());
+            System.out.println(" Query SQL: " + sql);
 
             try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
 
@@ -1216,7 +1214,7 @@ public class GameLoader {
                 while (rs.next()) {
                     int objectId = rs.getInt("ID");
                     String objectName = rs.getString("NAME");
-                    System.out.println("🎁 Trovato oggetto: " + objectId + " - " + objectName);
+                    System.out.println(" Trovato oggetto: " + objectId + " - " + objectName);
 
                     GameObjects obj = createObjectFromResultSet(rs);
                     if (obj != null) {
@@ -1226,18 +1224,18 @@ public class GameLoader {
                         // Aggiungi l'oggetto alla tabella ROOM_OBJECTS se non c'è già
                         addObjectToRoom(conn, room.getId(), obj.getId());
                         objectCount++;
-                        System.out.println("✅ Oggetto " + obj.getName() + " aggiunto alla stanza " + room.getName());
+                        System.out.println(" Oggetto " + obj.getName() + " aggiunto alla stanza " + room.getName());
                     } else {
-                        System.out.println("❌ Impossibile creare oggetto ID " + objectId);
+                        System.out.println(" Impossibile creare oggetto ID " + objectId);
                     }
                 }
 
-                System.out.println("📊 Totale oggetti trovati nella cassa " + chestId + ": " + objectCount);
+                System.out.println(" Totale oggetti trovati nella cassa " + chestId + ": " + objectCount);
 
             }
 
         } catch (SQLException e) {
-            System.err.println("❌ Errore nell'apertura cassa " + chestId + ": " + e.getMessage());
+            System.err.println(" Errore nell'apertura cassa " + chestId + ": " + e.getMessage());
             e.printStackTrace();
         }
 
@@ -1273,7 +1271,7 @@ public class GameLoader {
             }
 
         } catch (SQLException e) {
-            System.err.println("⚠️ Errore nell'aggiunta oggetto alla stanza: " + e.getMessage());
+            System.err.println("️ Errore nell'aggiunta oggetto alla stanza: " + e.getMessage());
         }
     }
 

@@ -4,13 +4,11 @@
 package com.mycompany.theblackmountain;
 
 import com.mycompany.theblackmountain.gui.MainMenu;
-import com.mycompany.theblackmountain.gui.GameGUI;
 import com.mycompany.theblackmountain.gui.SplashScreen;
 import com.mycompany.theblackmountain.impl.TBMGame;
 import com.mycompany.theblackmountain.parser.Parser;
 import com.mycompany.theblackmountain.parser.ParserOutput;
 import com.mycompany.theblackmountain.type.CommandType;
-import com.mycompany.theblackmountain.thread.MusicManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -68,12 +66,10 @@ public class TBM_engine {
             if (p == null || p.getCommand() == null) {
                 System.out.println("Non capisco quello che mi vuoi dire.");
             } else if (p.getCommand() != null && p.getCommand().getType() == CommandType.END) {
-                System.out.println("Sei un fifone, addio!");
                 break;
             } else {
                 game.nextMove(p, System.out);
                 if (game.getCurrentRoom() == null) {
-                    System.out.println("La tua avventura termina qui! Complimenti!");
                     System.exit(0);
                 }
             }

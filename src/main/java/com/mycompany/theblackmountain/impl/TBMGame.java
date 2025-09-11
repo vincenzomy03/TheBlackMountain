@@ -202,7 +202,6 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
 
     /**
      * Metodo statico per assicurarsi che le casse siano nelle stanze corrette
-     * Versione che non dipende da gameLoader
      */
     private static void ensureChestsInRoomsStatic(Connection conn) throws SQLException {
         System.out.println("Verifica presenza casse nelle stanze...");
@@ -273,7 +272,6 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
         }
     }
 
-    // MODIFICA per TBMGame.java - Metodo verifyGameState()
     /**
      * Verifica che lo stato del gioco sia valido - VERSIONE CORRETTA
      *
@@ -293,7 +291,7 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
 
             // TENTATIVO DI RECUPERO AUTOMATICO
             if (rooms != null && !rooms.isEmpty()) {
-                System.out.println("⚠️ Tentativo di recupero: imposto stanza 0 come corrente");
+                System.out.println("️ Tentativo di recupero: imposto stanza 0 come corrente");
                 setCurrentRoom(rooms.get(0)); // Imposta la prima stanza
 
                 // Rimuovi il problema dalla lista se risolto
@@ -306,7 +304,7 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
             problems.add("Giocatore non trovato");
 
             // TENTATIVO DI RECUPERO AUTOMATICO
-            System.out.println("⚠️ Tentativo di recupero: ricerca giocatore nelle strutture caricate");
+            System.out.println("️ Tentativo di recupero: ricerca giocatore nelle strutture caricate");
 
             // Cerca il giocatore tra tutti i personaggi caricati (se esistono)
             for (Room room : rooms) {
@@ -325,7 +323,7 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
 
             // Se ancora non trovato, crea un giocatore di emergenza
             if (player == null) {
-                System.out.println("🚨 Creazione giocatore di emergenza");
+                System.out.println(" Creazione giocatore di emergenza");
                 player = new GameCharacter(0, "Giocatore", "Avventuriero coraggioso",
                         100, 15, 5, CharacterType.PLAYER);
                 problems.removeIf(p -> p.equals("Giocatore non trovato"));
@@ -335,7 +333,7 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
         // Se ci sono ancora problemi, lancia eccezione
         if (!problems.isEmpty()) {
             String errorMessage = "Problemi nella verifica dello stato: " + String.join(", ", problems);
-            System.err.println("❌ " + errorMessage);
+            System.err.println(errorMessage);
             throw new Exception(errorMessage);
         }
     }
@@ -348,7 +346,7 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
         }
 
         try {
-            // *** COMANDI DEBUG SEMPLIFICATI ***
+            // COMANDI DEBUG SEMPLIFICATI
             String commandName = p.getCommand().getName();
 
             if (commandName.equals("kill")) {
@@ -902,7 +900,7 @@ ORDER BY r.ROOM_ID, r.OBJECT_ID
     }
 
     /**
-     * Metodo helper per createObjectFromResultSet (reso pubblico)
+     * Metodo helper per createObjectFromResultSet
      */
     private GameObjects createObjectFromResultSet(java.sql.ResultSet rs) throws SQLException {
         // Questo metodo esiste già in GameLoader, lo richiamiamo
